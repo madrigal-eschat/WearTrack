@@ -7,6 +7,13 @@ include:
   - component: $CI_SERVER_FQDN/to-be-continuous/docker/gitlab-ci-docker@8.3.0
     inputs:
       file: "docker/Dockerfile"
+      build-args: "--platform linux/amd64 --platform linux/arm64"
+      trivy-disabled: "true"
+      sbom-disabled: "true"
+
+docker-buildah-build:
+  tags:
+    - buildah
 
   - component: $CI_SERVER_FQDN/to-be-continuous/playwright/gitlab-ci-playwright@1.9.0
     inputs:
