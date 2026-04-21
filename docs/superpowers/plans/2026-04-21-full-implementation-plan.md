@@ -1,7 +1,7 @@
 # Full Implementation Plan: Weartrack Monolith
 
-**Date**: 2026-04-21  
-**Status**: Draft  
+**Date**: 2026-04-21
+**Status**: Draft
 **Target**: Implement all 5 sub-projects in order (1 → 5)
 
 ---
@@ -15,9 +15,13 @@ This plan implements the Weartrack monolith with:
 - **Subproject 4**: Hono backend API
 - **Subproject 5**: Vue 3 PWA frontend
 
-**Approach**: TDD — write test → verify fails → implement → verify passes → commit  
-**Time per task**: 2-5 minutes  
+**Approach**: TDD — write test → verify fails → implement → verify passes → commit
+**Time per task**: 2-5 minutes
 **Total tasks**: ~50 (2-3 hours total)
+
+IMPORTANT: Before each task, create a new branch. After implementing the task,
+push the branch, and create a gitlab merge request against the previous tasks's branch.
+
 
 ---
 
@@ -119,23 +123,11 @@ weartrack/
 
 ## Subproject 1: Infrastructure
 
-### Task 1.1: Create Root package.json
-- **Test**: N/A (bootstrap)
-- **Steps**:
-  - Initialize root `package.json` with workspaces
-  - Add workspace protocols
-  - Install root dev deps (vitest)
-- **File**: `package.json`
+### Task 1.1: Create Root package.json ✅
 
-### Task 1.2: Create docker-compose.yml
-- **Test**: `docker compose config`
-- **Steps**:
-  - Define single `weartrack` service
-  - Mount volume `weartrack-data` at `/data/db.sqlite`
-  - Expose port 3000
-- **File**: `docker-compose.yml`
+### Task 1.2: Create docker-compose.yml ✅
 
-### Task 1.3: Create docker/Dockerfile
+### Task 1.3: Create docker/Dockerfile ✅
 - **Test**: `docker build -t weartrack:test .`
 - **Steps**:
   - Stage 1: build (node:24-bookworm)
@@ -151,7 +143,7 @@ weartrack/
     - CMD: `node src/backend/src/server.ts`
 - **File**: `docker/Dockerfile`
 
-### Task 1.4: Create Frontend package.json
+### Task 1.4: Create Frontend package.json ✅
 - **Test**: N/A
 - **Steps**:
   - Add Vue 3, Vite, Konsta UI, vite-plugin-pwa
@@ -159,7 +151,7 @@ weartrack/
   - Add Playwright for E2E
 - **File**: `src/frontend/package.json`
 
-### Task 1.5: Create Backend package.json
+### Task 1.5: Create Backend package.json ✅
 - **Test**: N/A
 - **Steps**:
   - Add Hono, better-sqlite3, cors
