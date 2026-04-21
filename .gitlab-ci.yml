@@ -10,6 +10,10 @@ include:
       trivy-disabled: "true"
       sbom-disabled: "true"
 
+node-semgrep:
+  variables:
+    GIT_DEPTH: 0
+
 docker-buildah-build:
   tags:
     - buildah
