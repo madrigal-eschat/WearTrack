@@ -18,12 +18,9 @@ COPY --from=build /app/package.json /app/package-lock.json ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 
-RUN addgroup --system --gid 1000 nodejs \
-    && adduser --system --uid 1000 --ingroup nodejs appuser \
-    && chown -R appuser:appuser /app \
-    && chmod -R 755 /app
+RUN chown -R node:node /app
 
-USER appuser
+USER node
 
 EXPOSE 3000
 
