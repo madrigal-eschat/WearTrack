@@ -3,22 +3,20 @@ include:
     inputs:
       image: "node:24-bookworm"
       lint-enabled: "true"
-
   - component: $CI_SERVER_FQDN/to-be-continuous/docker/gitlab-ci-docker@8.3.0
     inputs:
       file: "docker/Dockerfile"
       build-args: "--platform linux/amd64 --platform linux/arm64"
       trivy-disabled: "true"
       sbom-disabled: "true"
-
-docker-buildah-build:
-  tags:
-    - buildah
-
   - component: $CI_SERVER_FQDN/to-be-continuous/playwright/gitlab-ci-playwright@1.9.0
     inputs:
       project-dir: "src/frontend/tests/e2e"
       review-enabled: "true"
+
+docker-buildah-build:
+  tags:
+    - buildah
 
 stages:
   - build
