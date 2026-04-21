@@ -1,0 +1,84 @@
+image: node:24-bookworm
+
+variables:
+  NODE_ENV: production
+
+stages:
+  - lint
+  - build
+  - test
+  - deploy
+
+before_script:
+  - |
+    apk add --no-cache git openssh-client
+    cd $CI_PROJECT_DIR
+    git config --global user.email "ci@example.com"
+    git config --global user.name "CI"
+
+lint:
+  stage: lint
+  script:
+    - cd src/backend && npm run lint
+    - cd src/frontend && npm run lint
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+build:
+  stage: build
+  script:
+    - cd src/backend && npm install && npm run build
+    - cd src/frontend && npm install && npm run build
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+test_backend:
+  stage: test
+  script:
+    - cd src/backend && npm install && npm test
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+test_frontend:
+  stage: test
+  script:
+    - cd src/frontend && npm install && npm test
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+deploy_staging:
+  stage: deploy
+  script:
+    - echo "Deploy to staging"
+  environment:
+    name: staging
+    url: https://staging.example.com
+  rules:
+    - if: $CI_COMMIT_BRANCH == "staging"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+deploy_prod:
+  stage: deploy
+  script:
+    - echo "Deploy to production"
+  environment:
+    name: production
+    url: https://example.com
+  when: manual
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+pages:
+  stage: deploy
+  script:
+    - npm install -g serve
+    - cd public && serve -l
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
