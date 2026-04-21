@@ -1,0 +1,16 @@
+services:
+  weartrack:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: weartrack
+    ports:
+      - "3000:3000"
+    volumes:
+      - weartrack-data:/data
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+
+volumes:
+  weartrack-data:
