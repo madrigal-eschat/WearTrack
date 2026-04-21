@@ -1,0 +1,22 @@
+{
+  "name": "@weartrack/backend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.ts",
+    "build": "tsc",
+    "test": "vitest",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "hono": "^4.6.0",
+    "better-sqlite3": "^11.0.0",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "vitest": "^1.6.0",
+    "@types/node": "^22.0.0",
+    "@types/cors": "^2.8.17"
+  }
+}
