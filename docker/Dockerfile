@@ -16,9 +16,6 @@ RUN npm ci
 # Copy entire source tree
 COPY . .
 
-# Install type definitions for Playwright
-RUN npm install -D @types/node playwright
-
 # Build Vue frontend
 RUN npx vite build --outDir dist/frontend
 
