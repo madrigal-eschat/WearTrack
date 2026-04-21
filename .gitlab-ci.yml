@@ -9,10 +9,6 @@ include:
       build-args: "--platform linux/amd64 --platform linux/arm64"
       trivy-disabled: "true"
       sbom-disabled: "true"
-  - component: $CI_SERVER_FQDN/to-be-continuous/playwright/gitlab-ci-playwright@1.9.0
-    inputs:
-      project-dir: "src/frontend/tests/e2e"
-      review-enabled: "true"
 
 docker-buildah-build:
   tags:
