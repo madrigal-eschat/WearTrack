@@ -10,8 +10,8 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "vue": "^3.5.0",
-    "konsta-ui": "^1.0.0"
+    "konsta": "^3.0.0",
+    "vue": "^3.5.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",

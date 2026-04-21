@@ -1,0 +1,26 @@
+include:
+  - component: $CI_SERVER_FQDN/to-be-continuous/node/gitlab-ci-node@5.3.0
+    inputs:
+      image: "node:24-bookworm"
+      project-dir: "src/backend"
+      lint-enabled: "true"
+  - component: $CI_SERVER_FQDN/to-be-continuous/docker/gitlab-ci-docker@8.3.0
+    inputs:
+      build-args: "--platform linux/amd64 --platform linux/arm64"
+      trivy-disabled: "true"
+      sbom-disabled: "true"
+
+node-semgrep:
+  variables:
+    GIT_DEPTH: 0
+
+docker-buildah-build:
+  tags:
+    - buildah
+
+stages:
+  - build
+  - test
+  - package-build
+  - package-test
+  - publish
