@@ -15,8 +15,7 @@ FROM node:24-bookworm-slim AS production
 WORKDIR /app
 
 COPY --from=build /app/package.json /app/package-lock.json ./
-RUN npm ci --omit=dev
-
+COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 
 RUN addgroup --system --gid 1000 nodejs \
