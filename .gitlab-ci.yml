@@ -1,12 +1,8 @@
-node-build:
-  stage: build
-  image: node:24-bookworm
-  script:
-    - npm install
-    - npm run --workspaces build
-    - npm run --workspaces test
-
 include:
+  - component: $CI_SERVER_FQDN/to-be-continuous/node/gitlab-ci-node@5.3.0
+    inputs:
+      image: "node:24-bookworm"
+      lint-enabled: "true"
   - component: $CI_SERVER_FQDN/to-be-continuous/docker/gitlab-ci-docker@8.3.0
     inputs:
       file: "docker/Dockerfile"
