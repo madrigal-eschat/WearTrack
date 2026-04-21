@@ -2,25 +2,56 @@
 
 ## Architecture
 
-Design specs live in `docs/design/`:
+Monorepo with 3 workspaces: `src/backend`, `src/frontend`, `src/shared`.
 
-- `docs/design/main.md` — app goals, features, UX flows
-- `docs/design/tech-stack.md` — planned tech stack (Vue 3, Hono, SQLite)
-- `docs/design/duration-formula.md` — domain logic for wear/rest periods
+- **Frontend**: Vue 3 + Vite + Konsta UI + vite-plugin-pwa (PWA)
+- **Backend**: Hono + better-sqlite3 + CORS
+- **Data**: SQLite at `/data/db.sqlite` (Docker volume mount)
+- **Infra**: Multi-stage Docker, GitLab CI with to-be-continuous
 
-When the app is scaffolded, expect:
+Domain logic in `docs/design/`:
+- `docs/design/main.md` — app goals, two-pane UX, injury flow
+- `docs/design/tech-stack.md` — stack decisions
+- `docs/design/duration-formula.md` — wear/rest calculations
 
-- Frontend: `vue` / `vite` / `konsta-ui` / `vite-plugin-pwa` (PWA)
-- Backend: `hono` API server + static file serving, single port
-- Data: `better-sqlite3` with dedicated data-access layer
-- Infrastructure: Docker Compose, volume-mounted SQLite at `/data/db.sqlite`
-- Tests: Vitest (unit) + Playwright (browser), CI via GitLab CI (to-be-continuous components)
+Full implementation plan in `docs/superpowers/plans/2026-04-21-full-implementation-plan.md`.
 
 ## Commands
 
-Nothing to run yet — the app has not been scaffolded.
+```bash
+# Build Docker image
+docker compose build
 
-## Constraints
+# Start app with migrations
+docker compose up --build
 
-- No existing code to follow. Treat design docs as the source of truth for domain logic.
-- When code appears, verify all commands and conventions from config/scripts rather than guessing.
+# Run unit tests (root + workspaces)
+npm test
+
+# Run frontend tests
+cd src/frontend && npm test
+
+# Run E2E tests (requires running container)
+npx playwright test
+```
+
+## Implementation Order
+
+Execute sub-projects in order when scaffolding:
+
+1. **Infrastructure** (SP1): Dockerfile, docker-compose, workspace package.json files, vitest.config.ts
+2. **CI/CD** (SP2): .gitlab-ci.yml
+3. **Data Layer** (SP3): db/index.ts, migrations, injury/calculations modules
+4. **Backend API** (SP4): server.ts, middleware, controllers, routers
+5. **Frontend** (SP5): vite.config.ts, views, components, composables
+
+## Constraints & Gotchas
+
+- **SQLite path**: `/data/db.sqlite` via named volume, not hardcoded in app
+- **Single port**: Backend serves API + static frontend on one port (3000)
+- **TDD**: Write test → verify fails → implement → commit (no placeholders)
+- **Transaction**: Session operations use DB transactions for atomicity
+- **Cascading deletes**: Items → sessions, injuries, stats (onDelete: cascade)
+- **Injury penalty**: When injured, reduce all wear times by 50%, increase rest by 150%
+- **No local Node**: Build/run via Docker only; no local Node deps
+- **Branch strategy**: Each task on new branch; push → create MR against prev branch
