@@ -42,7 +42,7 @@ export default function runMigration() {
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
       item_id     INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
       occurred_at INTEGER NOT NULL,
-      heals_at    INTEGER,
+      healed_at   INTEGER,
       severity    INTEGER NOT NULL
     );
 

@@ -29,14 +29,14 @@ describe('001_initial migration', () => {
     expect(cols).not.toContain('emoji');
   });
 
-  it('injuries has occurred_at, heals_at, severity', () => {
+  it('injuries has occurred_at, healed_at, severity', () => {
     const info = dbExport.prepare('PRAGMA table_info(injuries)').all() as Array<{ name: string }>;
     const cols = info.map((r) => r.name);
     expect(cols).toContain('occurred_at');
-    expect(cols).toContain('heals_at');
+    expect(cols).toContain('healed_at');
     expect(cols).toContain('severity');
     expect(cols).not.toContain('started_at');
-    expect(cols).not.toContain('healed_at');
+    expect(cols).not.toContain('heals_at');
   });
 
   it('stats has cumulative fields and no points', () => {
