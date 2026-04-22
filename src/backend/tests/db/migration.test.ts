@@ -19,12 +19,12 @@ describe('001_initial migration', () => {
   it('categories has formula fields', () => {
     const info = dbExport.prepare('PRAGMA table_info(categories)').all() as Array<{ name: string }>;
     const cols = info.map((r) => r.name);
-    expect(cols).toContain('initial_wear');
+    expect(cols).toContain('initial_wear_duration_seconds');
     expect(cols).toContain('rest_multiplier');
-    expect(cols).toContain('rest_constant');
+    expect(cols).toContain('rest_constant_seconds');
     expect(cols).toContain('risk_levels');
     expect(cols).toContain('break_decay_multiplier');
-    expect(cols).toContain('break_penalty_period');
+    expect(cols).toContain('break_starts_after_seconds');
     expect(cols).not.toContain('points_per_hour');
     expect(cols).not.toContain('emoji');
   });
@@ -42,12 +42,12 @@ describe('001_initial migration', () => {
   it('stats has cumulative fields and no points', () => {
     const info = dbExport.prepare('PRAGMA table_info(stats)').all() as Array<{ name: string }>;
     const cols = info.map((r) => r.name);
-    expect(cols).toContain('total_wear');
+    expect(cols).toContain('total_wear_seconds');
     expect(cols).toContain('session_count');
-    expect(cols).toContain('max_wear');
-    expect(cols).toContain('streak_wear');
+    expect(cols).toContain('max_single_session_wear_seconds');
+    expect(cols).toContain('streak_wear_seconds');
     expect(cols).toContain('streak_count');
-    expect(cols).toContain('best_streak_wear');
+    expect(cols).toContain('best_streak_wear_seconds');
     expect(cols).toContain('best_streak_count');
     expect(cols).not.toContain('points');
   });

@@ -9,12 +9,12 @@ export interface Category {
   id: number;
   name: string;
   icon: string;
-  initial_wear: number;
+  initial_wear_duration_seconds: number;
   rest_multiplier: number;
-  rest_constant: number;
+  rest_constant_seconds: number;
   risk_levels: string | RiskLevel[];
   break_decay_multiplier: number;
-  break_penalty_period: number;
+  break_starts_after_seconds: number;
 }
 
 function parseRiskLevels(category: Category): RiskLevel[] {
@@ -24,11 +24,11 @@ function parseRiskLevels(category: Category): RiskLevel[] {
 }
 
 /**
- * rest = rest_multiplier * wearSeconds + rest_constant
+ * rest = rest_multiplier * wearSeconds + rest_constant_seconds
  * Adjusted by 1.5× if another item in the same category is currently injured.
  */
 export function calculateRest(wearSeconds: number, category: Category, injuryActive = false): number {
-  const base = Math.floor(category.rest_multiplier * wearSeconds + category.rest_constant);
+  const base = Math.floor(category.rest_multiplier * wearSeconds + category.rest_constant_seconds);
   return injuryActive ? Math.floor(base * 1.5) : base;
 }
 
@@ -48,10 +48,10 @@ export function getRiskLevel(wearSeconds: number, category: Category): RiskLevel
 
 /**
  * Calculate decay factor for break periods beyond the rest period.
- * decay = break_decay_multiplier ^ (breakHours / break_penalty_period)
+ * decay = break_decay_multiplier ^ (breakHours / break_starts_after_seconds)
  */
 export function calculateBreakDecay(breakHours: number, category: Category): number {
-  return category.break_decay_multiplier ** (breakHours / category.break_penalty_period);
+  return category.break_decay_multiplier ** (breakHours / category.break_starts_after_seconds);
 }
 
 /**

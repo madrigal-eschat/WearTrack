@@ -9,33 +9,33 @@ export default function runMigration() {
     );
 
     CREATE TABLE IF NOT EXISTS categories (
-      id                     INTEGER PRIMARY KEY AUTOINCREMENT,
-      name                   TEXT(100) NOT NULL,
-      icon                   TEXT NOT NULL,
-      initial_wear           INTEGER NOT NULL,
-      rest_multiplier        REAL NOT NULL,
-      rest_constant          REAL NOT NULL,
-      risk_levels            TEXT NOT NULL,
-      break_decay_multiplier REAL NOT NULL,
-      break_penalty_period   INTEGER NOT NULL
+      id                            INTEGER PRIMARY KEY AUTOINCREMENT,
+      name                          TEXT(100) NOT NULL,
+      icon                          TEXT NOT NULL,
+      initial_wear_duration_seconds INTEGER NOT NULL,
+      rest_multiplier               REAL NOT NULL,
+      rest_constant_seconds         REAL NOT NULL,
+      risk_levels                   TEXT NOT NULL,
+      break_decay_multiplier        REAL NOT NULL,
+      break_starts_after_seconds    INTEGER NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS items (
-      id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
-      name        TEXT(100) NOT NULL,
-      color       TEXT NOT NULL,
-      difficulty  REAL NOT NULL DEFAULT 1.0
+      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+      category_id         INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+      name                TEXT(100) NOT NULL,
+      color               TEXT NOT NULL,
+      difficulty_multiplier REAL NOT NULL DEFAULT 1.0
     );
 
     CREATE TABLE IF NOT EXISTS sessions (
-      id              INTEGER PRIMARY KEY AUTOINCREMENT,
-      item_id         INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
-      started_at      INTEGER NOT NULL,
-      ended_at        INTEGER,
-      calculated_wear INTEGER NOT NULL DEFAULT 0,
-      calculated_rest INTEGER,
-      injury          INTEGER NOT NULL DEFAULT 0
+      id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+      item_id                 INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+      started_at              INTEGER NOT NULL,
+      ended_at                INTEGER,
+      calculated_wear_seconds INTEGER NOT NULL DEFAULT 0,
+      calculated_rest_seconds INTEGER,
+      ended_in_injury         INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS injuries (
@@ -47,14 +47,14 @@ export default function runMigration() {
     );
 
     CREATE TABLE IF NOT EXISTS stats (
-      item_id           INTEGER PRIMARY KEY REFERENCES items(id) ON DELETE CASCADE,
-      total_wear        INTEGER NOT NULL DEFAULT 0,
-      session_count     INTEGER NOT NULL DEFAULT 0,
-      max_wear          INTEGER NOT NULL DEFAULT 0,
-      streak_wear       INTEGER NOT NULL DEFAULT 0,
-      streak_count      INTEGER NOT NULL DEFAULT 0,
-      best_streak_wear  INTEGER NOT NULL DEFAULT 0,
-      best_streak_count INTEGER NOT NULL DEFAULT 0
+      item_id                         INTEGER PRIMARY KEY REFERENCES items(id) ON DELETE CASCADE,
+      total_wear_seconds              INTEGER NOT NULL DEFAULT 0,
+      session_count                   INTEGER NOT NULL DEFAULT 0,
+      max_single_session_wear_seconds INTEGER NOT NULL DEFAULT 0,
+      streak_wear_seconds             INTEGER NOT NULL DEFAULT 0,
+      streak_count                    INTEGER NOT NULL DEFAULT 0,
+      best_streak_wear_seconds        INTEGER NOT NULL DEFAULT 0,
+      best_streak_count               INTEGER NOT NULL DEFAULT 0
     );
   `);
 }

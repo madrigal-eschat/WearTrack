@@ -11,20 +11,20 @@ const mockCategory: Category = {
   id: 1,
   name: 'Test',
   icon: 'figure.walk',
-  initial_wear: 900,
+  initial_wear_duration_seconds: 900,
   rest_multiplier: 6,
-  rest_constant: 86400,
+  rest_constant_seconds: 86400,
   risk_levels: JSON.stringify([
     { lower: null, upper: 14400, text: 'safe', severity: 1 },
     { lower: 14400, upper: 28800, text: 'moderate', severity: 2 },
     { lower: 28800, upper: null, text: 'high', severity: 3 },
   ]),
   break_decay_multiplier: 0.75,
-  break_penalty_period: 168, // 1 week in hours
+  break_starts_after_seconds: 168, // 1 week in hours
 };
 
 describe('calculateRest', () => {
-  it('returns rest_multiplier * wear + rest_constant', () => {
+  it('returns rest_multiplier * wear + rest_constant_seconds', () => {
     // 1 hour wear: 6 * 3600 + 86400 = 108000
     expect(calculateRest(3600, mockCategory)).toBe(108000);
   });
@@ -59,7 +59,7 @@ describe('calculateBreakDecay', () => {
     expect(calculateBreakDecay(0, mockCategory)).toBe(1);
   });
 
-  it('returns break_decay_multiplier after one full penalty period', () => {
+  it('returns break_decay_multiplier after one full break_starts_after_seconds period', () => {
     expect(calculateBreakDecay(168, mockCategory)).toBeCloseTo(0.75);
   });
 });
