@@ -7,7 +7,7 @@ interface ItemRow {
   category_id: number;
   name: string;
   color: string;
-  difficulty: number;
+  difficulty_multiplier: number;
 }
 
 export const controller = new Hono();
@@ -32,7 +32,7 @@ controller.get('/:id', (c) => {
 // POST /api/items
 controller.post('/', async (c) => {
   const body = await c.req.json();
-  const { name, category_id, color, difficulty } = body;
+  const { name, category_id, color, difficulty_multiplier } = body;
 
   if (!name || typeof name !== 'string') throw new ValidationError('name is required');
   if (typeof category_id !== 'number') throw new ValidationError('category_id must be a number');
@@ -42,10 +42,10 @@ controller.post('/', async (c) => {
   const category = prepare('SELECT id FROM categories WHERE id = ?').get(category_id);
   if (!category) throw new ValidationError(`Category ${category_id} does not exist`);
 
-  const resolvedDifficulty = typeof difficulty === 'number' ? difficulty : 1.0;
+  const resolvedDifficulty = typeof difficulty_multiplier === 'number' ? difficulty_multiplier : 1.0;
 
   const result = prepare(
-    'INSERT INTO items (name, category_id, color, difficulty) VALUES (?, ?, ?, ?)',
+    'INSERT INTO items (name, category_id, color, difficulty_multiplier) VALUES (?, ?, ?, ?)',
   ).run(name, category_id, color, resolvedDifficulty);
 
   const row = prepare('SELECT * FROM items WHERE id = ?').get(result.lastInsertRowid) as ItemRow;
@@ -81,9 +81,9 @@ controller.patch('/:id', async (c) => {
     if (typeof body.color !== 'string') throw new ValidationError('color must be a string');
     updates.color = body.color;
   }
-  if ('difficulty' in body) {
-    if (typeof body.difficulty !== 'number') throw new ValidationError('difficulty must be a number');
-    updates.difficulty = body.difficulty;
+  if ('difficulty_multiplier' in body) {
+    if (typeof body.difficulty_multiplier !== 'number') throw new ValidationError('difficulty_multiplier must be a number');
+    updates.difficulty_multiplier = body.difficulty_multiplier;
   }
 
   if (Object.keys(updates).length === 0) {

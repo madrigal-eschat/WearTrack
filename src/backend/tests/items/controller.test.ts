@@ -8,16 +8,16 @@ const CATEGORIES_BASE = '/api/categories';
 const sampleCategory = {
   name: 'Footwear',
   icon: 'figure.walk',
-  initial_wear: 900,
+  initial_wear_duration_seconds: 900,
   rest_multiplier: 6,
-  rest_constant: 86400,
+  rest_constant_seconds: 86400,
   risk_levels: [
     { lower: null, upper: 14400, text: 'safe', severity: 1 },
     { lower: 14400, upper: 28800, text: 'moderate', severity: 2 },
     { lower: 28800, upper: null, text: 'high', severity: 3 },
   ],
   break_decay_multiplier: 0.75,
-  break_penalty_period: 168,
+  break_starts_after_seconds: 168,
 };
 
 let categoryId: number;
@@ -50,7 +50,7 @@ describe('POST /api/items', () => {
     expect(body.name).toBe('Running Shoe');
     expect(body.category_id).toBe(categoryId);
     expect(body.color).toBe('#ff0000');
-    expect(body.difficulty).toBe(1.0);
+    expect(body.difficulty_multiplier).toBe(1.0);
   });
 
   it('returns 400 when name is missing', async () => {
