@@ -7,12 +7,12 @@ interface CategoryRow {
   id: number;
   name: string;
   icon: string;
-  initial_wear: number;
+  initial_wear_duration_seconds: number;
   rest_multiplier: number;
-  rest_constant: number;
+  rest_constant_seconds: number;
   risk_levels: string;
   break_decay_multiplier: number;
-  break_penalty_period: number;
+  break_starts_after_seconds: number;
 }
 
 function serializeCategory(row: CategoryRow) {
@@ -57,27 +57,27 @@ controller.post('/', async (c) => {
   const {
     name,
     icon,
-    initial_wear,
+    initial_wear_duration_seconds,
     rest_multiplier,
-    rest_constant,
+    rest_constant_seconds,
     risk_levels,
     break_decay_multiplier,
-    break_penalty_period,
+    break_starts_after_seconds,
   } = body;
 
   if (!name || typeof name !== 'string') throw new ValidationError('name is required');
   if (!icon || typeof icon !== 'string') throw new ValidationError('icon is required');
-  if (typeof initial_wear !== 'number') throw new ValidationError('initial_wear must be a number');
+  if (typeof initial_wear_duration_seconds !== 'number') throw new ValidationError('initial_wear_duration_seconds must be a number');
   if (typeof rest_multiplier !== 'number') throw new ValidationError('rest_multiplier must be a number');
-  if (typeof rest_constant !== 'number') throw new ValidationError('rest_constant must be a number');
+  if (typeof rest_constant_seconds !== 'number') throw new ValidationError('rest_constant_seconds must be a number');
   if (!validateRiskLevels(risk_levels)) throw new ValidationError('risk_levels must be an array of valid risk level objects');
   if (typeof break_decay_multiplier !== 'number') throw new ValidationError('break_decay_multiplier must be a number');
-  if (typeof break_penalty_period !== 'number') throw new ValidationError('break_penalty_period must be a number');
+  if (typeof break_starts_after_seconds !== 'number') throw new ValidationError('break_starts_after_seconds must be a number');
 
   const result = prepare(
-    `INSERT INTO categories (name, icon, initial_wear, rest_multiplier, rest_constant, risk_levels, break_decay_multiplier, break_penalty_period)
+    `INSERT INTO categories (name, icon, initial_wear_duration_seconds, rest_multiplier, rest_constant_seconds, risk_levels, break_decay_multiplier, break_starts_after_seconds)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).run(name, icon, initial_wear, rest_multiplier, rest_constant, JSON.stringify(risk_levels), break_decay_multiplier, break_penalty_period);
+  ).run(name, icon, initial_wear_duration_seconds, rest_multiplier, rest_constant_seconds, JSON.stringify(risk_levels), break_decay_multiplier, break_starts_after_seconds);
 
   const row = prepare('SELECT * FROM categories WHERE id = ?').get(result.lastInsertRowid) as CategoryRow;
   return c.json(serializeCategory(row), 201);
@@ -100,17 +100,17 @@ controller.patch('/:id', async (c) => {
     if (typeof body.icon !== 'string') throw new ValidationError('icon must be a string');
     updates.icon = body.icon;
   }
-  if ('initial_wear' in body) {
-    if (typeof body.initial_wear !== 'number') throw new ValidationError('initial_wear must be a number');
-    updates.initial_wear = body.initial_wear;
+  if ('initial_wear_duration_seconds' in body) {
+    if (typeof body.initial_wear_duration_seconds !== 'number') throw new ValidationError('initial_wear_duration_seconds must be a number');
+    updates.initial_wear_duration_seconds = body.initial_wear_duration_seconds;
   }
   if ('rest_multiplier' in body) {
     if (typeof body.rest_multiplier !== 'number') throw new ValidationError('rest_multiplier must be a number');
     updates.rest_multiplier = body.rest_multiplier;
   }
-  if ('rest_constant' in body) {
-    if (typeof body.rest_constant !== 'number') throw new ValidationError('rest_constant must be a number');
-    updates.rest_constant = body.rest_constant;
+  if ('rest_constant_seconds' in body) {
+    if (typeof body.rest_constant_seconds !== 'number') throw new ValidationError('rest_constant_seconds must be a number');
+    updates.rest_constant_seconds = body.rest_constant_seconds;
   }
   if ('risk_levels' in body) {
     if (!validateRiskLevels(body.risk_levels)) throw new ValidationError('risk_levels must be an array of valid risk level objects');
@@ -120,9 +120,9 @@ controller.patch('/:id', async (c) => {
     if (typeof body.break_decay_multiplier !== 'number') throw new ValidationError('break_decay_multiplier must be a number');
     updates.break_decay_multiplier = body.break_decay_multiplier;
   }
-  if ('break_penalty_period' in body) {
-    if (typeof body.break_penalty_period !== 'number') throw new ValidationError('break_penalty_period must be a number');
-    updates.break_penalty_period = body.break_penalty_period;
+  if ('break_starts_after_seconds' in body) {
+    if (typeof body.break_starts_after_seconds !== 'number') throw new ValidationError('break_starts_after_seconds must be a number');
+    updates.break_starts_after_seconds = body.break_starts_after_seconds;
   }
 
   if (Object.keys(updates).length === 0) {
