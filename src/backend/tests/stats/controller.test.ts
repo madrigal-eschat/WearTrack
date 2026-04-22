@@ -10,16 +10,16 @@ const CATEGORIES = '/api/categories';
 const sampleCategory = {
   name: 'Footwear',
   icon: 'figure.walk',
-  initial_wear: 900,
+  initial_wear_duration_seconds: 900,
   rest_multiplier: 6,
-  rest_constant: 86400,
+  rest_constant_seconds: 86400,
   risk_levels: [
     { lower: null, upper: 14400, text: 'safe', severity: 1 },
     { lower: 14400, upper: 28800, text: 'moderate', severity: 2 },
     { lower: 28800, upper: null, text: 'high', severity: 3 },
   ],
   break_decay_multiplier: 0.75,
-  break_penalty_period: 168,
+  break_starts_after_seconds: 168,
 };
 
 let itemId: number;
@@ -56,10 +56,10 @@ describe('GET /api/stats/:item_id', () => {
     const body = await res.json();
     expect(body.item_id).toBe(itemId);
     expect(body.session_count).toBeGreaterThan(0);
-    expect(body.total_wear).toBeGreaterThan(0);
-    expect(body.max_wear).toBeGreaterThan(0);
-    expect(typeof body.streak_wear).toBe('number');
-    expect(typeof body.best_streak_wear).toBe('number');
+    expect(body.total_wear_seconds).toBeGreaterThan(0);
+    expect(body.max_single_session_wear_seconds).toBeGreaterThan(0);
+    expect(typeof body.streak_wear_seconds).toBe('number');
+    expect(typeof body.best_streak_wear_seconds).toBe('number');
   });
 
   it('returns 404 for unknown item', async () => {
@@ -76,7 +76,7 @@ describe('GET /api/stats/:item_id/history', () => {
     expect(Array.isArray(body)).toBe(true);
     if (body.length > 0) {
       expect(body[0].period).toMatch(/^\d{4}-\d{2}$/);
-      expect(typeof body[0].total_wear).toBe('number');
+      expect(typeof body[0].total_wear_seconds).toBe('number');
       expect(typeof body[0].session_count).toBe('number');
     }
   });

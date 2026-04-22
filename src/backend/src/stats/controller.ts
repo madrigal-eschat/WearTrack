@@ -9,27 +9,27 @@ function leaderboardQuery(type: LeaderboardType): string {
   switch (type) {
     case 'longest-wear':
       return `SELECT s.item_id, i.name as item_name, c.name as category_name,
-                s.max_wear as score
+                s.max_single_session_wear_seconds as score
               FROM stats s
               JOIN items i ON i.id = s.item_id
               JOIN categories c ON c.id = i.category_id
-              ORDER BY s.max_wear DESC
+              ORDER BY s.max_single_session_wear_seconds DESC
               LIMIT 20`;
     case 'most-total-wear':
       return `SELECT s.item_id, i.name as item_name, c.name as category_name,
-                s.total_wear as score
+                s.total_wear_seconds as score
               FROM stats s
               JOIN items i ON i.id = s.item_id
               JOIN categories c ON c.id = i.category_id
-              ORDER BY s.total_wear DESC
+              ORDER BY s.total_wear_seconds DESC
               LIMIT 20`;
     case 'best-streak':
       return `SELECT s.item_id, i.name as item_name, c.name as category_name,
-                s.best_streak_wear as score, s.best_streak_count as streak_sessions
+                s.best_streak_wear_seconds as score, s.best_streak_count as streak_sessions
               FROM stats s
               JOIN items i ON i.id = s.item_id
               JOIN categories c ON c.id = i.category_id
-              ORDER BY s.best_streak_wear DESC
+              ORDER BY s.best_streak_wear_seconds DESC
               LIMIT 20`;
     case 'most-sessions':
       return `SELECT s.item_id, i.name as item_name, c.name as category_name,
@@ -61,8 +61,16 @@ controller.get('/:item_id', (c) => {
   if (!item) throw new NotFoundError(`Item ${itemId} not found`);
 
   const stats = prepare('SELECT * FROM stats WHERE item_id = ?').get(itemId);
-  return c.json(stats ?? { item_id: itemId, total_wear: 0, session_count: 0, max_wear: 0,
-    streak_wear: 0, streak_count: 0, best_streak_wear: 0, best_streak_count: 0 });
+  return c.json(stats ?? {
+    item_id: itemId,
+    total_wear_seconds: 0,
+    session_count: 0,
+    max_single_session_wear_seconds: 0,
+    streak_wear_seconds: 0,
+    streak_count: 0,
+    best_streak_wear_seconds: 0,
+    best_streak_count: 0,
+  });
 });
 
 // GET /api/stats/:item_id/history?unit=month|week — time-series aggregated from sessions
@@ -81,7 +89,7 @@ controller.get('/:item_id/history', (c) => {
 
   const rows = prepare(`
     SELECT strftime('${format}', datetime(ended_at, 'unixepoch')) as period,
-           SUM(calculated_wear) as total_wear,
+           SUM(calculated_wear_seconds) as total_wear_seconds,
            COUNT(*) as session_count
     FROM sessions
     WHERE item_id = ? AND ended_at IS NOT NULL
@@ -91,4 +99,3 @@ controller.get('/:item_id/history', (c) => {
 
   return c.json(rows);
 });
-
