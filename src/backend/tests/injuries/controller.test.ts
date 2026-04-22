@@ -61,7 +61,7 @@ describe('POST /api/injuries', () => {
     expect(body.id).toBeDefined();
     expect(body.item_id).toBe(itemId);
     expect(body.occurred_at).toBeTypeOf('number');
-    expect(body.heals_at).toBeNull();
+    expect(body.healed_at).toBeNull();
     expect(body.severity).toBe(2); // 5h is in moderate band
 
     await healInjury(body.id);
@@ -111,12 +111,12 @@ describe('POST /api/injuries', () => {
 });
 
 describe('POST /api/injuries/:id/heal', () => {
-  it('heals an injury and sets heals_at', async () => {
+  it('heals an injury and sets healed_at', async () => {
     const injury = await (await createInjury({ wear_seconds: 5000 })).json();
     const res = await healInjury(injury.id);
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.heals_at).toBeTypeOf('number');
+    expect(body.healed_at).toBeTypeOf('number');
   });
 
   it('returns 400 when already healed', async () => {

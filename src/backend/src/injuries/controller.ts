@@ -8,7 +8,7 @@ interface InjuryRow {
   id: number;
   item_id: number;
   occurred_at: number;
-  heals_at: number | null;
+  healed_at: number | null;
   severity: number;
 }
 
@@ -90,7 +90,7 @@ controller.post('/:id/heal', (c) => {
   const id = Number(c.req.param('id'));
   const injury = prepare('SELECT * FROM injuries WHERE id = ?').get(id) as InjuryRow | undefined;
   if (!injury) throw new NotFoundError(`Injury ${id} not found`);
-  if (injury.heals_at !== null) throw new ValidationError(`Injury ${id} is already healed`);
+  if (injury.healed_at !== null) throw new ValidationError(`Injury ${id} is already healed`);
 
   healInjury(injury.item_id);
 
