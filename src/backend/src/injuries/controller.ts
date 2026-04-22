@@ -62,9 +62,9 @@ controller.post('/', async (c) => {
     wearSeconds = wear_seconds;
   } else {
     const lastSession = prepare(
-      'SELECT calculated_wear FROM sessions WHERE item_id = ? AND ended_at IS NOT NULL ORDER BY ended_at DESC LIMIT 1',
-    ).get(item_id) as { calculated_wear: number } | undefined;
-    wearSeconds = lastSession?.calculated_wear ?? 0;
+      'SELECT calculated_wear_seconds FROM sessions WHERE item_id = ? AND ended_at IS NOT NULL ORDER BY ended_at DESC LIMIT 1',
+    ).get(item_id) as { calculated_wear_seconds: number } | undefined;
+    wearSeconds = lastSession?.calculated_wear_seconds ?? 0;
   }
 
   const category = getCategory(item.category_id);
@@ -79,7 +79,7 @@ controller.post('/', async (c) => {
   ).get(item_id) as { id: number } | undefined;
   if (openSession) {
     const now = Math.floor(Date.now() / 1000);
-    prepare('UPDATE sessions SET ended_at = ?, injury = 1 WHERE id = ?').run(now, openSession.id);
+    prepare('UPDATE sessions SET ended_at = ?, ended_in_injury = 1 WHERE id = ?').run(now, openSession.id);
   }
 
   return c.json(injury, 201);
