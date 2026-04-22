@@ -9,23 +9,23 @@ interface SessionRow {
   item_id: number;
   started_at: number;
   ended_at: number | null;
-  calculated_wear: number;
-  calculated_rest: number | null;
-  injury: number;
+  calculated_wear_seconds: number;
+  calculated_rest_seconds: number | null;
+  ended_in_injury: number;
 }
 
 interface StatsRow {
   item_id: number;
-  total_wear: number;
+  total_wear_seconds: number;
   session_count: number;
-  max_wear: number;
-  streak_wear: number;
+  max_single_session_wear_seconds: number;
+  streak_wear_seconds: number;
   streak_count: number;
-  best_streak_wear: number;
+  best_streak_wear_seconds: number;
   best_streak_count: number;
 }
 
-const GRACE_SECONDS = 24 * 3600; // 24-hour grace on top of calculated_rest
+const GRACE_SECONDS = 24 * 3600; // 24-hour grace on top of calculated_rest_seconds
 
 function nowSeconds(): number {
   return Math.floor(Date.now() / 1000);
@@ -51,37 +51,37 @@ function getStats(itemId: number): StatsRow {
 
 /**
  * Work out how much wear credit carries over from a previous session.
- * If the break was within calculated_rest + grace, no decay applies.
+ * If the break was within calculated_rest_seconds + grace, no decay applies.
  * If longer, apply exponential decay.
  */
 function resolveInitialWear(itemId: number, category: Category): number {
   const last = getLastEndedSession(itemId);
-  if (!last || last.calculated_rest === null) {
-    // No prior session — start from category initial_wear
-    return category.initial_wear;
+  if (!last || last.calculated_rest_seconds === null) {
+    // No prior session — start from category initial_wear_duration_seconds
+    return category.initial_wear_duration_seconds;
   }
 
   const now = nowSeconds();
   const breakSeconds = now - last.ended_at!;
-  const graceWindow = last.calculated_rest + GRACE_SECONDS;
+  const graceWindow = last.calculated_rest_seconds + GRACE_SECONDS;
 
   if (breakSeconds <= graceWindow) {
     // Within grace — carry previous wear forward unchanged
-    return last.calculated_wear;
+    return last.calculated_wear_seconds;
   }
 
   // Beyond grace — apply decay based on hours over the grace window
-  const breakHoursOverGrace = (breakSeconds - last.calculated_rest) / 3600;
-  return calculatePostBreakWear(last.calculated_wear, breakHoursOverGrace, category);
+  const breakHoursOverGrace = (breakSeconds - last.calculated_rest_seconds) / 3600;
+  return calculatePostBreakWear(last.calculated_wear_seconds, breakHoursOverGrace, category);
 }
 
 /**
  * Update cumulative stats after ending a session.
- * Streak: reset if the break exceeded calculated_rest + grace on the PREVIOUS session.
+ * Streak: reset if the break exceeded calculated_rest_seconds + grace on the PREVIOUS session.
  */
 function updateStats(itemId: number, session: SessionRow) {
   const stats = getStats(itemId);
-  const duration = session.calculated_wear;
+  const duration = session.calculated_wear_seconds;
 
   // Did the streak survive into this session?
   // (The streak was already counted as broken if this session started with decayed wear)
@@ -89,12 +89,12 @@ function updateStats(itemId: number, session: SessionRow) {
     'SELECT * FROM sessions WHERE item_id = ? AND ended_at IS NOT NULL AND id != ? ORDER BY ended_at DESC LIMIT 1',
   ).get(itemId, session.id) as SessionRow | undefined;
 
-  let streakWear = stats.streak_wear + duration;
+  let streakWear = stats.streak_wear_seconds + duration;
   let streakCount = stats.streak_count + 1;
 
-  if (last && last.calculated_rest !== null) {
+  if (last && last.calculated_rest_seconds !== null) {
     const breakSeconds = session.started_at - last.ended_at!;
-    const graceWindow = last.calculated_rest + GRACE_SECONDS;
+    const graceWindow = last.calculated_rest_seconds + GRACE_SECONDS;
     if (breakSeconds > graceWindow) {
       // Streak broken — reset to just this session
       streakWear = duration;
@@ -102,17 +102,17 @@ function updateStats(itemId: number, session: SessionRow) {
     }
   }
 
-  const newMaxWear = Math.max(stats.max_wear, duration);
-  const newBestStreakWear = Math.max(stats.best_streak_wear, streakWear);
-  const newBestStreakCount = streakWear > stats.best_streak_wear ? streakCount : stats.best_streak_count;
+  const newMaxWear = Math.max(stats.max_single_session_wear_seconds, duration);
+  const newBestStreakWear = Math.max(stats.best_streak_wear_seconds, streakWear);
+  const newBestStreakCount = streakWear > stats.best_streak_wear_seconds ? streakCount : stats.best_streak_count;
 
   prepare(`UPDATE stats SET
-    total_wear = total_wear + ?,
+    total_wear_seconds = total_wear_seconds + ?,
     session_count = session_count + 1,
-    max_wear = ?,
-    streak_wear = ?,
+    max_single_session_wear_seconds = ?,
+    streak_wear_seconds = ?,
     streak_count = ?,
-    best_streak_wear = ?,
+    best_streak_wear_seconds = ?,
     best_streak_count = ?
     WHERE item_id = ?`).run(
     duration,
@@ -163,7 +163,7 @@ controller.post('/start', async (c) => {
   const now = nowSeconds();
 
   const result = prepare(
-    'INSERT INTO sessions (item_id, started_at, calculated_wear) VALUES (?, ?, ?)',
+    'INSERT INTO sessions (item_id, started_at, calculated_wear_seconds) VALUES (?, ?, ?)',
   ).run(item_id, now, initialWear);
 
   const row = prepare('SELECT * FROM sessions WHERE id = ?').get(result.lastInsertRowid) as SessionRow;
@@ -183,15 +183,15 @@ controller.post('/:id/end', (c) => {
   const category = getCategory(item.category_id);
   const now = nowSeconds();
   const elapsed = now - session.started_at;
-  const finalWear = session.calculated_wear + elapsed;
+  const finalWear = session.calculated_wear_seconds + elapsed;
 
   const injuryActive = hasActiveInjury(session.item_id);
   const calculatedRest = calculateRest(finalWear, category, injuryActive);
 
   prepare(`UPDATE sessions SET
     ended_at = ?,
-    calculated_wear = ?,
-    calculated_rest = ?
+    calculated_wear_seconds = ?,
+    calculated_rest_seconds = ?
     WHERE id = ?`).run(now, finalWear, calculatedRest, id);
 
   const updated = prepare('SELECT * FROM sessions WHERE id = ?').get(id) as SessionRow;

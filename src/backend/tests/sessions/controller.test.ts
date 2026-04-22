@@ -10,16 +10,16 @@ const CATEGORIES = '/api/categories';
 const sampleCategory = {
   name: 'Footwear',
   icon: 'figure.walk',
-  initial_wear: 900,
+  initial_wear_duration_seconds: 900,
   rest_multiplier: 6,
-  rest_constant: 86400,
+  rest_constant_seconds: 86400,
   risk_levels: [
     { lower: null, upper: 14400, text: 'safe', severity: 1 },
     { lower: 14400, upper: 28800, text: 'moderate', severity: 2 },
     { lower: 28800, upper: null, text: 'high', severity: 3 },
   ],
   break_decay_multiplier: 0.75,
-  break_penalty_period: 168,
+  break_starts_after_seconds: 168,
 };
 
 let categoryId: number;
@@ -63,7 +63,7 @@ describe('POST /api/sessions/start', () => {
     expect(body.item_id).toBe(itemId);
     expect(body.started_at).toBeTypeOf('number');
     expect(body.ended_at).toBeNull();
-    expect(body.calculated_wear).toBeTypeOf('number');
+    expect(body.calculated_wear_seconds).toBeTypeOf('number');
 
     // Clean up: end the session
     await endSession(body.id);
@@ -92,15 +92,15 @@ describe('POST /api/sessions/start', () => {
 });
 
 describe('POST /api/sessions/:id/end', () => {
-  it('ends a session and sets calculated_wear and calculated_rest', async () => {
+  it('ends a session and sets calculated_wear_seconds and calculated_rest_seconds', async () => {
     const started = await (await startSession()).json();
     const res = await endSession(started.id);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ended_at).toBeTypeOf('number');
-    expect(body.calculated_wear).toBeGreaterThanOrEqual(started.calculated_wear);
-    expect(body.calculated_rest).toBeTypeOf('number');
-    expect(body.calculated_rest).toBeGreaterThan(0);
+    expect(body.calculated_wear_seconds).toBeGreaterThanOrEqual(started.calculated_wear_seconds);
+    expect(body.calculated_rest_seconds).toBeTypeOf('number');
+    expect(body.calculated_rest_seconds).toBeGreaterThan(0);
   });
 
   it('returns 400 when session is already ended', async () => {
@@ -152,18 +152,18 @@ describe('GET /api/sessions/:id', () => {
 });
 
 describe('Stats updates after session end', () => {
-  it('increments session_count and total_wear', async () => {
+  it('increments session_count and total_wear_seconds', async () => {
     const statsBefore = prepare('SELECT * FROM stats WHERE item_id = ?').get(itemId) as {
       session_count: number;
-      total_wear: number;
+      total_wear_seconds: number;
     };
     const s = await (await startSession()).json();
     await endSession(s.id);
     const statsAfter = prepare('SELECT * FROM stats WHERE item_id = ?').get(itemId) as {
       session_count: number;
-      total_wear: number;
+      total_wear_seconds: number;
     };
     expect(statsAfter.session_count).toBe(statsBefore.session_count + 1);
-    expect(statsAfter.total_wear).toBeGreaterThan(statsBefore.total_wear);
+    expect(statsAfter.total_wear_seconds).toBeGreaterThan(statsBefore.total_wear_seconds);
   });
 });
