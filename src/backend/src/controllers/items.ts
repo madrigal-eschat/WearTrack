@@ -4,16 +4,16 @@ import { categoryStore } from '../db/stores/category-store.js';
 import { statsStore } from '../db/stores/stats-store.js';
 import { NotFoundError, ValidationError } from '../middleware/errors.js';
 
-export const controller = new Hono();
+export const router = new Hono();
 
 // GET /api/items
-controller.get('/', (c) => {
+router.get('/', (c) => {
   const categoryId = c.req.query('category_id');
   return c.json(itemStore.findAll(categoryId !== undefined ? Number(categoryId) : undefined));
 });
 
 // GET /api/items/:id/stats/history — must be before /:id/stats and /:id to avoid shadowing
-controller.get('/:id/stats/history', (c) => {
+router.get('/:id/stats/history', (c) => {
   const id = Number(c.req.param('id'));
   if (!itemStore.find(id)) throw new NotFoundError(`Item ${id} not found`);
 
@@ -26,7 +26,7 @@ controller.get('/:id/stats/history', (c) => {
 });
 
 // GET /api/items/:id/stats — must be before /:id to avoid shadowing
-controller.get('/:id/stats', (c) => {
+router.get('/:id/stats', (c) => {
   const id = Number(c.req.param('id'));
   if (!itemStore.find(id)) throw new NotFoundError(`Item ${id} not found`);
 
@@ -42,7 +42,7 @@ controller.get('/:id/stats', (c) => {
 });
 
 // GET /api/items/:id
-controller.get('/:id', (c) => {
+router.get('/:id', (c) => {
   const id = Number(c.req.param('id'));
   const item = itemStore.find(id);
   if (!item) throw new NotFoundError(`Item ${id} not found`);
@@ -50,7 +50,7 @@ controller.get('/:id', (c) => {
 });
 
 // POST /api/items
-controller.post('/', async (c) => {
+router.post('/', async (c) => {
   const body = await c.req.json();
   const { name, category_id, color, difficulty_multiplier } = body;
 
@@ -74,7 +74,7 @@ controller.post('/', async (c) => {
 });
 
 // PATCH /api/items/:id
-controller.patch('/:id', async (c) => {
+router.patch('/:id', async (c) => {
   const id = Number(c.req.param('id'));
   const existing = itemStore.find(id);
   if (!existing) throw new NotFoundError(`Item ${id} not found`);
@@ -110,7 +110,7 @@ controller.patch('/:id', async (c) => {
 });
 
 // DELETE /api/items/:id
-controller.delete('/:id', (c) => {
+router.delete('/:id', (c) => {
   const id = Number(c.req.param('id'));
   const existing = itemStore.find(id);
   if (!existing) throw new NotFoundError(`Item ${id} not found`);

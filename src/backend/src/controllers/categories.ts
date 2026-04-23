@@ -17,15 +17,15 @@ function validateRiskLevels(levels: unknown): levels is RiskLevel[] {
   );
 }
 
-export const controller = new Hono();
+export const router = new Hono();
 
 // GET /api/categories
-controller.get('/', (c) => {
+router.get('/', (c) => {
   return c.json(categoryStore.findAll());
 });
 
 // GET /api/categories/:id/stats — must be before /:id to avoid shadowing
-controller.get('/:id/stats', (c) => {
+router.get('/:id/stats', (c) => {
   const id = Number(c.req.param('id'));
   if (!categoryStore.find(id)) throw new NotFoundError(`Category ${id} not found`);
 
@@ -46,7 +46,7 @@ controller.get('/:id/stats', (c) => {
 });
 
 // GET /api/categories/:id
-controller.get('/:id', (c) => {
+router.get('/:id', (c) => {
   const id = Number(c.req.param('id'));
   const category = categoryStore.find(id);
   if (!category) throw new NotFoundError(`Category ${id} not found`);
@@ -54,7 +54,7 @@ controller.get('/:id', (c) => {
 });
 
 // POST /api/categories
-controller.post('/', async (c) => {
+router.post('/', async (c) => {
   const body = await c.req.json();
   const {
     name,
@@ -92,7 +92,7 @@ controller.post('/', async (c) => {
 });
 
 // PATCH /api/categories/:id
-controller.patch('/:id', async (c) => {
+router.patch('/:id', async (c) => {
   const id = Number(c.req.param('id'));
   const existing = categoryStore.find(id);
   if (!existing) throw new NotFoundError(`Category ${id} not found`);
@@ -141,7 +141,7 @@ controller.patch('/:id', async (c) => {
 });
 
 // DELETE /api/categories/:id
-controller.delete('/:id', (c) => {
+router.delete('/:id', (c) => {
   const id = Number(c.req.param('id'));
   const existing = categoryStore.find(id);
   if (!existing) throw new NotFoundError(`Category ${id} not found`);

@@ -10,16 +10,16 @@ function nowSeconds(): number {
   return Math.floor(Date.now() / 1000);
 }
 
-export const controller = new Hono();
+export const router = new Hono();
 
 // GET /api/injuries?item_id=
-controller.get('/', (c) => {
+router.get('/', (c) => {
   const itemId = c.req.query('item_id');
   return c.json(injuryStore.findAll(itemId !== undefined ? Number(itemId) : undefined));
 });
 
 // GET /api/injuries/:id
-controller.get('/:id', (c) => {
+router.get('/:id', (c) => {
   const id = Number(c.req.param('id'));
   const injury = injuryStore.find(id);
   if (!injury) throw new NotFoundError(`Injury ${id} not found`);
@@ -30,7 +30,7 @@ controller.get('/:id', (c) => {
 // Severity is derived from the item's current wear and category risk levels.
 // The request may optionally supply a wear_seconds override (e.g. from a just-ended session);
 // if omitted we use the latest session's calculated_wear.
-controller.post('/', async (c) => {
+router.post('/', async (c) => {
   const body = await c.req.json();
   const { item_id, wear_seconds } = body;
 
@@ -63,7 +63,7 @@ controller.post('/', async (c) => {
 });
 
 // POST /api/injuries/:id/heal — mark an injury as healed
-controller.post('/:id/heal', (c) => {
+router.post('/:id/heal', (c) => {
   const id = Number(c.req.param('id'));
   const injury = injuryStore.find(id);
   if (!injury) throw new NotFoundError(`Injury ${id} not found`);

@@ -8,16 +8,16 @@ function nowSeconds(): number {
   return Math.floor(Date.now() / 1000);
 }
 
-export const controller = new Hono();
+export const router = new Hono();
 
 // GET /api/sessions?item_id=
-controller.get('/', (c) => {
+router.get('/', (c) => {
   const itemId = c.req.query('item_id');
   return c.json(sessionStore.findAll(itemId !== undefined ? Number(itemId) : undefined));
 });
 
 // GET /api/sessions/current — one entry per category with active session or nulls
-controller.get('/current', (c) => {
+router.get('/current', (c) => {
   const categories = categoryStore.findAll();
   const openSessions = sessionStore.findOpenWithItemData();
 
@@ -51,7 +51,7 @@ controller.get('/current', (c) => {
 });
 
 // GET /api/sessions/:id
-controller.get('/:id', (c) => {
+router.get('/:id', (c) => {
   const id = Number(c.req.param('id'));
   const session = sessionStore.find(id);
   if (!session) throw new NotFoundError(`Session ${id} not found`);
@@ -59,7 +59,7 @@ controller.get('/:id', (c) => {
 });
 
 // POST /api/sessions/start — begin a new session for an item
-controller.post('/start', async (c) => {
+router.post('/start', async (c) => {
   const body = await c.req.json();
   const { item_id, started_at } = body;
 
@@ -86,7 +86,7 @@ controller.post('/start', async (c) => {
 });
 
 // POST /api/sessions/:id/end — finish a session and compute wear/rest
-controller.post('/:id/end', async (c) => {
+router.post('/:id/end', async (c) => {
   const id = Number(c.req.param('id'));
   const session = sessionStore.find(id);
   if (!session) throw new NotFoundError(`Session ${id} not found`);
