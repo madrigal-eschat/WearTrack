@@ -18,7 +18,7 @@
           @click="router.push('/items')"
         >
           <template #icon>
-            <squares-2x2-icon class="w-6 h-6" />
+            <ItemsIcon class="w-6 h-6" />
           </template>
         </k-tabbar-link>
         <k-tabbar-link
@@ -38,7 +38,7 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router';
 import { kApp, kToolbar, kTabbar, kTabbarLink } from 'konsta/vue';
-import { HomeIcon, Squares2X2Icon, ChartBarIcon } from '@heroicons/vue/24/solid';
+import { HomeIcon, Squares2X2Icon as ItemsIcon, ChartBarIcon } from '@heroicons/vue/24/solid';
 
 const route = useRoute();
 const router = useRouter();

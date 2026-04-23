@@ -3,6 +3,9 @@ import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { logging } from './middleware/logging.js';
 import { errorHandler } from './middleware/errors.js';
+import { runMigrations } from './db/migrations/index.js';
+
+runMigrations();
 import { router as categoriesRouter } from './controllers/categories.js';
 import { router as itemsRouter } from './controllers/items.js';
 import { router as sessionsRouter } from './controllers/sessions.js';
