@@ -23,10 +23,6 @@ export interface OpenSessionWithItem extends Session {
 
 const GRACE_SECONDS = 24 * 3600;
 
-function nowSeconds(): number {
-  return Math.floor(Date.now() / 1000);
-}
-
 class SessionStore {
   findAll(itemId?: number): Session[] {
     if (itemId !== undefined) {
