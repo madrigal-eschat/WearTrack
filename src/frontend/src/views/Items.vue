@@ -3,9 +3,7 @@
     <k-navbar title="Items">
       <template #right>
         <k-link navbar @click="showAddForm = !showAddForm">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
-            <path fill-rule="evenodd" d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z" clip-rule="evenodd" />
-          </svg>
+          <plus-icon class="w-5 h-5" />
         </k-link>
       </template>
     </k-navbar>
@@ -64,6 +62,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 import { kPage, kNavbar, kLink, kBlockTitle, kList, kListItem, kListInput, kButton, kBlock } from 'konsta/vue';
+import { PlusIcon } from '@heroicons/vue/24/solid';
 import { useItems } from '../composables/useItems.js';
 import { useCategories } from '../composables/useCategories.js';
 import type { Item } from '../composables/useWear.js';
