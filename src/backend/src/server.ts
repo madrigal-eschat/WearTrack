@@ -4,13 +4,13 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { logging } from './middleware/logging.js';
 import { errorHandler } from './middleware/errors.js';
 import { runMigrations } from './db/migrations/index.js';
-
-runMigrations();
 import { router as categoriesRouter } from './controllers/categories.js';
 import { router as itemsRouter } from './controllers/items.js';
 import { router as sessionsRouter } from './controllers/sessions.js';
 import { router as injuriesRouter } from './controllers/injuries.js';
 import { router as leaderboardsRouter } from './controllers/leaderboards.js';
+
+runMigrations();
 
 const app = new Hono();
 
@@ -35,6 +35,7 @@ if (process.env.FRONTEND_DIST) {
 }
 
 export { app };
+export default app;
 
 // Only start the HTTP server when this file is the direct entry point.
 // In dev, dev-server.ts starts its own server and imports { app } without triggering this.
