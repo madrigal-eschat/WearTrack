@@ -8,9 +8,11 @@ export class NotFoundError extends Error {
 }
 
 export class ConflictError extends Error {
-  constructor(message: string) {
+  readonly details?: Record<string, unknown>;
+  constructor(message: string, details?: Record<string, unknown>) {
     super(message);
     this.name = 'ConflictError';
+    this.details = details;
   }
 }
 
@@ -31,7 +33,7 @@ export const errorHandler = (): ErrorHandler => {
       return c.json({ error: 'Not found' }, 404);
     }
     if (e instanceof ConflictError) {
-      return c.json({ error: 'Conflict' }, 409);
+      return c.json({ error: e.message, ...(e.details ?? {}) }, 409);
     }
     if (e instanceof ValidationError) {
       return c.json({ error: e.message }, 400);
