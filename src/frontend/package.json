@@ -10,7 +10,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "konsta": "^3.0.0",
+    "konsta": "^5.0.0",
     "vue": "^3.5.0"
   },
   "devDependencies": {
