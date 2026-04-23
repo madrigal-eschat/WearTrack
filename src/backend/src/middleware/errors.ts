@@ -1,4 +1,4 @@
-import type { MiddlewareHandler } from 'hono';
+import type { ErrorHandler } from 'hono';
 
 export class NotFoundError extends Error {
   constructor(message: string) {
@@ -21,19 +21,22 @@ export class ValidationError extends Error {
   }
 }
 
-export const errorHandler = (): MiddlewareHandler => {
-  return async (c, next) => {
-    await next();
-    if (c.error) {
-      if (c.error instanceof NotFoundError) {
-        return c.json({ error: 'Not found' }, 404);
-      }
-      if (c.error instanceof ConflictError) {
-        return c.json({ error: 'Conflict' }, 409);
-      }
-      if (c.error instanceof ValidationError) {
-        return c.json({ error: c.error.message }, 400);
-      }
+/**
+ * Registered via app.onError() so Hono routes it through the compose error path,
+ * which correctly overrides the default 500 response.
+ */
+export const errorHandler = (): ErrorHandler => {
+  return (e, c) => {
+    if (e instanceof NotFoundError) {
+      return c.json({ error: 'Not found' }, 404);
     }
+    if (e instanceof ConflictError) {
+      return c.json({ error: 'Conflict' }, 409);
+    }
+    if (e instanceof ValidationError) {
+      return c.json({ error: e.message }, 400);
+    }
+    console.error('Unhandled error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
   };
 };
