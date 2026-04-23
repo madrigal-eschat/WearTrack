@@ -250,7 +250,7 @@ describe('GET /api/sessions/:id', () => {
 });
 
 describe('Stats updates after session end', () => {
-  it('increments session_count and total_wear_seconds', async () => {
+  it('increments per-item session_count and total_wear_seconds', async () => {
     const statsBefore = prepare('SELECT * FROM stats WHERE item_id = ?').get(itemId) as {
       session_count: number;
       total_wear_seconds: number;
@@ -263,5 +263,17 @@ describe('Stats updates after session end', () => {
     };
     expect(statsAfter.session_count).toBe(statsBefore.session_count + 1);
     expect(statsAfter.total_wear_seconds).toBeGreaterThan(statsBefore.total_wear_seconds);
+  });
+
+  it('increments category streak_count after a session', async () => {
+    const catStatsBefore = prepare('SELECT * FROM category_stats WHERE category_id = ?').get(categoryId) as {
+      streak_count: number;
+    };
+    const s = await (await startSession()).json();
+    await endSession(s.id);
+    const catStatsAfter = prepare('SELECT * FROM category_stats WHERE category_id = ?').get(categoryId) as {
+      streak_count: number;
+    };
+    expect(catStatsAfter.streak_count).toBe(catStatsBefore.streak_count + 1);
   });
 });

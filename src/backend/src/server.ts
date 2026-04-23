@@ -5,7 +5,7 @@ import { router as categoriesRouter } from './categories/router.js';
 import { router as itemsRouter } from './items/router.js';
 import { router as sessionsRouter } from './sessions/router.js';
 import { router as injuriesRouter } from './injuries/router.js';
-import { router as statsRouter } from './stats/router.js';
+import { router as leaderboardsRouter } from './leaderboards/router.js';
 
 const app = new Hono();
 
@@ -20,7 +20,7 @@ app.route('/api/categories', categoriesRouter);
 app.route('/api/items', itemsRouter);
 app.route('/api/sessions', sessionsRouter);
 app.route('/api/injuries', injuriesRouter);
-app.route('/api/stats', statsRouter);
+app.route('/api/leaderboards', leaderboardsRouter);
 
 app.get('/*', (c) => {
   return c.html('<html><body><h1>Weartrack</h1></body></html>', 200);

@@ -3,6 +3,8 @@ import app from '../../src/server.js';
 import runMigration from '../../src/db/migrations/001_initial.js';
 
 const BASE = '/api/categories';
+const ITEMS = '/api/items';
+const SESSIONS = '/api/sessions';
 
 const sampleCategory = {
   name: 'Footwear',
@@ -145,6 +147,69 @@ describe('DELETE /api/categories/:id', () => {
 
   it('returns 404 for unknown id', async () => {
     const res = await app.request(`${BASE}/99999`, { method: 'DELETE' });
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('GET /api/categories/:id/stats', () => {
+  it('returns zeroed stats for a new category with no sessions', async () => {
+    const cat = await (await createCategory({ name: 'Empty Stats Cat' })).json();
+    const res = await app.request(`${BASE}/${cat.id}/stats`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.category_id).toBe(cat.id);
+    expect(body.total_wear_seconds).toBe(0);
+    expect(body.session_count).toBe(0);
+    expect(body.streak_wear_seconds).toBe(0);
+    expect(body.streak_count).toBe(0);
+    expect(body.best_streak_wear_seconds).toBe(0);
+    expect(body.best_streak_count).toBe(0);
+    expect(body.item_count).toBe(0);
+  });
+
+  it('reflects aggregated stats and streak after sessions across items', async () => {
+    const cat = await (await createCategory({ name: 'Streak Cat' })).json();
+
+    const item1 = await (await app.request(ITEMS, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Streak Item A', category_id: cat.id, color: '#aaa' }),
+    })).json();
+
+    const item2 = await (await app.request(ITEMS, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Streak Item B', category_id: cat.id, color: '#bbb' }),
+    })).json();
+
+    // Session on item1
+    const s1 = await (await app.request(`${SESSIONS}/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: item1.id }),
+    })).json();
+    await app.request(`${SESSIONS}/${s1.id}/end`, { method: 'POST' });
+
+    // Session on item2 (same category — should continue streak)
+    const s2 = await (await app.request(`${SESSIONS}/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: item2.id }),
+    })).json();
+    await app.request(`${SESSIONS}/${s2.id}/end`, { method: 'POST' });
+
+    const res = await app.request(`${BASE}/${cat.id}/stats`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.session_count).toBe(2);
+    expect(body.total_wear_seconds).toBeGreaterThan(0);
+    expect(body.streak_count).toBe(2);          // both sessions within grace window
+    expect(body.best_streak_count).toBe(2);
+    expect(body.item_count).toBe(2);
+  });
+
+  it('returns 404 for unknown category', async () => {
+    const res = await app.request(`${BASE}/99999/stats`);
     expect(res.status).toBe(404);
   });
 });

@@ -43,6 +43,44 @@ controller.get('/', (c) => {
   return c.json(rows.map(serializeCategory));
 });
 
+// GET /api/categories/:id/stats — must be before /:id to avoid shadowing
+controller.get('/:id/stats', (c) => {
+  const id = Number(c.req.param('id'));
+  const category = prepare('SELECT id FROM categories WHERE id = ?').get(id);
+  if (!category) throw new NotFoundError(`Category ${id} not found`);
+
+  const stats = prepare('SELECT * FROM category_stats WHERE category_id = ?').get(id) as {
+    category_id: number;
+    total_wear_seconds: number;
+    session_count: number;
+    max_single_session_wear_seconds: number;
+    streak_wear_seconds: number;
+    streak_count: number;
+    best_streak_wear_seconds: number;
+    best_streak_count: number;
+  } | undefined;
+
+  const { item_count } = prepare(
+    'SELECT COUNT(*) AS item_count FROM items WHERE category_id = ?',
+  ).get(id) as { item_count: number };
+
+  return c.json(
+    stats
+      ? { ...stats, item_count }
+      : {
+          category_id: id,
+          total_wear_seconds: 0,
+          session_count: 0,
+          max_single_session_wear_seconds: 0,
+          streak_wear_seconds: 0,
+          streak_count: 0,
+          best_streak_wear_seconds: 0,
+          best_streak_count: 0,
+          item_count,
+        },
+  );
+});
+
 // GET /api/categories/:id
 controller.get('/:id', (c) => {
   const id = Number(c.req.param('id'));
@@ -80,6 +118,10 @@ controller.post('/', async (c) => {
   ).run(name, icon, initial_wear_duration_seconds, rest_multiplier, rest_constant_seconds, JSON.stringify(risk_levels), break_decay_multiplier, break_starts_after_seconds);
 
   const row = prepare('SELECT * FROM categories WHERE id = ?').get(result.lastInsertRowid) as CategoryRow;
+
+  // Initialise category_stats row for this category
+  prepare('INSERT OR IGNORE INTO category_stats (category_id) VALUES (?)').run(row.id);
+
   return c.json(serializeCategory(row), 201);
 });
 

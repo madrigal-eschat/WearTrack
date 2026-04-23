@@ -56,9 +56,18 @@ Expose REST API for Weartrack data layer using Hono + better-sqlite3, with middl
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | /api/stats/leaderboard/:type | Cross-item leaderboard (registered before /:item_id) |
-| GET | /api/stats/:item_id | Cumulative stats for one item |
-| GET | /api/stats/:item_id/history | Time-series from sessions; `?unit=month\|week` |
+| GET | /api/items/:id/stats | Cumulative stats for one item |
+| GET | /api/items/:id/stats/history | Time-series from sessions; `?unit=month\|week` |
+| GET | /api/categories/:id/stats | Aggregated stats for one category (includes streak) |
+
+### Leaderboards
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | /api/leaderboards/longest-wear | Items by `max_single_session_wear_seconds DESC` |
+| GET | /api/leaderboards/most-total-wear | Items by `total_wear_seconds DESC` |
+| GET | /api/leaderboards/best-streak | Categories by `best_streak_wear_seconds DESC` |
+| GET | /api/leaderboards/most-sessions | Items by `session_count DESC` |
 
 ---
 
@@ -124,6 +133,28 @@ Returns `200 OK` — updated object. Accepts any subset of the writable fields.
 
 Returns `204 No Content`. Cascades to items → sessions, injuries, stats.
 
+#### GET /api/categories/:id/stats
+
+Returns `200 OK` — aggregated stats across all items in the category, including streak tracking.
+
+```json
+{
+  "category_id": 1,
+  "total_wear_seconds": 43200,
+  "session_count": 5,
+  "max_single_session_wear_seconds": 14400,
+  "streak_wear_seconds": 28800,
+  "streak_count": 3,
+  "best_streak_wear_seconds": 28800,
+  "best_streak_count": 3,
+  "item_count": 2
+}
+```
+
+- Returns zeroed object for a category with no sessions yet
+- `item_count` is the number of items belonging to the category
+- `404` if category does not exist
+
 ---
 
 ## Items Model
@@ -161,6 +192,39 @@ Returns `201 Created`.
 #### PATCH /api/items/:id
 
 Returns `200 OK` — updated item. Accepts any subset of writable fields.
+
+#### GET /api/items/:id/stats
+
+Returns `200 OK` — per-item cumulative stats.
+
+```json
+{
+  "item_id": 5,
+  "total_wear_seconds": 21600,
+  "session_count": 3,
+  "max_single_session_wear_seconds": 10800
+}
+```
+
+- Returns zeroed object for an item with no sessions yet
+- `404` if item does not exist
+- Streak fields are not present here — streaks are tracked per category
+
+#### GET /api/items/:id/stats/history?unit=month|week
+
+Returns time-series aggregated from sessions:
+
+```json
+[
+  { "period": "2026-04", "total_wear_seconds": 21600, "session_count": 3 },
+  { "period": "2026-05", "total_wear_seconds": 7200, "session_count": 1 }
+]
+```
+
+`unit=month` → `%Y-%m` format; `unit=week` → `%Y-%W` format.
+
+- `400` if `unit` is not `month` or `week`
+- `404` if item does not exist
 
 ---
 
@@ -267,11 +331,17 @@ Validation:
 - Session must exist → `404`
 - Session must not already be ended → `400`
 
-After ending, stats are updated immediately:
+After ending, two sets of stats are updated immediately:
+
+**Per-item (`stats` table):**
 - `total_wear_seconds += calculated_wear_seconds`
 - `session_count += 1`
 - `max_single_session_wear_seconds = MAX(...)`
-- Streak logic: carries forward if break ≤ `previous.calculated_rest_seconds + 86400`; otherwise resets
+
+**Per-category (`category_stats` table):**
+- Same cumulative fields as above (summed across all items in the category)
+- Streak logic: the previous session is the most-recently-ended session for **any** item in the category. If `session.started_at - prev.ended_at > prev.calculated_rest_seconds + 86400` (1-day grace), the streak resets; otherwise it continues.
+- `streak_wear_seconds` and `streak_count` track the current streak; `best_streak_*` are updated if the current streak surpasses them.
 
 ---
 
@@ -317,7 +387,11 @@ Returns `200 OK` — updated injury row with `healed_at` set to current Unix tim
 
 ---
 
-## Stats Model
+## Stats Models
+
+### Per-item stats
+
+Stored in the `stats` table. Updated when a session ends.
 
 ```typescript
 interface StatsRow {
@@ -325,59 +399,59 @@ interface StatsRow {
   total_wear_seconds: number;
   session_count: number;
   max_single_session_wear_seconds: number;
-  streak_wear_seconds: number;
-  streak_count: number;
-  best_streak_wear_seconds: number;
-  best_streak_count: number;
 }
 ```
 
-### Stats API
+### Per-category stats
 
-#### GET /api/stats/:item_id
+Stored in the `category_stats` table. Streaks are tracked here, not per-item.
 
-Returns `200 OK` — stats row (or zeroed object if no sessions yet).
-
-```json
-{
-  "item_id": 5,
-  "total_wear_seconds": 21600,
-  "session_count": 3,
-  "max_single_session_wear_seconds": 10800,
-  "streak_wear_seconds": 21600,
-  "streak_count": 3,
-  "best_streak_wear_seconds": 21600,
-  "best_streak_count": 3
+```typescript
+interface CategoryStatsRow {
+  category_id: number;
+  total_wear_seconds: number;          // sum across all items
+  session_count: number;               // total sessions across all items
+  max_single_session_wear_seconds: number; // max single session across all items
+  streak_wear_seconds: number;         // cumulative wear in current streak
+  streak_count: number;                // sessions in current streak
+  best_streak_wear_seconds: number;    // best streak ever (wear seconds)
+  best_streak_count: number;           // best streak ever (session count)
 }
 ```
 
-#### GET /api/stats/leaderboard/:type
+A streak continues as long as each session's `started_at` is within `previous.calculated_rest_seconds + 86400` seconds of the previous category session's `ended_at`. The "previous session" is the most-recently-ended session for **any** item in the category.
 
-**Must be registered before `/:item_id`** to avoid route shadowing.
+---
 
-Supported `:type` values:
+## Leaderboards API
 
-| type | sorted by |
-|------|-----------|
-| `longest-wear` | `max_single_session_wear_seconds DESC` |
-| `most-total-wear` | `total_wear_seconds DESC` |
-| `best-streak` | `best_streak_wear_seconds DESC` |
-| `most-sessions` | `session_count DESC` |
+All leaderboard routes live under `/api/leaderboards/`. Each is an explicit route — there is no generic `:type` parameter.
 
-Returns top 20 rows joining `stats → items → categories`.
+Returns top 20 entries. Unknown paths fall through to the SPA catch-all (200 HTML), not a 400 error.
 
-#### GET /api/stats/:item_id/history?unit=month|week
+#### GET /api/leaderboards/longest-wear
 
-Returns time-series aggregated from sessions:
+Items ranked by `max_single_session_wear_seconds DESC`.
 
 ```json
-[
-  { "period": "2026-04", "total_wear_seconds": 21600, "session_count": 3 },
-  { "period": "2026-05", "total_wear_seconds": 7200, "session_count": 1 }
-]
+[{ "item_id": 5, "item_name": "Test Shoe", "category_name": "Footwear", "score": 14400 }]
 ```
 
-`unit=month` → `%Y-%m` format; `unit=week` → `%Y-%W` format.
+#### GET /api/leaderboards/most-total-wear
+
+Items ranked by `total_wear_seconds DESC`. Same shape as `longest-wear`.
+
+#### GET /api/leaderboards/best-streak
+
+**Categories** (not items) ranked by `best_streak_wear_seconds DESC`.
+
+```json
+[{ "category_id": 1, "category_name": "Footwear", "score": 28800, "streak_sessions": 3 }]
+```
+
+#### GET /api/leaderboards/most-sessions
+
+Items ranked by `session_count DESC`. Same shape as `longest-wear`.
 
 ---
 
@@ -415,10 +489,10 @@ src/backend/
 │   ├── middleware/
 │   │   └── errors.ts
 │   ├── categories/
-│   │   ├── controller.ts
+│   │   ├── controller.ts   (includes GET /:id/stats)
 │   │   └── router.ts
 │   ├── items/
-│   │   ├── controller.ts
+│   │   ├── controller.ts   (includes GET /:id/stats and GET /:id/stats/history)
 │   │   └── router.ts
 │   ├── sessions/
 │   │   ├── controller.ts
@@ -426,7 +500,7 @@ src/backend/
 │   ├── injuries/
 │   │   ├── controller.ts
 │   │   └── router.ts
-│   └── stats/
+│   └── leaderboards/
 │       ├── controller.ts
 │       └── router.ts
 └── tests/
@@ -435,12 +509,14 @@ src/backend/
     ├── items/
     ├── sessions/
     ├── injuries/
-    └── stats/
+    └── leaderboards/
 ```
 
 ## Notes
 
 - **Timestamps**: All timestamps are Unix seconds (integers), not ISO 8601
 - **Cascading deletes**: categories → items → sessions, injuries, stats
-- **route registration order**: `GET /api/sessions/current` must be before `GET /api/sessions/:id`; `GET /api/stats/leaderboard/:type` must be before `GET /api/stats/:item_id`
+- **Route registration order**: `GET /api/sessions/current` must be before `GET /api/sessions/:id`; `GET /api/items/:id/stats` must be before `GET /api/items/:id`; same for categories
+- **Streaks are per-category**: Per-item stats have no streak fields. Streak state lives in `category_stats` and is updated when any session in the category ends.
+- **SPA catch-all**: `app.get('/*', ...)` serves the SPA HTML for all unmatched routes (200, not 404). Unknown `/api/leaderboards/` paths fall through to this handler.
 - **Testing**: Tests use an in-memory SQLite DB (`:memory:`) reset via `runMigration()` in `beforeAll`
