@@ -1,7 +1,7 @@
 # Revised SP3 + SP4 Implementation Plan
 
 **Date**: 2026-04-22  
-**Status**: Active  
+**Status**: Superseded — all content integrated into `2026-04-21-full-implementation-plan.md` (updated 2026-04-23)  
 **Supersedes**: `2026-04-21-full-implementation-plan.md` (SP3 + SP4 sections only)
 
 ## Why this revision
