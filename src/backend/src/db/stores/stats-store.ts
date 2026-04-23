@@ -1,0 +1,213 @@
+import db from '../index.js';
+
+// ─── Per-item stats ───────────────────────────────────────────────────────────
+
+export interface ItemStats {
+  item_id: number;
+  total_wear_seconds: number;
+  session_count: number;
+  max_single_session_wear_seconds: number;
+}
+
+// ─── Per-category stats (includes streak tracking) ────────────────────────────
+
+export interface CategoryStats {
+  category_id: number;
+  total_wear_seconds: number;
+  session_count: number;
+  max_single_session_wear_seconds: number;
+  streak_wear_seconds: number;
+  streak_count: number;
+  best_streak_wear_seconds: number;
+  best_streak_count: number;
+}
+
+// Minimal session shape needed for stats update logic.
+export interface SessionSnapshot {
+  id: number;
+  item_id: number;
+  started_at: number;
+  ended_at: number;
+  calculated_wear_seconds: number;
+  calculated_rest_seconds: number | null;
+}
+
+const GRACE_SECONDS = 24 * 3600;
+
+class StatsStore {
+  // ── Per-item ────────────────────────────────────────────────────────────────
+
+  findForItem(itemId: number): ItemStats | undefined {
+    return db.prepare('SELECT * FROM stats WHERE item_id = ?').get(itemId) as ItemStats | undefined;
+  }
+
+  initItem(itemId: number): void {
+    db.prepare('INSERT OR IGNORE INTO stats (item_id) VALUES (?)').run(itemId);
+  }
+
+  /** Update cumulative per-item stats when a session ends. */
+  recordItemSession(session: SessionSnapshot): void {
+    const duration = session.calculated_wear_seconds;
+    db.prepare(`
+      UPDATE stats SET
+        total_wear_seconds              = total_wear_seconds + ?,
+        session_count                   = session_count + 1,
+        max_single_session_wear_seconds = MAX(max_single_session_wear_seconds, ?)
+      WHERE item_id = ?
+    `).run(duration, duration, session.item_id);
+  }
+
+  /** Time-series wear data for one item, grouped by month or week. */
+  history(itemId: number, unit: 'month' | 'week'): unknown[] {
+    const format = unit === 'month' ? '%Y-%m' : '%Y-%W';
+    return db
+      .prepare(
+        `SELECT strftime('${format}', datetime(ended_at, 'unixepoch')) AS period,
+                SUM(calculated_wear_seconds) AS total_wear_seconds,
+                COUNT(*) AS session_count
+         FROM sessions
+         WHERE item_id = ? AND ended_at IS NOT NULL
+         GROUP BY period
+         ORDER BY period ASC`,
+      )
+      .all(itemId);
+  }
+
+  // ── Per-category ─────────────────────────────────────────────────────────────
+
+  findForCategory(categoryId: number): (CategoryStats & { item_count: number }) | undefined {
+    const stats = db
+      .prepare('SELECT * FROM category_stats WHERE category_id = ?')
+      .get(categoryId) as CategoryStats | undefined;
+    if (!stats) return undefined;
+    const { item_count } = db
+      .prepare('SELECT COUNT(*) AS item_count FROM items WHERE category_id = ?')
+      .get(categoryId) as { item_count: number };
+    return { ...stats, item_count };
+  }
+
+  initCategory(categoryId: number): void {
+    db.prepare('INSERT OR IGNORE INTO category_stats (category_id) VALUES (?)').run(categoryId);
+  }
+
+  /**
+   * Update per-category cumulative stats and streak when a session ends.
+   * The streak continues as long as each session starts within
+   * `previousSession.calculated_rest_seconds + 24h grace` of the previous
+   * category session (any item). Otherwise the streak resets.
+   */
+  recordCategorySession(categoryId: number, session: SessionSnapshot): void {
+    const stats = db
+      .prepare('SELECT * FROM category_stats WHERE category_id = ?')
+      .get(categoryId) as CategoryStats | undefined;
+    if (!stats) return;
+
+    const duration = session.calculated_wear_seconds;
+
+    // Last ended session for ANY item in this category, excluding the current one
+    const prev = db
+      .prepare(
+        `SELECT s.* FROM sessions s
+         JOIN items i ON i.id = s.item_id
+         WHERE i.category_id = ? AND s.ended_at IS NOT NULL AND s.id != ?
+         ORDER BY s.ended_at DESC LIMIT 1`,
+      )
+      .get(categoryId, session.id) as SessionSnapshot | undefined;
+
+    let streakWear = stats.streak_wear_seconds + duration;
+    let streakCount = stats.streak_count + 1;
+
+    if (prev && prev.calculated_rest_seconds !== null) {
+      const breakSeconds = session.started_at - prev.ended_at;
+      if (breakSeconds > prev.calculated_rest_seconds + GRACE_SECONDS) {
+        streakWear = duration;
+        streakCount = 1;
+      }
+    }
+
+    const newBestStreakWear = Math.max(stats.best_streak_wear_seconds, streakWear);
+    const newBestStreakCount =
+      streakWear > stats.best_streak_wear_seconds ? streakCount : stats.best_streak_count;
+
+    db.prepare(`
+      UPDATE category_stats SET
+        total_wear_seconds              = total_wear_seconds + ?,
+        session_count                   = session_count + 1,
+        max_single_session_wear_seconds = MAX(max_single_session_wear_seconds, ?),
+        streak_wear_seconds             = ?,
+        streak_count                    = ?,
+        best_streak_wear_seconds        = ?,
+        best_streak_count               = ?
+      WHERE category_id = ?
+    `).run(
+      duration,
+      duration,
+      streakWear,
+      streakCount,
+      newBestStreakWear,
+      newBestStreakCount,
+      categoryId,
+    );
+  }
+
+  // ── Leaderboards ─────────────────────────────────────────────────────────────
+
+  longestWear(): unknown[] {
+    return db
+      .prepare(
+        `SELECT s.item_id, i.name AS item_name, c.name AS category_name,
+                s.max_single_session_wear_seconds AS score
+         FROM stats s
+         JOIN items i ON i.id = s.item_id
+         JOIN categories c ON c.id = i.category_id
+         ORDER BY s.max_single_session_wear_seconds DESC
+         LIMIT 20`,
+      )
+      .all();
+  }
+
+  mostTotalWear(): unknown[] {
+    return db
+      .prepare(
+        `SELECT s.item_id, i.name AS item_name, c.name AS category_name,
+                s.total_wear_seconds AS score
+         FROM stats s
+         JOIN items i ON i.id = s.item_id
+         JOIN categories c ON c.id = i.category_id
+         ORDER BY s.total_wear_seconds DESC
+         LIMIT 20`,
+      )
+      .all();
+  }
+
+  /** Best streak is per-category, not per-item. */
+  bestStreak(): unknown[] {
+    return db
+      .prepare(
+        `SELECT cs.category_id, c.name AS category_name,
+                cs.best_streak_wear_seconds AS score,
+                cs.best_streak_count AS streak_sessions
+         FROM category_stats cs
+         JOIN categories c ON c.id = cs.category_id
+         ORDER BY cs.best_streak_wear_seconds DESC
+         LIMIT 20`,
+      )
+      .all();
+  }
+
+  mostSessions(): unknown[] {
+    return db
+      .prepare(
+        `SELECT s.item_id, i.name AS item_name, c.name AS category_name,
+                s.session_count AS score
+         FROM stats s
+         JOIN items i ON i.id = s.item_id
+         JOIN categories c ON c.id = i.category_id
+         ORDER BY s.session_count DESC
+         LIMIT 20`,
+      )
+      .all();
+  }
+}
+
+export const statsStore = new StatsStore();

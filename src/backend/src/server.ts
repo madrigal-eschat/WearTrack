@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
 import { logging } from './middleware/logging.js';
 import { errorHandler } from './middleware/errors.js';
-import { router as categoriesRouter } from './categories/router.js';
-import { router as itemsRouter } from './items/router.js';
-import { router as sessionsRouter } from './sessions/router.js';
-import { router as injuriesRouter } from './injuries/router.js';
-import { router as leaderboardsRouter } from './leaderboards/router.js';
+import { router as categoriesRouter } from './controllers/categories.js';
+import { router as itemsRouter } from './controllers/items.js';
+import { router as sessionsRouter } from './controllers/sessions.js';
+import { router as injuriesRouter } from './controllers/injuries.js';
+import { router as leaderboardsRouter } from './controllers/leaderboards.js';
 
 const app = new Hono();
 
