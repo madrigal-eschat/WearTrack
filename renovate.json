@@ -1,0 +1,40 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard"
+  ],
+  "ignorePresets": ["docker:pinDigests"],
+  "platformAutomerge": true,
+  "automerge": true,
+  "assignees": [
+    "madrigal"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "commitHourlyLimit": 2,
+  "prConcurrentLimit": 4,
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/\\.gitlab-ci\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "\\s?_IMAGE:\\s['\"]?(?:(?<registryUrls>.*?)\\/)?(?<depName>[^:'\"\\s\\/]+):(?<currentValue>[^'\"\\s]*)['\"]?"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/\\.gitlab-ci\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "\\s?image:\\s['\"]?(?:(?<registryUrls>.*?)\\/)?(?<depName>[^:'\"\\s\\/]+):(?<currentValue>[^'\"\\s]*)['\"]?"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ]
+}
