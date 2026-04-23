@@ -7,7 +7,7 @@ beforeAll(() => {
 });
 
 describe('001_initial migration', () => {
-  const expectedTables = ['categories', 'items', 'sessions', 'injuries', 'stats'];
+  const expectedTables = ['categories', 'items', 'sessions', 'injuries', 'stats', 'category_stats'];
 
   it.each(expectedTables)('creates table: %s', (table) => {
     const row = dbExport
@@ -39,9 +39,24 @@ describe('001_initial migration', () => {
     expect(cols).not.toContain('heals_at');
   });
 
-  it('stats has cumulative fields and no points', () => {
+  it('stats has per-item cumulative fields and no streak fields', () => {
     const info = dbExport.prepare('PRAGMA table_info(stats)').all() as Array<{ name: string }>;
     const cols = info.map((r) => r.name);
+    expect(cols).toContain('total_wear_seconds');
+    expect(cols).toContain('session_count');
+    expect(cols).toContain('max_single_session_wear_seconds');
+    // Streaks live in category_stats, not here
+    expect(cols).not.toContain('streak_wear_seconds');
+    expect(cols).not.toContain('streak_count');
+    expect(cols).not.toContain('best_streak_wear_seconds');
+    expect(cols).not.toContain('best_streak_count');
+    expect(cols).not.toContain('points');
+  });
+
+  it('category_stats has cumulative and streak fields', () => {
+    const info = dbExport.prepare('PRAGMA table_info(category_stats)').all() as Array<{ name: string }>;
+    const cols = info.map((r) => r.name);
+    expect(cols).toContain('category_id');
     expect(cols).toContain('total_wear_seconds');
     expect(cols).toContain('session_count');
     expect(cols).toContain('max_single_session_wear_seconds');
@@ -49,6 +64,5 @@ describe('001_initial migration', () => {
     expect(cols).toContain('streak_count');
     expect(cols).toContain('best_streak_wear_seconds');
     expect(cols).toContain('best_streak_count');
-    expect(cols).not.toContain('points');
   });
 });

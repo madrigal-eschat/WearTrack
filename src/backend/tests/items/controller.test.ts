@@ -3,6 +3,7 @@ import app from '../../src/server.js';
 import runMigration from '../../src/db/migrations/001_initial.js';
 
 const BASE = '/api/items';
+const SESSIONS = '/api/sessions';
 const CATEGORIES_BASE = '/api/categories';
 
 const sampleCategory = {
@@ -149,6 +150,83 @@ describe('DELETE /api/items/:id', () => {
 
   it('returns 404 for unknown id', async () => {
     const res = await app.request(`${BASE}/99999`, { method: 'DELETE' });
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('GET /api/items/:id/stats', () => {
+  it('returns zeroed stats for an item with no sessions', async () => {
+    const item = await (await createItem({ name: 'No Sessions' })).json();
+    const res = await app.request(`${BASE}/${item.id}/stats`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.item_id).toBe(item.id);
+    expect(body.total_wear_seconds).toBe(0);
+    expect(body.session_count).toBe(0);
+    expect(body.max_single_session_wear_seconds).toBe(0);
+    // No streak fields — streaks are per-category
+    expect((body as Record<string, unknown>).streak_wear_seconds).toBeUndefined();
+  });
+
+  it('reflects stats after a completed session', async () => {
+    const item = await (await createItem({ name: 'Stats Item' })).json();
+    const s = await (await app.request(`${SESSIONS}/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: item.id }),
+    })).json();
+    await app.request(`${SESSIONS}/${s.id}/end`, { method: 'POST' });
+
+    const res = await app.request(`${BASE}/${item.id}/stats`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.session_count).toBe(1);
+    expect(body.total_wear_seconds).toBeGreaterThan(0);
+    expect(body.max_single_session_wear_seconds).toBeGreaterThan(0);
+  });
+
+  it('returns 404 for unknown item', async () => {
+    const res = await app.request(`${BASE}/99999/stats`);
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('GET /api/items/:id/stats/history', () => {
+  it('returns monthly time-series', async () => {
+    const item = await (await createItem({ name: 'History Item' })).json();
+    const s = await (await app.request(`${SESSIONS}/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: item.id }),
+    })).json();
+    await app.request(`${SESSIONS}/${s.id}/end`, { method: 'POST' });
+
+    const res = await app.request(`${BASE}/${item.id}/stats/history?unit=month`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body)).toBe(true);
+    if (body.length > 0) {
+      expect(body[0].period).toMatch(/^\d{4}-\d{2}$/);
+      expect(typeof body[0].total_wear_seconds).toBe('number');
+      expect(typeof body[0].session_count).toBe('number');
+    }
+  });
+
+  it('returns weekly time-series', async () => {
+    const item = await (await createItem({ name: 'History Item Weekly' })).json();
+    const res = await app.request(`${BASE}/${item.id}/stats/history?unit=week`);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(await res.json())).toBe(true);
+  });
+
+  it('returns 400 for invalid unit', async () => {
+    const item = await (await createItem({ name: 'History Bad Unit' })).json();
+    const res = await app.request(`${BASE}/${item.id}/stats/history?unit=day`);
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 404 for unknown item', async () => {
+    const res = await app.request(`${BASE}/99999/stats/history`);
     expect(res.status).toBe(404);
   });
 });

@@ -15,17 +15,6 @@ interface SessionRow {
   ended_in_injury: number;
 }
 
-interface StatsRow {
-  item_id: number;
-  total_wear_seconds: number;
-  session_count: number;
-  max_single_session_wear_seconds: number;
-  streak_wear_seconds: number;
-  streak_count: number;
-  best_streak_wear_seconds: number;
-  best_streak_count: number;
-}
-
 interface CategoryRow {
   id: number;
   name: string;
@@ -73,10 +62,6 @@ function getLastEndedSession(itemId: number): SessionRow | undefined {
   ).get(itemId) as SessionRow | undefined;
 }
 
-function getStats(itemId: number): StatsRow {
-  return prepare('SELECT * FROM stats WHERE item_id = ?').get(itemId) as StatsRow;
-}
-
 function serializeCategory(row: CategoryRow) {
   return {
     ...row,
@@ -109,54 +94,68 @@ function resolveInitialWear(itemId: number, category: Category, startedAt: numbe
   return calculatePostBreakWear(last.calculated_wear_seconds, breakHoursOverGrace, category);
 }
 
+/** Update per-item cumulative stats (totals only; no streak). */
+function updateItemStats(itemId: number, session: SessionRow) {
+  const duration = session.calculated_wear_seconds;
+  prepare(`
+    UPDATE stats SET
+      total_wear_seconds              = total_wear_seconds + ?,
+      session_count                   = session_count + 1,
+      max_single_session_wear_seconds = MAX(max_single_session_wear_seconds, ?)
+    WHERE item_id = ?
+  `).run(duration, duration, itemId);
+}
+
 /**
- * Update cumulative stats after ending a session.
- * Streak: reset if the break exceeded calculated_rest_seconds + grace on the PREVIOUS session.
+ * Update per-category cumulative stats including streak tracking.
+ * Streak breaks if the gap between the previous category session's end and
+ * this session's start exceeded that previous session's calculated_rest_seconds + 24h grace.
  */
-function updateStats(itemId: number, session: SessionRow) {
-  const stats = getStats(itemId);
+function updateCategoryStats(categoryId: number, session: SessionRow) {
+  const stats = prepare('SELECT * FROM category_stats WHERE category_id = ?').get(categoryId) as {
+    streak_wear_seconds: number;
+    streak_count: number;
+    best_streak_wear_seconds: number;
+    best_streak_count: number;
+  } | undefined;
+  if (!stats) return;
+
   const duration = session.calculated_wear_seconds;
 
-  // Did the streak survive into this session?
-  // (The streak was already counted as broken if this session started with decayed wear)
-  const last = prepare(
-    'SELECT * FROM sessions WHERE item_id = ? AND ended_at IS NOT NULL AND id != ? ORDER BY ended_at DESC LIMIT 1',
-  ).get(itemId, session.id) as SessionRow | undefined;
+  // Last ended session for ANY item in this category (not the one just ended)
+  const prev = prepare(`
+    SELECT s.* FROM sessions s
+    JOIN items i ON i.id = s.item_id
+    WHERE i.category_id = ? AND s.ended_at IS NOT NULL AND s.id != ?
+    ORDER BY s.ended_at DESC LIMIT 1
+  `).get(categoryId, session.id) as SessionRow | undefined;
 
   let streakWear = stats.streak_wear_seconds + duration;
   let streakCount = stats.streak_count + 1;
 
-  if (last && last.calculated_rest_seconds !== null) {
-    const breakSeconds = session.started_at - last.ended_at!;
-    const graceWindow = last.calculated_rest_seconds + GRACE_SECONDS;
-    if (breakSeconds > graceWindow) {
-      // Streak broken — reset to just this session
+  if (prev && prev.calculated_rest_seconds !== null) {
+    const breakSeconds = session.started_at - prev.ended_at!;
+    if (breakSeconds > prev.calculated_rest_seconds + GRACE_SECONDS) {
       streakWear = duration;
       streakCount = 1;
     }
   }
 
-  const newMaxWear = Math.max(stats.max_single_session_wear_seconds, duration);
   const newBestStreakWear = Math.max(stats.best_streak_wear_seconds, streakWear);
-  const newBestStreakCount = streakWear > stats.best_streak_wear_seconds ? streakCount : stats.best_streak_count;
+  const newBestStreakCount =
+    streakWear > stats.best_streak_wear_seconds ? streakCount : stats.best_streak_count;
 
-  prepare(`UPDATE stats SET
-    total_wear_seconds = total_wear_seconds + ?,
-    session_count = session_count + 1,
-    max_single_session_wear_seconds = ?,
-    streak_wear_seconds = ?,
-    streak_count = ?,
-    best_streak_wear_seconds = ?,
-    best_streak_count = ?
-    WHERE item_id = ?`).run(
-    duration,
-    newMaxWear,
-    streakWear,
-    streakCount,
-    newBestStreakWear,
-    newBestStreakCount,
-    itemId,
-  );
+  prepare(`
+    UPDATE category_stats SET
+      total_wear_seconds              = total_wear_seconds + ?,
+      session_count                   = session_count + 1,
+      max_single_session_wear_seconds = MAX(max_single_session_wear_seconds, ?),
+      streak_wear_seconds             = ?,
+      streak_count                    = ?,
+      best_streak_wear_seconds        = ?,
+      best_streak_count               = ?
+    WHERE category_id = ?
+  `).run(duration, duration, streakWear, streakCount, newBestStreakWear, newBestStreakCount, categoryId);
 }
 
 export const controller = new Hono();
@@ -291,7 +290,8 @@ controller.post('/:id/end', async (c) => {
     WHERE id = ?`).run(endTs, finalWear, calculatedRest, id);
 
   const updated = prepare('SELECT * FROM sessions WHERE id = ?').get(id) as SessionRow;
-  updateStats(session.item_id, updated);
+  updateItemStats(session.item_id, updated);
+  updateCategoryStats(item.category_id, updated);
 
   return c.json(updated);
 });

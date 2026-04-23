@@ -46,12 +46,21 @@ export default function runMigration() {
       severity    INTEGER NOT NULL                             -- 1–5, derived from the risk_levels band at time of injury
     );
 
+    -- Per-item cumulative stats (no streak — streaks are tracked at category level)
     CREATE TABLE IF NOT EXISTS stats (
       item_id                         INTEGER PRIMARY KEY REFERENCES items(id) ON DELETE CASCADE,
       total_wear_seconds              INTEGER NOT NULL DEFAULT 0,   -- lifetime cumulative wear across all sessions
       session_count                   INTEGER NOT NULL DEFAULT 0,   -- total number of completed sessions
-      max_single_session_wear_seconds INTEGER NOT NULL DEFAULT 0,   -- highest wear recorded in any single session
-      streak_wear_seconds             INTEGER NOT NULL DEFAULT 0,   -- total wear in the current unbroken streak
+      max_single_session_wear_seconds INTEGER NOT NULL DEFAULT 0    -- highest wear recorded in any single session
+    );
+
+    -- Per-category cumulative stats including streak tracking across all items
+    CREATE TABLE IF NOT EXISTS category_stats (
+      category_id                     INTEGER PRIMARY KEY REFERENCES categories(id) ON DELETE CASCADE,
+      total_wear_seconds              INTEGER NOT NULL DEFAULT 0,   -- sum of wear across all items in this category
+      session_count                   INTEGER NOT NULL DEFAULT 0,   -- total sessions across all items
+      max_single_session_wear_seconds INTEGER NOT NULL DEFAULT 0,   -- highest single-session wear across all items
+      streak_wear_seconds             INTEGER NOT NULL DEFAULT 0,   -- total wear in the current unbroken streak (any item)
       streak_count                    INTEGER NOT NULL DEFAULT 0,   -- number of sessions in the current streak
       best_streak_wear_seconds        INTEGER NOT NULL DEFAULT 0,   -- all-time best streak measured by wear seconds
       best_streak_count               INTEGER NOT NULL DEFAULT 0    -- session count of the all-time best streak
