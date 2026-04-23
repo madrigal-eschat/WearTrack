@@ -10,6 +10,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@heroicons/vue": "^2.2.0",
     "konsta": "^5.0.0",
     "vue": "^3.5.0"
   },
