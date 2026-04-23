@@ -1,23 +1,13 @@
 import { Hono } from 'hono';
-import { prepare } from '../db/index.js';
-import { hasActiveInjury, recordInjury, healInjury } from '../db/injury.js';
-import { getRiskLevel, type Category } from '../db/calculations.js';
+import { injuryStore } from '../db/stores/injury-store.js';
+import { itemStore } from '../db/stores/item-store.js';
+import { categoryStore } from '../db/stores/category-store.js';
+import { sessionStore } from '../db/stores/session-store.js';
+import { getRiskLevel } from '../db/calculations.js';
 import { NotFoundError, ValidationError } from '../middleware/errors.js';
 
-interface InjuryRow {
-  id: number;
-  item_id: number;
-  occurred_at: number;
-  healed_at: number | null;
-  severity: number;
-}
-
-function getItem(itemId: number) {
-  return prepare('SELECT * FROM items WHERE id = ?').get(itemId) as { id: number; category_id: number } | undefined;
-}
-
-function getCategory(categoryId: number): Category {
-  return prepare('SELECT * FROM categories WHERE id = ?').get(categoryId) as Category;
+function nowSeconds(): number {
+  return Math.floor(Date.now() / 1000);
 }
 
 export const controller = new Hono();
@@ -25,18 +15,15 @@ export const controller = new Hono();
 // GET /api/injuries?item_id=
 controller.get('/', (c) => {
   const itemId = c.req.query('item_id');
-  const rows = itemId
-    ? (prepare('SELECT * FROM injuries WHERE item_id = ? ORDER BY occurred_at DESC').all(Number(itemId)) as InjuryRow[])
-    : (prepare('SELECT * FROM injuries ORDER BY occurred_at DESC').all() as InjuryRow[]);
-  return c.json(rows);
+  return c.json(injuryStore.findAll(itemId !== undefined ? Number(itemId) : undefined));
 });
 
 // GET /api/injuries/:id
 controller.get('/:id', (c) => {
   const id = Number(c.req.param('id'));
-  const row = prepare('SELECT * FROM injuries WHERE id = ?').get(id) as InjuryRow | undefined;
-  if (!row) throw new NotFoundError(`Injury ${id} not found`);
-  return c.json(row);
+  const injury = injuryStore.find(id);
+  if (!injury) throw new NotFoundError(`Injury ${id} not found`);
+  return c.json(injury);
 });
 
 // POST /api/injuries — record a new injury for an item
@@ -49,37 +36,27 @@ controller.post('/', async (c) => {
 
   if (typeof item_id !== 'number') throw new ValidationError('item_id must be a number');
 
-  const item = getItem(item_id);
+  const item = itemStore.find(item_id);
   if (!item) throw new NotFoundError(`Item ${item_id} not found`);
 
-  if (hasActiveInjury(item_id)) {
+  if (injuryStore.hasActive(item_id)) {
     throw new ValidationError(`Item ${item_id} already has an active injury`);
   }
 
   // Resolve wear to derive severity
-  let wearSeconds: number;
-  if (typeof wear_seconds === 'number') {
-    wearSeconds = wear_seconds;
-  } else {
-    const lastSession = prepare(
-      'SELECT calculated_wear_seconds FROM sessions WHERE item_id = ? AND ended_at IS NOT NULL ORDER BY ended_at DESC LIMIT 1',
-    ).get(item_id) as { calculated_wear_seconds: number } | undefined;
-    wearSeconds = lastSession?.calculated_wear_seconds ?? 0;
-  }
+  const wearSeconds: number =
+    typeof wear_seconds === 'number' ? wear_seconds : injuryStore.lastSessionWear(item_id);
 
-  const category = getCategory(item.category_id);
+  const category = categoryStore.findRaw(item.category_id)!;
   const riskLevel = getRiskLevel(wearSeconds, category);
   const severity = riskLevel?.severity ?? 1;
 
-  const injury = recordInjury(item_id, severity);
+  const injury = injuryStore.record(item_id, severity);
 
   // End any open session for this item — wearing while injured isn't tracked
-  const openSession = prepare(
-    'SELECT id FROM sessions WHERE item_id = ? AND ended_at IS NULL',
-  ).get(item_id) as { id: number } | undefined;
+  const openSession = sessionStore.findOpenForItem(item_id);
   if (openSession) {
-    const now = Math.floor(Date.now() / 1000);
-    prepare('UPDATE sessions SET ended_at = ?, ended_in_injury = 1 WHERE id = ?').run(now, openSession.id);
+    sessionStore.endWithInjury(openSession.id, nowSeconds());
   }
 
   return c.json(injury, 201);
@@ -88,12 +65,11 @@ controller.post('/', async (c) => {
 // POST /api/injuries/:id/heal — mark an injury as healed
 controller.post('/:id/heal', (c) => {
   const id = Number(c.req.param('id'));
-  const injury = prepare('SELECT * FROM injuries WHERE id = ?').get(id) as InjuryRow | undefined;
+  const injury = injuryStore.find(id);
   if (!injury) throw new NotFoundError(`Injury ${id} not found`);
   if (injury.healed_at !== null) throw new ValidationError(`Injury ${id} is already healed`);
 
-  healInjury(injury.item_id);
+  injuryStore.heal(injury.item_id);
 
-  const updated = prepare('SELECT * FROM injuries WHERE id = ?').get(id) as InjuryRow;
-  return c.json(updated);
+  return c.json(injuryStore.find(id)!);
 });

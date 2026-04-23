@@ -1,33 +1,36 @@
 import { Hono } from 'hono';
-import { prepare } from '../db/index.js';
+import { itemStore } from '../db/stores/item-store.js';
+import { categoryStore } from '../db/stores/category-store.js';
+import { statsStore } from '../db/stores/stats-store.js';
 import { NotFoundError, ValidationError } from '../middleware/errors.js';
-
-interface ItemRow {
-  id: number;
-  category_id: number;
-  name: string;
-  color: string;
-  difficulty_multiplier: number;
-}
 
 export const controller = new Hono();
 
 // GET /api/items
 controller.get('/', (c) => {
   const categoryId = c.req.query('category_id');
-  const rows = categoryId
-    ? (prepare('SELECT * FROM items WHERE category_id = ? ORDER BY id').all(Number(categoryId)) as ItemRow[])
-    : (prepare('SELECT * FROM items ORDER BY id').all() as ItemRow[]);
-  return c.json(rows);
+  return c.json(itemStore.findAll(categoryId !== undefined ? Number(categoryId) : undefined));
+});
+
+// GET /api/items/:id/stats/history — must be before /:id/stats and /:id to avoid shadowing
+controller.get('/:id/stats/history', (c) => {
+  const id = Number(c.req.param('id'));
+  if (!itemStore.find(id)) throw new NotFoundError(`Item ${id} not found`);
+
+  const unit = c.req.query('unit') ?? 'month';
+  if (unit !== 'month' && unit !== 'week') {
+    throw new ValidationError('unit must be "month" or "week"');
+  }
+
+  return c.json(statsStore.history(id, unit));
 });
 
 // GET /api/items/:id/stats — must be before /:id to avoid shadowing
 controller.get('/:id/stats', (c) => {
   const id = Number(c.req.param('id'));
-  const item = prepare('SELECT id FROM items WHERE id = ?').get(id);
-  if (!item) throw new NotFoundError(`Item ${id} not found`);
+  if (!itemStore.find(id)) throw new NotFoundError(`Item ${id} not found`);
 
-  const stats = prepare('SELECT * FROM stats WHERE item_id = ?').get(id);
+  const stats = statsStore.findForItem(id);
   return c.json(
     stats ?? {
       item_id: id,
@@ -38,37 +41,12 @@ controller.get('/:id/stats', (c) => {
   );
 });
 
-// GET /api/items/:id/stats/history?unit=month|week
-controller.get('/:id/stats/history', (c) => {
-  const id = Number(c.req.param('id'));
-  const item = prepare('SELECT id FROM items WHERE id = ?').get(id);
-  if (!item) throw new NotFoundError(`Item ${id} not found`);
-
-  const unit = c.req.query('unit') ?? 'month';
-  if (unit !== 'month' && unit !== 'week') {
-    throw new ValidationError('unit must be "month" or "week"');
-  }
-
-  const format = unit === 'month' ? '%Y-%m' : '%Y-%W';
-  const rows = prepare(`
-    SELECT strftime('${format}', datetime(ended_at, 'unixepoch')) AS period,
-           SUM(calculated_wear_seconds) AS total_wear_seconds,
-           COUNT(*) AS session_count
-    FROM sessions
-    WHERE item_id = ? AND ended_at IS NOT NULL
-    GROUP BY period
-    ORDER BY period ASC
-  `).all(id);
-
-  return c.json(rows);
-});
-
 // GET /api/items/:id
 controller.get('/:id', (c) => {
   const id = Number(c.req.param('id'));
-  const row = prepare('SELECT * FROM items WHERE id = ?').get(id) as ItemRow | undefined;
-  if (!row) throw new NotFoundError(`Item ${id} not found`);
-  return c.json(row);
+  const item = itemStore.find(id);
+  if (!item) throw new NotFoundError(`Item ${id} not found`);
+  return c.json(item);
 });
 
 // POST /api/items
@@ -80,32 +58,29 @@ controller.post('/', async (c) => {
   if (typeof category_id !== 'number') throw new ValidationError('category_id must be a number');
   if (!color || typeof color !== 'string') throw new ValidationError('color is required');
 
-  // Verify category exists
-  const category = prepare('SELECT id FROM categories WHERE id = ?').get(category_id);
-  if (!category) throw new ValidationError(`Category ${category_id} does not exist`);
+  if (!categoryStore.find(category_id)) {
+    throw new ValidationError(`Category ${category_id} does not exist`);
+  }
 
-  const resolvedDifficulty = typeof difficulty_multiplier === 'number' ? difficulty_multiplier : 1.0;
+  // itemStore.create() also initialises the stats row for this item
+  const item = itemStore.create({
+    name,
+    category_id,
+    color,
+    difficulty_multiplier: typeof difficulty_multiplier === 'number' ? difficulty_multiplier : undefined,
+  });
 
-  const result = prepare(
-    'INSERT INTO items (name, category_id, color, difficulty_multiplier) VALUES (?, ?, ?, ?)',
-  ).run(name, category_id, color, resolvedDifficulty);
-
-  const row = prepare('SELECT * FROM items WHERE id = ?').get(result.lastInsertRowid) as ItemRow;
-
-  // Initialise cumulative stats row for this item
-  prepare('INSERT OR IGNORE INTO stats (item_id) VALUES (?)').run(row.id);
-
-  return c.json(row, 201);
+  return c.json(item, 201);
 });
 
 // PATCH /api/items/:id
 controller.patch('/:id', async (c) => {
   const id = Number(c.req.param('id'));
-  const existing = prepare('SELECT * FROM items WHERE id = ?').get(id) as ItemRow | undefined;
+  const existing = itemStore.find(id);
   if (!existing) throw new NotFoundError(`Item ${id} not found`);
 
   const body = await c.req.json();
-  const updates: Record<string, unknown> = {};
+  const updates: Parameters<typeof itemStore.update>[1] = {};
 
   if ('name' in body) {
     if (typeof body.name !== 'string') throw new ValidationError('name must be a string');
@@ -113,8 +88,9 @@ controller.patch('/:id', async (c) => {
   }
   if ('category_id' in body) {
     if (typeof body.category_id !== 'number') throw new ValidationError('category_id must be a number');
-    const category = prepare('SELECT id FROM categories WHERE id = ?').get(body.category_id);
-    if (!category) throw new ValidationError(`Category ${body.category_id} does not exist`);
+    if (!categoryStore.find(body.category_id)) {
+      throw new ValidationError(`Category ${body.category_id} does not exist`);
+    }
     updates.category_id = body.category_id;
   }
   if ('color' in body) {
@@ -130,20 +106,14 @@ controller.patch('/:id', async (c) => {
     return c.json(existing);
   }
 
-  const setClauses = Object.keys(updates)
-    .map((k) => `${k} = ?`)
-    .join(', ');
-  prepare(`UPDATE items SET ${setClauses} WHERE id = ?`).run(...Object.values(updates), id);
-
-  const row = prepare('SELECT * FROM items WHERE id = ?').get(id) as ItemRow;
-  return c.json(row);
+  return c.json(itemStore.update(id, updates));
 });
 
 // DELETE /api/items/:id
 controller.delete('/:id', (c) => {
   const id = Number(c.req.param('id'));
-  const existing = prepare('SELECT * FROM items WHERE id = ?').get(id) as ItemRow | undefined;
+  const existing = itemStore.find(id);
   if (!existing) throw new NotFoundError(`Item ${id} not found`);
-  prepare('DELETE FROM items WHERE id = ?').run(id);
+  itemStore.delete(id);
   return c.body(null, 204);
 });
