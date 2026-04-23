@@ -15,77 +15,76 @@ Expose REST API for Weartrack data layer using Hono + better-sqlite3, with middl
 
 ### Categories
 
-| Method | Path | Handler | Purpose |
-|--------|------|---------|---------|
-| GET | /api/categories | CategoriesController#list | List all categories |
-| POST | /api/categories | CategoriesController#create | Create new category |
-| GET | /api/categories/:id | CategoriesController#get | Get category by ID |
-| PUT | /api/categories/:id | CategoriesController#update | Update category formula |
-| DELETE | /api/categories/:id | CategoriesController#delete | Delete category |
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | /api/categories | List all categories |
+| POST | /api/categories | Create new category |
+| GET | /api/categories/:id | Get category by ID |
+| PATCH | /api/categories/:id | Update category fields |
+| DELETE | /api/categories/:id | Delete category (cascades) |
 
 ### Items
 
-| Method | Path | Handler | Purpose |
-|--------|------|---------|---------|
-| GET | /api/items | ItemsController#list | List all items |
-| POST | /api/items | ItemsController#create | Create new item |
-| GET | /api/items/:id | ItemsController#get | Get item by ID |
-| PUT | /api/items/:id | ItemsController#update | Update item |
-| DELETE | /api/items/:id | ItemsController#delete | Delete item |
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | /api/items | List all items |
+| POST | /api/items | Create new item |
+| GET | /api/items/:id | Get item by ID |
+| PATCH | /api/items/:id | Update item fields |
+| DELETE | /api/items/:id | Delete item (cascades) |
 
 ### Sessions
 
-| Method | Path | Handler | Purpose |
-|--------|------|---------|---------|
-| POST | /api/sessions/start/:itemId | SessionsController#start | Start wear session |
-| POST | /api/sessions/end/:itemId | SessionsController#end | End wear session |
-| GET | /api/sessions/:itemId | SessionsController#recent | List recent sessions |
-| GET | /api/sessions/:itemId/current | SessionsController#current | Get current session |
-| DELETE | /api/sessions/:itemId/current | SessionsController#forceEnd | Force end current session |
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | /api/sessions | List sessions; optional `?item_id=` filter |
+| GET | /api/sessions/current | One entry per category (null-object for idle) |
+| GET | /api/sessions/:id | Get session by ID |
+| POST | /api/sessions/start | Begin wear session |
+| POST | /api/sessions/:id/end | Finish wear session |
 
 ### Injuries
 
-| Method | Path | Handler | Purpose |
-|--------|------|---------|---------|
-| POST | /api/injuries/:itemId | InjuriesController#create | Report injury |
-| GET | /api/injuries/:itemId | InjuriesController#get | Check injury status |
-| DELETE | /api/injuries/:itemId | InjuriesController#delete | Mark healed |
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | /api/injuries | List injuries; optional `?item_id=` filter |
+| GET | /api/injuries/:id | Get injury by ID |
+| POST | /api/injuries | Report a new injury |
+| POST | /api/injuries/:id/heal | Mark injury as healed |
 
 ### Stats
 
-| Method | Path | Handler | Purpose |
-|--------|------|---------|---------|
-| GET | /api/stats/:itemId | StatsController#get | Get item stats |
-| GET | /api/stats/category/:categoryId | StatsController#category | Category stats |
-| GET | /api/stats/category/:categoryId/leaderboard | StatsController#leaderboard | Items ranked by wear |
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | /api/stats/leaderboard/:type | Cross-item leaderboard (registered before /:item_id) |
+| GET | /api/stats/:item_id | Cumulative stats for one item |
+| GET | /api/stats/:item_id/history | Time-series from sessions; `?unit=month\|week` |
+
+---
 
 ## Categories Model
 
 ```typescript
-interface CategorySchema {
+interface CategoryRow {
   id: number;
   name: string;
-  icon: string; // SF Symbols name (e.g., "dumbbell", "footprints")
-  
-  // Rest formula
-  initial_wear: number; // Base wear time in seconds
-  rest_multiplier: number; // y = mx + c coefficient
-  rest_constant: number; // y = mx + c intercept
-  
-  // Risk levels (JSON array)
-  risk_levels: {
-    lower_threshold?: number; // null for first level
-    upper_threshold: number; // upper bound, or null for last
-    text: string; // e.g., "mild", "moderate", "severe"
-    severity: 1 | 2 | 3 | 4 | 5; // numeric for calculations
-  }[]; // validated non-overlapping: > lower, <= upper
-  
-  // Break penalty calculation
-  break_decay_multiplier: number; // e.g., 0.75 for 75%
-  break_penalty_period: number; // hours until break penalty starts
+  icon: string;                          // SF Symbols name (e.g. "figure.walk")
+  initial_wear_duration_seconds: number; // T0 — base wear before rest matters
+  rest_multiplier: number;               // m in rest = m*wear + c
+  rest_constant_seconds: number;         // c in rest = m*wear + c
+  risk_levels: string;                   // JSON — parsed to RiskLevel[] on read
+  break_decay_multiplier: number;        // e.g. 0.75
+  break_starts_after_seconds: number;    // seconds before decay kicks in
+}
+```
 
-  // Injury handling
-  injury_rest_multiplier: number; // e.g., 1.5x normal rest
+`risk_levels` is stored as JSON text in SQLite and parsed on read. Each element:
+```typescript
+interface RiskLevel {
+  lower: number | null;   // null means "from zero"
+  upper: number | null;   // null means "no upper bound"
+  text: string;           // e.g. "safe", "moderate", "high"
+  severity: number;       // 1–5
 }
 ```
 
@@ -93,68 +92,49 @@ interface CategorySchema {
 
 #### GET /api/categories
 
-Returns: `200 OK` - Array of category objects
-
-```json
-[{
-  "id": 1,
-  "name": "lifting",
-  "icon": "dumbbell",
-  "initial_wear": 900, // 15 minutes
-  "rest_multiplier": 0.5,
-  "rest_constant": 86400, // 24 hours
-  "risk_levels": [
-    { "lower_threshold": null, "upper_threshold": 14400, "text": "safe", "severity": 1 },
-    { "lower_threshold": 14400, "upper_threshold": 28800, "text": "moderate", "severity": 2 },
-    { "lower_threshold": 28800, "upper_threshold": 43200, "text": "high", "severity": 3 },
-    { "lower_threshold": 43200, "upper_threshold": 64800, "text": "very_high", "severity": 4 },
-    { "lower_threshold": 64800, "upper_threshold": null, "text": "extreme", "severity": 5 }
-  ],
-  "break_decay_multiplier": 0.75,
-  "break_penalty_period": 24,
-  "injury_rest_multiplier": 1.5
-}]
-```
+Returns `200 OK` — array of category objects with `risk_levels` parsed as an array.
 
 #### POST /api/categories
 
-Returns: `201 Created`
+Returns `201 Created`.
 
 ```json
 // Request
 {
-  "name": "running",
-  "icon": "footprints",
-  "initial_wear": 1800, // 30 minutes
-  "rest_multiplier": 0.4,
-  "rest_constant": 172800, // 48 hours
-  "risk_levels": [], // empty or array
+  "name": "Footwear",
+  "icon": "figure.walk",
+  "initial_wear_duration_seconds": 900,
+  "rest_multiplier": 6,
+  "rest_constant_seconds": 86400,
+  "risk_levels": [
+    { "lower": null, "upper": 14400, "text": "safe", "severity": 1 },
+    { "lower": 14400, "upper": 28800, "text": "moderate", "severity": 2 },
+    { "lower": 28800, "upper": null, "text": "high", "severity": 3 }
+  ],
   "break_decay_multiplier": 0.75,
-  "break_penalty_period": 24,
-  "injury_rest_multiplier": 1.5
+  "break_starts_after_seconds": 604800
 }
-
-// Note: risk_levels validation skipped for brevity
 ```
 
-#### PUT /api/categories/:id
+#### PATCH /api/categories/:id
 
-Returns: `200 OK` - Updated object
+Returns `200 OK` — updated object. Accepts any subset of the writable fields.
 
 #### DELETE /api/categories/:id
 
-Returns: `204 No Content` (cascading delete from items)
+Returns `204 No Content`. Cascades to items → sessions, injuries, stats.
+
+---
 
 ## Items Model
 
 ```typescript
-interface ItemSchema {
+interface ItemRow {
   id: number;
   category_id: number;
   name: string;
-  icon: string; // SF Symbols name
-  color: string; // hex or name (e.g., "#FF6B6B")
-  difficulty: number; // e.g., 1.0, 0.66 for 150% difficulty
+  color: string;                // hex colour e.g. "#ff0000"
+  difficulty_multiplier: number; // 1.0 = normal; higher = harder
 }
 ```
 
@@ -162,345 +142,305 @@ interface ItemSchema {
 
 #### GET /api/items
 
-Returns: `200 OK` - Array of items with category info
-
-```json
-[{
-  "id": 1,
-  "category_id": 1,
-  "category": {
-    "id": 1,
-    "name": "lifting",
-    "icon": "dumbbell"
-  },
-  "name": "Barbell",
-  "icon": "dumbbell",
-  "color": "#FF4444",
-  "difficulty": 1.0
-}]
-```
+Returns `200 OK` — array of items.
 
 #### POST /api/items
 
-Returns: `201 Created`
+Returns `201 Created`.
 
 ```json
 // Request
 {
   "category_id": 1,
-  "name": "Dumbbell",
-  "icon": "dumbbell",
-  "color": "#44FF44",
-  "difficulty": 0.8
+  "name": "Test Shoe",
+  "color": "#ff0000",
+  "difficulty_multiplier": 1.0  // optional; defaults to 1.0
 }
 ```
+
+#### PATCH /api/items/:id
+
+Returns `200 OK` — updated item. Accepts any subset of writable fields.
+
+---
 
 ## Sessions Model
 
 ```typescript
-interface WearSessionSchema {
+interface SessionRow {
   id: number;
   item_id: number;
-  category_id: number; // FK cascade via items
-  started_at: string; // ISO 8601
-  ended_at: string | null; // ISO 8601, null if active
-  calculated_wear: number; // seconds
-  calculated_rest: number | null; // seconds, null if still wearing
-  injury: boolean;
+  started_at: number;            // Unix timestamp
+  ended_at: number | null;       // null while wearing
+  calculated_wear_seconds: number;
+  calculated_rest_seconds: number | null;  // null while wearing
+  ended_in_injury: number;       // 0 or 1
 }
 ```
+
+All timestamps are Unix (seconds since epoch), not ISO 8601.
 
 ### Sessions API
 
-#### POST /api/sessions/start/:itemId
+#### GET /api/sessions/current
 
-Returns: `201 Created`
-
-```json
-// Response
-{
-  "id": 123,
-  "item_id": 5,
-  "started_at": "2026-04-21T10:00:00Z",
-  "category_id": 1,
-  "item": { "id": 5, "name": "Barbell", "icon": "dumbbell" },
-  "state": "wearing",
-  "effective_wear": 3600,
-  "effective_rest": 900
-}
-```
-
-Note: Injury check not done here - injury state retrieved via `/api/injuries/:itemId` endpoint.
-
-Error responses:
-
-- `409 Conflict` - Already wearing (active session exists)
-- `500 Internal Server Error` - DB error
-
-#### POST /api/sessions/end/:itemId
-
-Returns: `200 OK` - Session with calculated rest and injury info
+Returns `200 OK` — one entry per category, always the full list. Categories without an open session use the null-object pattern:
 
 ```json
-// Normal end (no injury)
-{
-  "id": 123,
-  "ended_at": "2026-04-21T12:00:00Z",
-  "calculated_wear": 3600,
-  "calculated_rest": 1800,
-  "injury_reported": false,
-  "state": "resting"
-}
-
-// Injury occurred
-{
-  "id": 123,
-  "ended_at": "2026-04-21T12:00:00Z",
-  "calculated_wear": 3600,
-  "calculated_rest": 5400, // extended with injury rest multiplier
-  "injury_reported": true,
-  "injury": {
-    "id": 456,
-    "severity": 2,
-    "occurred_at": "2026-04-21T12:00:00Z",
-    "heals_at": "2026-04-24T12:00:00Z"
+[
+  {
+    "category": {
+      "id": 1,
+      "name": "Footwear",
+      "icon": "figure.walk",
+      "initial_wear_duration_seconds": 900,
+      "rest_multiplier": 6,
+      "rest_constant_seconds": 86400,
+      "risk_levels": [{ "lower": null, "upper": 14400, "text": "safe", "severity": 1 }, ...],
+      "break_decay_multiplier": 0.75,
+      "break_starts_after_seconds": 604800
+    },
+    "item": {
+      "id": 5,
+      "category_id": 1,
+      "name": "Test Shoe",
+      "color": "#ff0000",
+      "difficulty_multiplier": 1.0
+    },
+    "session": {
+      "id": 123,
+      "item_id": 5,
+      "started_at": 1745000000,
+      "ended_at": null,
+      "calculated_wear_seconds": 900,
+      "calculated_rest_seconds": null,
+      "ended_in_injury": 0
+    }
   },
-  "state": "injured"
+  {
+    "category": { "id": 2, "name": "Lifting", ... },
+    "item": null,
+    "session": null
+  }
+]
+```
+
+#### POST /api/sessions/start
+
+Returns `201 Created` — new session row.
+
+```json
+// Request
+{
+  "item_id": 5,
+  "started_at": 1745000000  // optional; defaults to current Unix time
 }
 ```
 
-Error:
+Validation:
+- `item_id` must be a number → `400`
+- `started_at` if present must be a number → `400`
+- Item must exist → `404`
+- One session per **category**: if another item in the same category has an open session → `409`
 
-- `409 Conflict` - No active session to end
-- `400 Bad Request` - Injury already active
+Error 409 response:
+```json
+{
+  "error": "Category already has an open session on item \"Test Shoe\" (id 5)",
+  "conflicting_item": { "id": 5, "name": "Test Shoe" }
+}
+```
 
-Returns injury record with injury ID for tracking.
+#### POST /api/sessions/:id/end
 
-#### GET /api/sessions/:itemId
+Returns `200 OK` — updated session row with `ended_at`, `calculated_wear_seconds`, and `calculated_rest_seconds` set.
 
-Returns: `200 OK` - Recent sessions (last 30 days, descending by started_at)
+```json
+// Request (body optional)
+{
+  "ended_at": 1745003600  // optional; defaults to current Unix time
+}
+```
 
-#### GET /api/sessions/:itemId/current
+Validation:
+- `ended_at` if present must be a number → `400`
+- Session must exist → `404`
+- Session must not already be ended → `400`
 
-Returns: `200 OK` - Active session or null
+After ending, stats are updated immediately:
+- `total_wear_seconds += calculated_wear_seconds`
+- `session_count += 1`
+- `max_single_session_wear_seconds = MAX(...)`
+- Streak logic: carries forward if break ≤ `previous.calculated_rest_seconds + 86400`; otherwise resets
 
-#### DELETE /api/sessions/:itemId/current
+---
 
-Returns: `204 No Content` (forces end current session)
+## Injuries Model
+
+```typescript
+interface InjuryRow {
+  id: number;
+  item_id: number;
+  occurred_at: number;       // Unix timestamp
+  healed_at: number | null;  // null until healed
+  severity: number;          // 1–5, derived from risk_levels at time of injury
+}
+```
 
 ### Injuries API
 
-#### POST /api/sessions/:itemId
+#### POST /api/injuries
 
-Reports injury when ending session (injured: true in response).
-
-#### GET /api/injuries/:itemId
-
-Returns: `200 OK` - Active injury or null
+Returns `201 Created` — new injury row.
 
 ```json
-// With injury
+// Request
 {
   "item_id": 5,
-  "injury_id": 456,
-  "occurred_at": "2026-04-21T12:00:00Z",
-  "heals_at": "2026-04-24T12:00:00Z",
-  "severity": 2,
-  "days_remaining": 3
+  "wear_seconds": 18000  // optional; used to derive severity
 }
-
-// No injury
-null
 ```
 
-#### DELETE /api/injuries/:itemId
+`severity` is derived from `getRiskLevel(wear_seconds, category).severity`. Defaults to 1 if no wear data is provided and item has no current session.
 
-Returns: `204 No Content` - Mark injury as healed
+Error responses:
+- `400` — item already has an active injury (`healed_at IS NULL`)
+- `400` — `item_id` missing
+- `404` — item does not exist
+
+#### POST /api/injuries/:id/heal
+
+Returns `200 OK` — updated injury row with `healed_at` set to current Unix time.
+
+- `400` — already healed
+- `404` — not found
+
+---
 
 ## Stats Model
 
 ```typescript
-interface ItemStatsSchema {
-  id: number;
+interface StatsRow {
   item_id: number;
-  max_wear: number; // max single session
-  streak_count: number; // completed streaks
-  streak_wear: number; // longest streak
-  total_wear: number; // cumulative
-  session_count: number; // total sessions
-  month_wear_yoy: number | null; // current month vs last year
+  total_wear_seconds: number;
+  session_count: number;
+  max_single_session_wear_seconds: number;
+  streak_wear_seconds: number;
+  streak_count: number;
+  best_streak_wear_seconds: number;
+  best_streak_count: number;
 }
 ```
 
 ### Stats API
 
-#### GET /api/stats/:itemId
+#### GET /api/stats/:item_id
 
-Returns: `200 OK` - Item stats
+Returns `200 OK` — stats row (or zeroed object if no sessions yet).
 
 ```json
 {
   "item_id": 5,
-  "max_wear": 3600,
-  "streak_count": 3,
-  "streak_wear": 3300,
-  "total_wear": 6300,
+  "total_wear_seconds": 21600,
   "session_count": 3,
-  "month_wear_yoy": 5
+  "max_single_session_wear_seconds": 10800,
+  "streak_wear_seconds": 21600,
+  "streak_count": 3,
+  "best_streak_wear_seconds": 21600,
+  "best_streak_count": 3
 }
 ```
 
-#### GET /api/stats/category/:categoryId
+#### GET /api/stats/leaderboard/:type
 
-Returns: `200 OK` - Category stats (aggregate of items)
+**Must be registered before `/:item_id`** to avoid route shadowing.
+
+Supported `:type` values:
+
+| type | sorted by |
+|------|-----------|
+| `longest-wear` | `max_single_session_wear_seconds DESC` |
+| `most-total-wear` | `total_wear_seconds DESC` |
+| `best-streak` | `best_streak_wear_seconds DESC` |
+| `most-sessions` | `session_count DESC` |
+
+Returns top 20 rows joining `stats → items → categories`.
+
+#### GET /api/stats/:item_id/history?unit=month|week
+
+Returns time-series aggregated from sessions:
 
 ```json
-{
-  "category_id": 1,
-  "category": { "id": 1, "name": "lifting" },
-  "items": [
-    { "id": 1, "name": "Barbell", "max_wear": 3600, "total_wear": 6300, "session_count": 3 },
-    { "id": 2, "name": "Dumbbell", "max_wear": 2400, "total_wear": 2000, "session_count": 1 }
-  ]
-}
+[
+  { "period": "2026-04", "total_wear_seconds": 21600, "session_count": 3 },
+  { "period": "2026-05", "total_wear_seconds": 7200, "session_count": 1 }
+]
 ```
 
-#### GET /api/stats/category/:categoryId/leaderboard
+`unit=month` → `%Y-%m` format; `unit=week` → `%Y-%W` format.
 
-Returns: `200 OK` - Items sorted by total_wear descending
-
-```json
-[{
-  "id": 1,
-  "name": "Barbell",
-  "rank": 1,
-  "max_wear": 3600,
-  "streak_count": 3,
-  "streak_wear": 3300,
-  "total_wear": 6300,
-  "session_count": 3,
-  "color": "#FF4444"
-}]
-```
+---
 
 ## Middleware
 
-### Logging Middleware
+### Error Handling
+
+Registered via `app.onError()`:
 
 ```typescript
-// middleware/logging.js
-const log = (req, res) => {
-  const logger = console; // Could use winston/pino
-  logger.info(`${req.method} ${req.url} - ${req.method} ${req.path}`);
+// middleware/errors.ts
+export class NotFoundError extends Error { ... }
+export class ConflictError extends Error {
+  readonly details?: Record<string, unknown>;
+}
+export class ValidationError extends Error { ... }
+
+export const errorHandler = (): ErrorHandler => (e, c) => {
+  if (e instanceof NotFoundError)  return c.json({ error: 'Not found' }, 404);
+  if (e instanceof ConflictError)  return c.json({ error: e.message, ...(e.details ?? {}) }, 409);
+  if (e instanceof ValidationError) return c.json({ error: e.message }, 400);
+  console.error('Unhandled error:', e);
+  return c.json({ error: 'Internal server error' }, 500);
 };
 ```
 
-### Error Handling Middleware
-
-```typescript
-// middleware/errors.js
-const errorHandler = (err, c) => {
-  if (err.name === 'NotFoundError') {
-    return c.json({ error: 'Not found' }, 404);
-  }
-  if (err.name === 'ConflictError') {
-    return c.json({ error: 'Conflict' }, 409);
-  }
-  // Other errors
-  return c.json({ error: err.message || 'Internal error' }, 500);
-};
-```
-
-### Usage in server.js
-
-```typescript
-import { Hono } from 'hono';
-import { cors } from 'hono/cors';
-import static from 'hono/jsx/static';
-import { log } from './middleware/logging';
-import { errorHandler } from './middleware/errors';
-import { items, categories } from './controllers';
-
-const app = new Hono();
-
-// CORS for PWA
-app.use('*', cors());
-
-// Logging
-app.use('*', log);
-
-// Error handler (catch-all)
-// Already registered below
-
-// Static files
-app.route('/', static(path.join(import.meta.dirname, 'frontend/build')));
-
-// API routes
-app.get('/api/categories', categories.list);
-app.post('/api/categories', bodyParser(), categories.create);
-// ... etc
-```
+`ConflictError` carries a structured `details` object spread into the 409 response body (e.g. `conflicting_item`).
 
 ## Directory Structure
 
 ```
 src/backend/
 ├── src/
-│   ├── server.js              # Hono app entry
+│   ├── server.ts
 │   ├── middleware/
-│   │   ├── logging.js
-│   │   └── errors.js
-│   ├── items/
-│   │   ├── controller.js
-│   │   └── router.js
+│   │   └── errors.ts
 │   ├── categories/
-│   │   ├── controller.js
-│   │   └── router.js
+│   │   ├── controller.ts
+│   │   └── router.ts
+│   ├── items/
+│   │   ├── controller.ts
+│   │   └── router.ts
 │   ├── sessions/
-│   │   ├── controller.js
-│   │   └── router.js
+│   │   ├── controller.ts
+│   │   └── router.ts
 │   ├── injuries/
-│   │   ├── controller.js
-│   │   └── router.js
+│   │   ├── controller.ts
+│   │   └── router.ts
 │   └── stats/
-│       ├── controller.js
-│       └── router.js
-├── db/
-│   ├── index.js              # better-sqlite3 connection
-│   └── schema.js             # Table definitions
-├── package.json
+│       ├── controller.ts
+│       └── router.ts
 └── tests/
-    └── db/
+    ├── db/
+    ├── categories/
+    ├── items/
+    ├── sessions/
+    ├── injuries/
+    └── stats/
 ```
-
-## Validation
-
-- **risk_levels array**: validated non-overlapping:
-
-```typescript
-function validateRiskLevels(levels) {
-  let lower = null;
-  for (const level of levels) {
-    if (lower !== null && (level.lower_threshold ?? -Infinity) <= lower) {
-      throw new Error('Overlapping risk levels');
-    }
-    lower = level.upper_threshold ?? Infinity;
-  }
-}
-```
-
-- **icon**: SF Symbols name (non-empty string)
-- **color**: hex or named color
-
-## Error Handling
-
-- **NotFoundError**: 404
-- **ConflictError**: 409
-- **ValidationError**: 400
-- **General errors**: 500
 
 ## Notes
 
-- **Transactions**: Sessions CRUD use transactions (insert session, update stats)
-- **Timestamps**: All timestamps ISO 8601 UTC
-- **Cascading deletes**: items → wear_sessions, injuries, streaks, breaks, stats, goals
+- **Timestamps**: All timestamps are Unix seconds (integers), not ISO 8601
+- **Cascading deletes**: categories → items → sessions, injuries, stats
+- **route registration order**: `GET /api/sessions/current` must be before `GET /api/sessions/:id`; `GET /api/stats/leaderboard/:type` must be before `GET /api/stats/:item_id`
+- **Testing**: Tests use an in-memory SQLite DB (`:memory:`) reset via `runMigration()` in `beforeAll`
