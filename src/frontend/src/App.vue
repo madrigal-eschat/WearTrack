@@ -1,7 +1,7 @@
 <template>
   <k-app theme="ios" class="h-full">
     <router-view />
-    <k-toolbar bottom class="left-0 right-0 bottom-0 fixed">
+    <k-toolbar bottom class="left-0 right-0 bottom-0 fixed z-30">
       <k-tabbar labels icons>
         <k-tabbar-link
           :active="route.path === '/'"

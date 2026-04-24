@@ -1,8 +1,10 @@
 import { dbExport } from '../index.js';
 import runMigration001 from './001_initial.js';
+import runMigration002 from './002_oklch_colors.js';
 
 const migrations: Array<{ version: number; name: string; run: () => void }> = [
   { version: 1, name: '001_initial', run: runMigration001 },
+  { version: 2, name: '002_oklch_colors', run: runMigration002 },
 ];
 
 export function runMigrations() {
