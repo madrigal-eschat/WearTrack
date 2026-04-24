@@ -21,6 +21,11 @@ describe('formatDuration', () => {
 });
 
 describe('shortDuration', () => {
+  it('returns "0m" for zero or negative', () => {
+    expect(shortDuration(0)).toBe('0m');
+    expect(shortDuration(-60)).toBe('0m');
+  });
+
   it('returns minutes only when under an hour', () => {
     expect(shortDuration(125)).toBe('2m');
   });
