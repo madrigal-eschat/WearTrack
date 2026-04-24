@@ -2,20 +2,11 @@
   <k-page style="padding-bottom: 56px">
     <k-navbar title="Stats" />
 
-    <!-- Leaderboard type selector -->
-    <div class="flex gap-2 overflow-x-auto px-4 py-3 no-scrollbar">
-      <button
-        v-for="t in LEADERBOARD_TYPES"
-        :key="t.value"
-        class="flex-shrink-0 px-3 py-1 rounded-full text-sm border transition-colors"
-        :class="activeType === t.value
-          ? 'bg-blue-500 text-white border-blue-500'
-          : 'bg-white text-gray-700 border-gray-300'"
-        @click="loadLeaderboard(t.value)"
-      >
-        {{ t.label }}
-      </button>
-    </div>
+    <SegmentedControl
+      :options="LEADERBOARD_TYPES"
+      :modelValue="activeType"
+      @update:modelValue="loadLeaderboard"
+    />
 
     <div v-if="loading" class="text-center py-8 text-gray-400">Loading…</div>
     <k-list v-else-if="leaderboard.length > 0" inset>
@@ -43,6 +34,7 @@
 import { onMounted, computed } from 'vue';
 import { kPage, kNavbar, kList, kListItem, kBadge, kBlock } from 'konsta/vue';
 import { useStats } from '../composables/useStats.js';
+import SegmentedControl from '../components/SegmentedControl.vue';
 
 const { leaderboard, activeType, loading, loadLeaderboard, LEADERBOARD_TYPES } = useStats();
 
@@ -66,8 +58,3 @@ function entryBadge(entry: Record<string, unknown>): string {
   return activeTypeObj.value?.badge(entry) ?? '';
 }
 </script>
-
-<style scoped>
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-</style>
