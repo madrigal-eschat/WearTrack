@@ -1,9 +1,10 @@
 <template>
-  <!-- Sheet slides up from bottom -->
+  <!-- Sheet slides up from bottom; v-if removes it from DOM when closed to prevent pointer-event blocking -->
   <k-sheet
+    v-if="open"
     :opened="open"
     @backdropclick="$emit('close')"
-    class="pb-safe"
+    class="pb-safe bg-white dark:bg-gray-900"
   >
     <k-toolbar>
       <div class="flex w-full items-center justify-between px-4">
