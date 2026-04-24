@@ -1,17 +1,37 @@
 import { ref } from 'vue';
-
-export type LeaderboardType = 'longest-wear' | 'most-total-wear' | 'best-streak' | 'most-sessions';
+import { formatDuration } from '../utils/formatDuration.js';
 
 export interface LeaderboardEntry {
   [key: string]: unknown;
 }
 
-export const LEADERBOARD_TYPES: { value: LeaderboardType; label: string }[] = [
-  { value: 'longest-wear', label: 'Longest Wear' },
-  { value: 'most-total-wear', label: 'Most Total Wear' },
-  { value: 'best-streak', label: 'Best Streak' },
-  { value: 'most-sessions', label: 'Most Sessions' },
-];
+export const LEADERBOARD_TYPES = [
+  {
+    value: 'longest-wear' as const,
+    label: 'Longest Wear',
+    badge: (entry: Record<string, unknown>) =>
+      formatDuration((entry.max_single_session_wear_seconds ?? 0) as number),
+  },
+  {
+    value: 'most-total-wear' as const,
+    label: 'Most Total Wear',
+    badge: (entry: Record<string, unknown>) =>
+      formatDuration((entry.total_wear_seconds ?? 0) as number),
+  },
+  {
+    value: 'best-streak' as const,
+    label: 'Best Streak',
+    badge: (entry: Record<string, unknown>) =>
+      formatDuration((entry.best_streak_wear_seconds ?? 0) as number),
+  },
+  {
+    value: 'most-sessions' as const,
+    label: 'Most Sessions',
+    badge: (entry: Record<string, unknown>) => `${entry.session_count ?? 0} sessions`,
+  },
+] as const;
+
+export type LeaderboardType = typeof LEADERBOARD_TYPES[number]['value'];
 
 const leaderboard = ref<LeaderboardEntry[]>([]);
 const activeType = ref<LeaderboardType>('longest-wear');

@@ -40,13 +40,17 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { onMounted, computed } from 'vue';
 import { kPage, kNavbar, kList, kListItem, kBadge, kBlock } from 'konsta/vue';
 import { useStats } from '../composables/useStats.js';
 
 const { leaderboard, activeType, loading, loadLeaderboard, LEADERBOARD_TYPES } = useStats();
 
 onMounted(() => loadLeaderboard('longest-wear'));
+
+const activeTypeObj = computed(() =>
+  LEADERBOARD_TYPES.find((t) => t.value === activeType.value)
+);
 
 function entryName(entry: Record<string, unknown>): string {
   return (entry.name ?? entry.category_name ?? '—') as string;
@@ -58,25 +62,8 @@ function entrySubtitle(entry: Record<string, unknown>): string {
   return '';
 }
 
-function formatSeconds(s: number): string {
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
-}
-
 function entryBadge(entry: Record<string, unknown>): string {
-  if (activeType.value === 'most-sessions') {
-    return `${entry.session_count ?? 0} sessions`;
-  }
-  if (activeType.value === 'best-streak') {
-    return formatSeconds((entry.best_streak_wear_seconds ?? 0) as number);
-  }
-  if (activeType.value === 'most-total-wear') {
-    return formatSeconds((entry.total_wear_seconds ?? 0) as number);
-  }
-  // longest-wear
-  return formatSeconds((entry.max_single_session_wear_seconds ?? 0) as number);
+  return activeTypeObj.value?.badge(entry) ?? '';
 }
 </script>
 
