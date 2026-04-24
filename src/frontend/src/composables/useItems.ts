@@ -75,6 +75,10 @@ async function deleteItem(id: number): Promise<void> {
   items.value = items.value.filter((i) => i.id !== id);
 }
 
+function itemsForCategory(categoryId: number): Item[] {
+  return items.value.filter((i) => i.category_id === categoryId);
+}
+
 export function useItems() {
   return {
     items,
@@ -84,5 +88,6 @@ export function useItems() {
     createItem,
     updateItem,
     deleteItem,
+    itemsForCategory,
   };
 }
