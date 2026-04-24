@@ -73,4 +73,80 @@ test.describe('Item management', () => {
     const itemBox = await itemEntry.boundingBox();
     expect(catBox!.y).toBeLessThan(itemBox!.y);
   });
+
+  test('can select a color via swatch', async ({ page }) => {
+    const name = `Item-${uid()}`;
+
+    await page.getByRole('button', { name: '+ Add' }).nth(1).click();
+    await page.getByLabel('Name').last().fill(name);
+
+    // Open the color picker popover
+    await page.locator('[data-testid="color-trigger"]').click();
+
+    // Click the second swatch (hue 30°)
+    await page.locator('[data-testid="color-swatch"]').nth(1).click();
+
+    await page.getByRole('button', { name: 'Add Item' }).click();
+    await expect(page.getByText(name).first()).toBeVisible();
+
+    // Color circle style should contain oklch
+    const circle = page.locator('li').filter({ hasText: name }).locator('[data-testid="color-circle"]').first();
+    const style = await circle.getAttribute('style');
+    expect(style).toContain('oklch');
+  });
+
+  test('new items get random default colors', async ({ page }) => {
+    const names = Array.from({ length: 4 }, () => `Item-${uid()}`);
+
+    for (const name of names) {
+      await page.getByRole('button', { name: '+ Add' }).nth(1).click();
+      await page.getByLabel('Name').last().fill(name);
+      await page.getByRole('button', { name: 'Add Item' }).click();
+      await expect(page.getByText(name).first()).toBeVisible();
+    }
+
+    const colors = await Promise.all(
+      names.map((name) =>
+        page
+          .locator('li')
+          .filter({ hasText: name })
+          .locator('[data-testid="color-circle"]')
+          .first()
+          .getAttribute('style')
+      )
+    );
+
+    const unique = new Set(colors);
+    expect(unique.size).toBeGreaterThan(1);
+  });
+
+  test('can set color via advanced hue and chroma sliders', async ({ page }) => {
+    const name = `Item-${uid()}`;
+
+    await page.getByRole('button', { name: '+ Add' }).nth(1).click();
+    await page.getByLabel('Name').last().fill(name);
+
+    // Open color picker
+    await page.locator('[data-testid="color-trigger"]').click();
+
+    // Expand advanced sliders
+    await page.getByRole('button', { name: /advanced/i }).click();
+
+    // Set hue to 180, chroma to 0.2
+    await page.locator('[data-testid="hue-slider"]').fill('180');
+    await page.locator('[data-testid="chroma-slider"]').fill('0.2');
+
+    await page.getByRole('button', { name: 'Add Item' }).click();
+    await expect(page.getByText(name).first()).toBeVisible();
+
+    const circle = page
+      .locator('li')
+      .filter({ hasText: name })
+      .locator('[data-testid="color-circle"]')
+      .first();
+    const style = await circle.getAttribute('style');
+    expect(style).toContain('oklch');
+    expect(style).toContain('180');
+    expect(style).toContain('0.2');
+  });
 });
