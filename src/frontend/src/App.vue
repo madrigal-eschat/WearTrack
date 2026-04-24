@@ -1,5 +1,6 @@
 <template>
   <k-app theme="ios" class="h-full">
+    <Toast />
     <router-view />
     <k-toolbar bottom class="left-0 right-0 bottom-0 fixed z-30">
       <k-tabbar labels icons>
@@ -39,6 +40,7 @@
 import { useRoute, useRouter } from 'vue-router';
 import { kApp, kToolbar, kTabbar, kTabbarLink } from 'konsta/vue';
 import { HomeIcon, Squares2X2Icon as ItemsIcon, ChartBarIcon } from '@heroicons/vue/24/solid';
+import Toast from './components/Toast.vue';
 
 const route = useRoute();
 const router = useRouter();
