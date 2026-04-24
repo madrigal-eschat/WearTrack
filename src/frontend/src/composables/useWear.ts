@@ -102,17 +102,6 @@ function currentWear(session: Session): number {
   return session.calculated_wear_seconds + (Math.floor(Date.now() / 1000) - session.started_at);
 }
 
-/** Format seconds as "Xh Ym" or "Ym Zs". */
-function formatDuration(seconds: number): string {
-  if (seconds <= 0) return '0s';
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m ${s}s`;
-  return `${s}s`;
-}
-
 export function useWear() {
   onMounted(() => {
     fetchCurrent();
@@ -132,6 +121,5 @@ export function useWear() {
     endSession,
     reportInjury,
     currentWear,
-    formatDuration,
   };
 }

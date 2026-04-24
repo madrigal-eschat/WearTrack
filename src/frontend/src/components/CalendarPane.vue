@@ -33,15 +33,9 @@
 import { onMounted } from 'vue';
 import { kButton } from 'konsta/vue';
 import { useCalendar } from '../composables/useCalendar.js';
+import { shortDuration } from '../utils/formatDuration.js';
 
 const { weekDays, loadWeekSessions, prevWeek, nextWeek, formatWeekRange } = useCalendar();
 
 onMounted(loadWeekSessions);
-
-function shortDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0) return `${h}h`;
-  return `${m}m`;
-}
 </script>

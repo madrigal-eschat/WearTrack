@@ -60,8 +60,9 @@ import { kBlockTitle, kList, kListItem, kButton } from 'konsta/vue';
 import { useWear, type CurrentEntry, type Session } from '../composables/useWear.js';
 import { useItems } from '../composables/useItems.js';
 import type { Item } from '../composables/useWear.js';
+import { formatDuration } from '../utils/formatDuration.js';
 
-const { currentSessions, startSession, endSession, currentWear, formatDuration, fetchCurrent } = useWear();
+const { currentSessions, startSession, endSession, currentWear, fetchCurrent } = useWear();
 const { items, loadItems } = useItems();
 
 const selectedItem = reactive<Record<number, number | null>>({});
