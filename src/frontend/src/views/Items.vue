@@ -80,6 +80,10 @@
         />
       </div>
       <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Color</label>
+        <ColorPicker v-model="itemForm.color" />
+      </div>
+      <div>
         <label for="item-category" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
         <select
           id="item-category"
@@ -109,7 +113,7 @@
             :title="item.name"
           >
             <template #media>
-              <div class="w-3 h-3 rounded-full" :style="{ background: item.color }"></div>
+              <div data-testid="color-circle" class="w-3 h-3 rounded-full" :style="{ background: item.color }"></div>
             </template>
             <template #after>
               <k-button small outline @click="onDeleteItem(item.id)">Delete</k-button>
@@ -132,6 +136,8 @@ import { kPage, kNavbar, kList, kListItem, kButton, kBlock } from 'konsta/vue';
 import { useItems } from '../composables/useItems.js';
 import { useCategories } from '../composables/useCategories.js';
 import type { Item } from '../composables/useWear.js';
+import ColorPicker from '../components/ColorPicker.vue';
+import { randomSwatchColor } from '../utils/colors.js';
 
 const { items, loadItems, createItem, deleteItem } = useItems();
 const { categories, loadCategories, createCategory, deleteCategory } = useCategories();
@@ -143,7 +149,7 @@ const showItemForm = ref(false);
 const catForm = reactive({ name: '', icon: '' });
 const itemForm = reactive<{ name: string; color: string; category_id: number | null }>({
   name: '',
-  color: '#3b82f6',
+  color: randomSwatchColor(),
   category_id: null,
 });
 
@@ -207,7 +213,7 @@ async function onAddItem() {
   try {
     await createItem({ name: itemForm.name, color: itemForm.color, category_id: itemForm.category_id });
     itemForm.name = '';
-    itemForm.color = '#3b82f6';
+    itemForm.color = randomSwatchColor();
     showItemForm.value = false;
   } catch (e) {
     alert(String(e));

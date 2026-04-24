@@ -136,6 +136,9 @@ test.describe('Item management', () => {
     await page.locator('[data-testid="hue-slider"]').fill('180');
     await page.locator('[data-testid="chroma-slider"]').fill('0.2');
 
+    // Close the dropdown before submitting
+    await page.locator('[data-testid="color-backdrop"]').click();
+
     await page.getByRole('button', { name: 'Add Item' }).click();
     await expect(page.getByText(name).first()).toBeVisible();
 
