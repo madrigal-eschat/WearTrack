@@ -3,6 +3,7 @@
     <button
       v-for="option in options"
       :key="option.value"
+      type="button"
       class="flex-shrink-0 px-3 py-1 rounded-full text-sm border transition-colors"
       :class="modelValue === option.value
         ? 'bg-blue-500 text-white border-blue-500'
