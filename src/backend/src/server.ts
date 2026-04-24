@@ -4,6 +4,7 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { logging } from './middleware/logging.js';
 import { errorHandler } from './middleware/errors.js';
 import { runMigrations } from './db/migrations/index.js';
+import { dbExport } from './db/index.js';
 import { router as categoriesRouter } from './controllers/categories.js';
 import { router as itemsRouter } from './controllers/items.js';
 import { router as sessionsRouter } from './controllers/sessions.js';
@@ -20,6 +21,21 @@ app.onError(errorHandler());
 app.get('/api/health', (c) => {
   return c.json({ status: 'ok' });
 });
+
+// Dev-only: wipe all data (keeps schema). Used by Playwright globalSetup.
+if (process.env.NODE_ENV !== 'production') {
+  app.post('/api/__reset', (c) => {
+    dbExport.exec(`
+      DELETE FROM sessions;
+      DELETE FROM injuries;
+      DELETE FROM stats;
+      DELETE FROM category_stats;
+      DELETE FROM items;
+      DELETE FROM categories;
+    `);
+    return c.json({ ok: true });
+  });
+}
 
 app.route('/api/categories', categoriesRouter);
 app.route('/api/items', itemsRouter);
