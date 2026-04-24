@@ -8,3 +8,8 @@ dist/
 .vite-temp/
 *.tmp
 *.temp
+.idea/*
+.claude
+.DS_Store
+.*.sw*
+test-results/
