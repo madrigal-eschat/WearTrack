@@ -59,11 +59,12 @@ import { ref, reactive, onMounted } from 'vue';
 import { kBlockTitle, kList, kListItem, kButton } from 'konsta/vue';
 import { useWear, type CurrentEntry, type Session } from '../composables/useWear.js';
 import { useItems } from '../composables/useItems.js';
-import type { Item } from '../composables/useWear.js';
+import { useToast } from '../composables/useToast.js';
 import { formatDuration } from '../utils/formatDuration.js';
 
 const { currentSessions, startSession, endSession, currentWear, fetchCurrent } = useWear();
-const { items, loadItems } = useItems();
+const { items, loadItems, itemsForCategory } = useItems();
+const { showError } = useToast();
 
 const selectedItem = reactive<Record<number, number | null>>({});
 
@@ -75,10 +76,6 @@ onMounted(async () => {
     selectedItem[entry.category.id] = first?.id ?? null;
   }
 });
-
-function itemsForCategory(categoryId: number): Item[] {
-  return items.value.filter((i) => i.category_id === categoryId);
-}
 
 function subtitle(entry: CurrentEntry): string {
   if (entry.session !== null && entry.item !== null) {
@@ -97,7 +94,7 @@ async function onWear(entry: CurrentEntry) {
   try {
     await startSession(itemId);
   } catch (e) {
-    alert(String(e));
+    showError(String(e));
   }
 }
 
@@ -106,7 +103,7 @@ async function onStop(entry: CurrentEntry) {
   try {
     await endSession(entry.session.id);
   } catch (e) {
-    alert(String(e));
+    showError(String(e));
   }
 }
 </script>
