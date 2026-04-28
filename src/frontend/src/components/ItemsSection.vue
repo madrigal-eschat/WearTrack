@@ -87,10 +87,16 @@ onMounted(async () => {
   loading.value = false;
 });
 
+// categories is populated by CategoriesSection via the shared useCategories ref;
+// this component intentionally does not call loadCategories() itself.
 // Keep default category selection in sync when categories change.
 // deep: true is needed because createCategory pushes to the array rather than replacing it.
 watch(categories, (cats) => {
-  if (cats.length > 0 && !itemForm.category_id) {
+  const validIds = cats.map((c) => String(c.id));
+  if (itemForm.category_id && !validIds.includes(itemForm.category_id)) {
+    // Selected category was deleted — reset to last available or empty.
+    itemForm.category_id = cats.length > 0 ? String(cats[cats.length - 1].id) : '';
+  } else if (!itemForm.category_id && cats.length > 0) {
     itemForm.category_id = String(cats[cats.length - 1].id);
   }
 }, { immediate: true, deep: true });
