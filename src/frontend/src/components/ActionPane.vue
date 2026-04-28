@@ -55,7 +55,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { reactive, onMounted } from 'vue';
 import { kBlockTitle, kList, kListItem, kButton } from 'konsta/vue';
 import { useWear, type CurrentEntry, type Session } from '../composables/useWear.js';
 import { useItems } from '../composables/useItems.js';
@@ -63,7 +63,7 @@ import { useToast } from '../composables/useToast.js';
 import { formatDuration } from '../utils/formatDuration.js';
 
 const { currentSessions, startSession, endSession, currentWear, fetchCurrent } = useWear();
-const { items, loadItems, itemsForCategory } = useItems();
+const { loadItems, itemsForCategory } = useItems();
 const { showError } = useToast();
 
 const selectedItem = reactive<Record<number, number | null>>({});
