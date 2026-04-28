@@ -25,7 +25,7 @@
           :subtitle="cat.icon"
         >
           <template #after>
-            <k-button small outline @click="onDeleteCategory(cat.id)">Delete</k-button>
+            <k-button small outline type="button" @click="onDeleteCategory(cat.id)">Delete</k-button>
           </template>
         </k-list-item>
       </k-list>
@@ -75,9 +75,11 @@ async function onDeleteCategory(id: number) {
   if (!confirm('Delete this category and all its items?')) return;
   try {
     await deleteCategory(id);
-    await loadItems();
   } catch (e) {
     showError(String(e));
+    return;
   }
+  // Refresh items silently after cascade delete; a stale list is not fatal.
+  await loadItems().catch(() => {});
 }
 </script>
