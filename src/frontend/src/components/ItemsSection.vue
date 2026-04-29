@@ -7,28 +7,33 @@
       @toggle="showItemForm = !showItemForm"
     />
 
-    <div v-if="showItemForm && categories.length > 0" class="px-4 pb-2 space-y-3">
+    <div v-if="showItemForm && categories.length > 0" class="mx-4 mb-3 p-3 bg-white border border-gray-200 rounded-2xl space-y-2">
       <TextField id="item-name" label="Name" v-model="itemForm.name" />
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Color</label>
+      <div class="flex gap-2 items-end">
         <ColorPicker v-model="itemForm.color" />
+        <template v-if="selectedCat?.icon">
+          <Icon v-if="selectedCat.icon.includes(':')" :icon="selectedCat.icon" class="w-6 h-6 self-center shrink-0" :style="{ color: itemForm.color }" />
+          <span v-else class="text-xl self-center shrink-0">{{ selectedCat.icon }}</span>
+        </template>
+        <div class="flex-1 min-w-[10ch]">
+          <SelectField
+            id="item-category"
+            label=""
+            :modelValue="itemForm.category_id"
+            @update:modelValue="itemForm.category_id = $event"
+          >
+            <option value="" disabled>Select…</option>
+            <option v-for="cat in categories" :key="cat.id" :value="String(cat.id)">{{ cat.name }}</option>
+          </SelectField>
+        </div>
+        <k-button
+          type="button"
+          @click="onAddItem"
+          :disabled="!itemForm.name || !itemForm.category_id"
+        >
+          Add
+        </k-button>
       </div>
-      <SelectField
-        id="item-category"
-        label="Category"
-        :modelValue="itemForm.category_id"
-        @update:modelValue="itemForm.category_id = $event"
-      >
-        <option value="" disabled>Select…</option>
-        <option v-for="cat in categories" :key="cat.id" :value="String(cat.id)">{{ cat.name }}</option>
-      </SelectField>
-      <k-button
-        type="button"
-        @click="onAddItem"
-        :disabled="!itemForm.name || !itemForm.category_id"
-      >
-        Add Item
-      </k-button>
     </div>
 
     <template v-if="!loading">
@@ -36,14 +41,21 @@
         <div class="px-4 mt-4 mb-1 text-xs font-semibold text-gray-500 uppercase tracking-wide">
           {{ cat.name }}
         </div>
-        <k-list inset>
+        <k-list inset class="!my-2">
           <k-list-item
             v-for="item in itemsForCategory(cat.id)"
             :key="item.id"
             :title="item.name"
           >
             <template #media>
-              <ColorCircle :color="item.color" />
+              <Icon
+                v-if="cat.icon?.includes(':')"
+                :icon="cat.icon"
+                class="w-7 h-7"
+                :style="{ color: item.color }"
+              />
+              <span v-else-if="cat.icon" class="text-2xl">{{ cat.icon }}</span>
+              <ColorCircle v-else :color="item.color" />
             </template>
             <template #after>
               <k-button small outline type="button" @click="onDeleteItem(item.id)">Delete</k-button>
@@ -61,7 +73,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted } from 'vue';
+import { ref, reactive, computed, watch, onMounted } from 'vue';
+import { Icon } from '@iconify/vue';
 import { kList, kListItem, kButton } from 'konsta/vue';
 import { useItems } from '../composables/useItems.js';
 import { useCategories } from '../composables/useCategories.js';
@@ -81,6 +94,10 @@ const loading = ref(true);
 const showItemForm = ref(false);
 
 const itemForm = reactive({ name: '', color: randomSwatchColor(), category_id: '' });
+
+const selectedCat = computed(() =>
+  categories.value.find((c) => String(c.id) === itemForm.category_id) ?? null
+);
 
 onMounted(async () => {
   await loadItems();

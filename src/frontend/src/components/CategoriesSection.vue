@@ -7,23 +7,30 @@
       @toggle="showCatForm = !showCatForm"
     />
 
-    <div v-if="showCatForm" class="px-4 pb-2 space-y-3">
+    <div v-if="showCatForm" class="mx-4 mb-3 p-3 bg-white border border-gray-200 rounded-2xl space-y-2">
       <TextField id="cat-name" label="Name" v-model="catForm.name" />
-      <TextField id="cat-icon" label="Icon (emoji or symbol)" v-model="catForm.icon" placeholder="👟" />
-      <k-button @click="onAddCategory" :disabled="!catForm.name || !catForm.icon">
-        Add Category
-      </k-button>
+      <div class="flex gap-2 items-end">
+        <div class="flex-1 min-w-[10ch]">
+          <TextField id="cat-icon" label="Icon" v-model="catForm.icon" placeholder="👟" />
+        </div>
+        <k-button @click="onAddCategory" :disabled="!catForm.name || !catForm.icon">
+          Add
+        </k-button>
+      </div>
     </div>
 
     <div v-if="loading" class="text-center py-4 text-gray-400">Loading…</div>
     <template v-else>
-      <k-list v-if="categories.length > 0" inset>
+      <k-list v-if="categories.length > 0" inset class="!my-2">
         <k-list-item
           v-for="cat in categories"
           :key="cat.id"
           :title="cat.name"
-          :subtitle="cat.icon"
         >
+          <template #media>
+            <Icon v-if="cat.icon?.includes(':')" :icon="cat.icon" class="text-2xl w-8 h-8" />
+            <span v-else class="text-2xl">{{ cat.icon }}</span>
+          </template>
           <template #after>
             <k-button small outline type="button" @click="onDeleteCategory(cat.id)">Delete</k-button>
           </template>
@@ -38,6 +45,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
+import { Icon } from '@iconify/vue';
 import { kList, kListItem, kButton, kBlock } from 'konsta/vue';
 import { useCategories } from '../composables/useCategories.js';
 import { useItems } from '../composables/useItems.js';

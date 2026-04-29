@@ -8,6 +8,7 @@ export interface DayEntry {
   isToday: boolean;
   totalWearSeconds: number;
   sessionCount: number;
+  sessions: Session[];
 }
 
 function startOfWeek(date: Date): Date {
@@ -43,6 +44,7 @@ const weekDays = computed<DayEntry[]>(() => {
       isToday: date.toDateString() === today.toDateString(),
       totalWearSeconds: daySessions.reduce((sum, s) => sum + s.calculated_wear_seconds, 0),
       sessionCount: daySessions.length,
+      sessions: daySessions,
     };
   });
 });
