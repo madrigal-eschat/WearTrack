@@ -10,13 +10,18 @@
     <div v-if="showCatForm" class="mx-4 mb-3 p-3 bg-white border border-gray-200 rounded-2xl space-y-2">
       <TextField id="cat-name" label="Name" v-model="catForm.name" />
       <div class="flex gap-2 items-end">
-        <div class="flex-1 min-w-[10ch]">
-          <TextField id="cat-icon" label="Icon" v-model="catForm.icon" placeholder="👟" />
+        <div class="flex-1">
+          <IconPickerTrigger label="Icon" :modelValue="catForm.icon" @click="showIconPicker = true" />
         </div>
         <k-button @click="onAddCategory" :disabled="!catForm.name || !catForm.icon">
           Add
         </k-button>
       </div>
+      <IconPickerSheet
+        v-model="catForm.icon"
+        :open="showIconPicker"
+        @update:open="showIconPicker = $event"
+      />
     </div>
 
     <div v-if="loading" class="text-center py-4 text-gray-400">Loading…</div>
@@ -53,6 +58,8 @@ import { useToast } from '../composables/useToast.js';
 import { DEFAULT_CATEGORY_FIELDS } from '../utils/categoryDefaults.js';
 import TextField from './TextField.vue';
 import FormSectionHeader from './FormSectionHeader.vue';
+import IconPickerTrigger from './IconPickerTrigger.vue';
+import IconPickerSheet from './IconPickerSheet.vue';
 
 const { categories, loadCategories, createCategory, deleteCategory } = useCategories();
 const { loadItems } = useItems();
@@ -60,6 +67,7 @@ const { showError } = useToast();
 
 const loading = ref(true);
 const showCatForm = ref(false);
+const showIconPicker = ref(false);
 const catForm = reactive({ name: '', icon: '' });
 
 onMounted(async () => {
@@ -77,6 +85,7 @@ async function onAddCategory() {
     catForm.name = '';
     catForm.icon = '';
     showCatForm.value = false;
+    showIconPicker.value = false;
   } catch (e) {
     showError(String(e));
   }
