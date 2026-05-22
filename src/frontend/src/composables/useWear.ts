@@ -38,16 +38,21 @@ export interface CurrentEntry {
 
 const currentSessions = ref<CurrentEntry[]>([]);
 const loading = ref(false);
+const loaded = ref(false);
 const error = ref<string | null>(null);
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 
 async function fetchCurrent() {
+  loading.value = true;
   try {
     const res = await fetch('/api/sessions/current');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     currentSessions.value = await res.json();
   } catch (e) {
     error.value = String(e);
+  } finally {
+    loading.value = false;
+    loaded.value = true;
   }
 }
 
@@ -115,6 +120,7 @@ export function useWear() {
   return {
     currentSessions,
     loading,
+    loaded,
     error,
     fetchCurrent,
     startSession,

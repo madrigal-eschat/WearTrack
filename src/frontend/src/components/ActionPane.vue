@@ -2,8 +2,11 @@
   <div class="action-pane overflow-y-auto">
     <k-block-title>Currently Wearing</k-block-title>
 
-    <div v-if="currentSessions.length === 0" class="px-4 py-8 text-center text-gray-400">
+    <div v-if="!loaded" class="px-4 py-8 text-center text-gray-400">
       Loading…
+    </div>
+    <div v-else-if="currentSessions.length === 0" class="px-4 py-8 text-center text-gray-400">
+      No active sessions
     </div>
 
     <k-list v-else>
@@ -84,7 +87,7 @@ import { useItems } from '../composables/useItems.js';
 import { useToast } from '../composables/useToast.js';
 import { formatDuration } from '../utils/formatDuration.js';
 
-const { currentSessions, startSession, endSession, fetchCurrent } = useWear();
+const { currentSessions, loaded, startSession, endSession, fetchCurrent } = useWear();
 const { loadItems, itemsForCategory } = useItems();
 const { showError } = useToast();
 

@@ -63,8 +63,11 @@ const showCatForm = ref(false);
 const catForm = reactive({ name: '', icon: '' });
 
 onMounted(async () => {
-  await loadCategories();
-  loading.value = false;
+  try {
+    await loadCategories();
+  } finally {
+    loading.value = false;
+  }
 });
 
 async function onAddCategory() {

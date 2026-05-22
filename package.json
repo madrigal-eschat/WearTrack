@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "npm run dev --prefix src/backend"
+    "dev": "npm run dev --prefix src/backend",
+    "dev:frontend": "npm run dev --prefix src/frontend"
   }
 }

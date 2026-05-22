@@ -100,8 +100,11 @@ const selectedCat = computed(() =>
 );
 
 onMounted(async () => {
-  await loadItems();
-  loading.value = false;
+  try {
+    await loadItems();
+  } finally {
+    loading.value = false;
+  }
 });
 
 // categories is populated by CategoriesSection via the shared useCategories ref;
