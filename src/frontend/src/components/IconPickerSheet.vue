@@ -156,14 +156,12 @@ function setupObserver() {
   if (!gridEl.value) return;
   observer = new IntersectionObserver(
     (entries) => {
-      for (const entry of entries) {
-        if (entry.isIntersecting) {
-          const cat = (entry.target as HTMLElement).dataset.category ?? '';
-          activeCategory.value = cat;
-          pillEls[cat]?.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
-          break;
-        }
-      }
+      const visible = entries.filter((e) => e.isIntersecting);
+      if (!visible.length) return;
+      visible.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+      const cat = (visible[0].target as HTMLElement).dataset.category ?? '';
+      activeCategory.value = cat;
+      pillEls[cat]?.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
     },
     {
       root: gridEl.value,
@@ -183,6 +181,9 @@ watch(
       activeCategory.value = '';
       observer?.disconnect();
       observer = null;
+      // Clear element maps — pills may not fire null-ref callbacks if hidden when sheet closes
+      for (const key of Object.keys(headingEls)) headingEls[key] = null;
+      for (const key of Object.keys(pillEls)) pillEls[key] = null;
     } else {
       nextTick(() => setupObserver());
     }
