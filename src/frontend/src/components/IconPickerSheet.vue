@@ -101,7 +101,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue';
+import { ref, computed, watch, nextTick, onUnmounted } from 'vue';
 import { Icon } from '@iconify/vue';
 import { kSheet, kToolbar, kButton } from 'konsta/vue';
 import type { PhCategories } from '../utils/phCategories.js';
@@ -189,4 +189,10 @@ watch(
     }
   }
 );
+
+// Guard against navigating away while the picker is open (watch won't fire in that case)
+onUnmounted(() => {
+  observer?.disconnect();
+  observer = null;
+});
 </script>
