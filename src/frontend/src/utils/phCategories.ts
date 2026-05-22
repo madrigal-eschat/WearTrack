@@ -37,7 +37,7 @@ export function filterIcons(categories: PhCategories, query: string): PhIconEntr
   for (const entries of Object.values(categories)) {
     for (const entry of entries) {
       if (seen.has(entry.id)) continue;
-      const name = entry.id.replace('ph:', '');
+      const name = entry.id.slice(3); // strip 'ph:' prefix (always 3 chars)
       if (name.includes(q) || entry.tags.some((t) => t.includes(q))) {
         results.push(entry);
         seen.add(entry.id);
