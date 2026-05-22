@@ -12,6 +12,7 @@
         :key="entry.category.id"
         :title="entry.category.name"
         :subtitle="subtitle(entry)"
+        :class="rowBg(entry)"
       >
         <template #media>
           <Icon
@@ -83,7 +84,7 @@ import { useItems } from '../composables/useItems.js';
 import { useToast } from '../composables/useToast.js';
 import { formatDuration } from '../utils/formatDuration.js';
 
-const { currentSessions, startSession, endSession, currentWear, fetchCurrent } = useWear();
+const { currentSessions, startSession, endSession, fetchCurrent } = useWear();
 const { loadItems, itemsForCategory } = useItems();
 const { showError } = useToast();
 
@@ -105,8 +106,12 @@ function subtitle(entry: CurrentEntry): string {
   return 'Idle';
 }
 
+function sessionSeconds(session: Session): number {
+  return Math.floor(Date.now() / 1000) - session.started_at;
+}
+
 function elapsed(session: Session): string {
-  return formatDuration(currentWear(session));
+  return formatDuration(sessionSeconds(session));
 }
 
 function maxWear(entry: CurrentEntry): string {
@@ -119,7 +124,18 @@ function wearProgress(entry: CurrentEntry): number {
   if (!entry.session || !entry.item) return 0;
   const max = entry.category.initial_wear_duration_seconds * entry.item.difficulty_multiplier;
   if (max <= 0) return 0;
-  return Math.min((currentWear(entry.session) / max) * 100, 100);
+  return Math.min((sessionSeconds(entry.session) / max) * 100, 100);
+}
+
+function rowBg(entry: CurrentEntry): string {
+  if (!entry.session || !entry.item) return '';
+  const max = entry.category.initial_wear_duration_seconds * entry.item.difficulty_multiplier;
+  if (max <= 0) return '';
+  const remaining = 1 - sessionSeconds(entry.session) / max;
+  if (remaining <= 0) return 'bg-red-100';
+  if (remaining <= 0.05) return 'bg-orange-100';
+  if (remaining <= 0.10) return 'bg-yellow-100';
+  return '';
 }
 
 async function onWear(entry: CurrentEntry) {
