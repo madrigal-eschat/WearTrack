@@ -1,6 +1,5 @@
 <template>
-  <k-page style="padding-bottom: 56px">
-    <k-navbar title="Stats" />
+  <k-page class="pt-4" style="padding-bottom: 56px">
 
     <SegmentedControl
       :options="LEADERBOARD_TYPES"
@@ -32,7 +31,7 @@
 
 <script setup lang="ts">
 import { onMounted, computed } from 'vue';
-import { kPage, kNavbar, kList, kListItem, kBadge, kBlock } from 'konsta/vue';
+import { kPage, kList, kListItem, kBadge, kBlock } from 'konsta/vue';
 import { useStats } from '../composables/useStats.js';
 import SegmentedControl from '../components/SegmentedControl.vue';
 

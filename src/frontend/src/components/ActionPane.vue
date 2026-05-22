@@ -2,8 +2,11 @@
   <div class="action-pane overflow-y-auto">
     <k-block-title>Currently Wearing</k-block-title>
 
-    <div v-if="currentSessions.length === 0" class="px-4 py-8 text-center text-gray-400">
+    <div v-if="!loaded" class="px-4 py-8 text-center text-gray-400">
       Loading…
+    </div>
+    <div v-else-if="currentSessions.length === 0" class="px-4 py-8 text-center text-gray-400">
+      No active sessions
     </div>
 
     <k-list v-else>
@@ -12,15 +15,36 @@
         :key="entry.category.id"
         :title="entry.category.name"
         :subtitle="subtitle(entry)"
+        :class="rowBg(entry)"
       >
         <template #media>
-          <span class="text-2xl">{{ entry.category.icon }}</span>
+          <Icon
+            v-if="entry.category.icon?.includes(':')"
+            :icon="entry.category.icon"
+            class="text-2xl w-8 h-8"
+            :style="{ color: entry.session && entry.item ? entry.item.color : 'black' }"
+          />
+          <span v-else class="text-2xl">{{ entry.category.icon }}</span>
+        </template>
+        <template v-if="entry.session && entry.item" #inner>
+          <div class="h-1.5 rounded-full bg-gray-200 overflow-hidden mt-1">
+            <div
+              class="h-full rounded-full transition-all duration-1000"
+              :style="{
+                width: wearProgress(entry) + '%',
+                background: entry.item.color,
+              }"
+            ></div>
+          </div>
         </template>
         <template #after>
           <div class="flex gap-2 items-center">
             <!-- Active session: show elapsed + Stop -->
             <template v-if="entry.session !== null">
-              <span class="text-sm text-gray-500 tabular-nums">{{ elapsed(entry.session) }}</span>
+              <div class="text-right tabular-nums leading-snug whitespace-nowrap">
+                <div class="text-sm text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Worn</span>{{ elapsed(entry.session) }}</div>
+                <div v-if="entry.item" class="text-sm text-gray-600 mt-0.5"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Max</span>{{ maxWear(entry) }}</div>
+              </div>
               <k-button
                 small
                 outline
@@ -56,13 +80,14 @@
 
 <script setup lang="ts">
 import { reactive, onMounted } from 'vue';
+import { Icon } from '@iconify/vue';
 import { kBlockTitle, kList, kListItem, kButton } from 'konsta/vue';
 import { useWear, type CurrentEntry, type Session } from '../composables/useWear.js';
 import { useItems } from '../composables/useItems.js';
 import { useToast } from '../composables/useToast.js';
 import { formatDuration } from '../utils/formatDuration.js';
 
-const { currentSessions, startSession, endSession, currentWear, fetchCurrent } = useWear();
+const { currentSessions, loaded, startSession, endSession, fetchCurrent } = useWear();
 const { loadItems, itemsForCategory } = useItems();
 const { showError } = useToast();
 
@@ -84,8 +109,36 @@ function subtitle(entry: CurrentEntry): string {
   return 'Idle';
 }
 
+function sessionSeconds(session: Session): number {
+  return Math.floor(Date.now() / 1000) - session.started_at;
+}
+
 function elapsed(session: Session): string {
-  return formatDuration(currentWear(session));
+  return formatDuration(sessionSeconds(session));
+}
+
+function maxWear(entry: CurrentEntry): string {
+  if (!entry.item) return '';
+  const seconds = entry.category.initial_wear_duration_seconds * entry.item.difficulty_multiplier;
+  return formatDuration(seconds);
+}
+
+function wearProgress(entry: CurrentEntry): number {
+  if (!entry.session || !entry.item) return 0;
+  const max = entry.category.initial_wear_duration_seconds * entry.item.difficulty_multiplier;
+  if (max <= 0) return 0;
+  return Math.min((sessionSeconds(entry.session) / max) * 100, 100);
+}
+
+function rowBg(entry: CurrentEntry): string {
+  if (!entry.session || !entry.item) return '';
+  const max = entry.category.initial_wear_duration_seconds * entry.item.difficulty_multiplier;
+  if (max <= 0) return '';
+  const remaining = 1 - sessionSeconds(entry.session) / max;
+  if (remaining <= 0) return 'bg-red-100';
+  if (remaining <= 0.05) return 'bg-orange-100';
+  if (remaining <= 0.10) return 'bg-yellow-100';
+  return '';
 }
 
 async function onWear(entry: CurrentEntry) {
