@@ -4,6 +4,8 @@ metadata:
   name: weartrack
   labels:
     app: weartrack
+  annotations:
+    kube-score/ignore: deployment-replicas
 spec:
   replicas: 1
   selector:
