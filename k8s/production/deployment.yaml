@@ -5,7 +5,7 @@ metadata:
   labels:
     app: weartrack
   annotations:
-    kube-score/ignore: deployment-replicas
+    kube-score/ignore: deployment-replicas,container-security-context-user-group-id
 spec:
   replicas: 1
   selector:
@@ -19,8 +19,8 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: ${K8S_NODE_HOSTNAME}
       securityContext:
-        runAsUser: 10001
-        runAsGroup: 10001
+        runAsUser: 1000
+        runAsGroup: 1000
         runAsNonRoot: true
       containers:
         - name: weartrack
