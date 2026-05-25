@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: weartrack
+  labels:
+    app: weartrack
+  annotations:
+    kube-score/ignore: deployment-replicas,container-security-context-user-group-id
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: weartrack
+  template:
+    metadata:
+      labels:
+        app: weartrack
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: ${K8S_NODE_HOSTNAME}
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+      containers:
+        - name: weartrack
+          image: "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: production
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+              ephemeral-storage: 100Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+              ephemeral-storage: 500Mi
+      volumes:
+        - name: data
+          hostPath:
+            path: /storage/hdd/madrigal/weartrack
+            type: DirectoryOrCreate
+        - name: tmp
+          emptyDir: {}
