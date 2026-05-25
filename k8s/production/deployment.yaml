@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: weartrack
+  labels:
+    app: weartrack
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: weartrack
+  template:
+    metadata:
+      labels:
+        app: weartrack
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: ${K8S_NODE_HOSTNAME}
+      containers:
+        - name: weartrack
+          image: "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}"
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: production
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: data
+          hostPath:
+            path: /storage/hdd/madrigal/weartrack
+            type: DirectoryOrCreate
