@@ -24,7 +24,7 @@ spec:
         runAsNonRoot: true
       containers:
         - name: weartrack
-          image: "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}"
+          image: ${CI_REGISTRY_IMAGE}:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
