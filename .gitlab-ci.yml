@@ -23,6 +23,7 @@ include:
 variables:
   KUBE_CONTEXT: $CI_PROJECT_ROOT_NAMESPACE/cluster-management:home
 
+
 node-semgrep:
   variables:
     GIT_DEPTH: 0
@@ -38,3 +39,4 @@ stages:
   - package-test
   - publish
   - deploy
+  - production
