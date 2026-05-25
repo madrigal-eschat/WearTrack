@@ -9,6 +9,20 @@ include:
       build-args: "--platform linux/amd64 --platform linux/arm64"
       trivy-disabled: "true"
       sbom-disabled: "true"
+  - component: $CI_SERVER_FQDN/to-be-continuous/kubernetes/gitlab-ci-k8s@~latest
+    inputs:
+      kubectl-image: docker.io/alpine/k8s:1.33.2
+      base-app-name: weartrack
+      kustomize-enabled: "true"
+      scripts-dir: k8s
+      prod-space: home-entertainment
+      environment-url: https://${K8S_INGRESS_HOST}
+      prod-deploy-strategy: auto
+      create-namespace-enabled: "true"
+
+variables:
+  KUBE_CONTEXT: $CI_PROJECT_ROOT_NAMESPACE/cluster-management:home
+
 
 node-semgrep:
   variables:
@@ -24,3 +38,5 @@ stages:
   - package-build
   - package-test
   - publish
+  - deploy
+  - production
