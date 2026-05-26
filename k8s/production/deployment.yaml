@@ -34,6 +34,8 @@ spec:
           env:
             - name: NODE_ENV
               value: production
+            - name: DB_PATH
+              value: /data/weartrack.db
           readinessProbe:
             httpGet:
               path: /
