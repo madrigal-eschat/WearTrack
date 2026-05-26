@@ -1,7 +1,7 @@
 include:
   - component: $CI_SERVER_FQDN/to-be-continuous/node/gitlab-ci-node@5.3.0
     inputs:
-      image: "node:24-bookworm"
+      image: "${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/library/node:24-bookworm"
       project-dir: "src/backend"
       lint-enabled: "true"
   - component: $CI_SERVER_FQDN/to-be-continuous/docker/gitlab-ci-docker@8.3.0
@@ -12,7 +12,7 @@ include:
       prod-publish-strategy: "auto"
   - component: $CI_SERVER_FQDN/to-be-continuous/kubernetes/gitlab-ci-k8s@~latest
     inputs:
-      kubectl-image: docker.io/alpine/k8s:1.33.2
+      kubectl-image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/alpine/k8s:1.33.2
       base-app-name: weartrack
       kustomize-enabled: "true"
       scripts-dir: k8s
@@ -32,6 +32,9 @@ node-semgrep:
 docker-buildah-build:
   tags:
     - buildah
+  variables:
+    DOCKER_BUILD_ARGS: "CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX"
+    DOCKER_BUILD_CONTEXT_VARIABLES: CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX
 
 stages:
   - build
