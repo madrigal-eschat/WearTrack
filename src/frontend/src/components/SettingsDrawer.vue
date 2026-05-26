@@ -6,9 +6,9 @@
     @backdropclick="$emit('close')"
     class="pb-safe bg-white dark:bg-gray-900"
   >
-    <k-toolbar>
-      <div class="flex w-full items-center justify-between px-4">
-        <span class="font-semibold">Settings</span>
+    <k-toolbar innerClass="!h-6">
+      <div class="flex w-full items-center justify-between">
+        <span class="font-semibold text-sm">Settings</span>
         <k-button clear @click="$emit('close')">Done</k-button>
       </div>
     </k-toolbar>

@@ -3,14 +3,17 @@
     v-if="open"
     :opened="open"
     @backdropclick="close"
-    class="pb-safe bg-white dark:bg-gray-900 flex flex-col"
-    style="height: 85vh"
+    class="pb-safe bg-white dark:bg-gray-900 flex flex-col overflow-hidden h-[85vh]"
   >
     <!-- Header -->
-    <k-toolbar>
-      <div class="flex w-full items-center justify-between px-4">
-        <span class="font-semibold">Choose Icon</span>
-        <k-button clear @click="close">✕</k-button>
+    <k-toolbar innerClass="!h-6 !w-full">
+      <div class="relative flex w-full items-center justify-center">
+        <button
+          type="button"
+          class="absolute left-0 flex items-center justify-center w-8 h-full text-primary text-xl"
+          @click="close"
+        >✕</button>
+        <span class="font-semibold whitespace-nowrap text-sm">Choose Icon</span>
       </div>
     </k-toolbar>
 

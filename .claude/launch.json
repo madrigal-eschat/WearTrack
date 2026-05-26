@@ -5,7 +5,9 @@
       "name": "Weartrack",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 3000
+      "cwd": "src/backend",
+      "port": 3000,
+      "autoPort": true
     }
   ]
 }
