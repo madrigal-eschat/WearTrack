@@ -63,7 +63,7 @@ spec:
       volumes:
         - name: data
           hostPath:
-            path: /storage/hdd/madrigal/services/weartrack
+            path: /storage/ssd/services/weartrack
             type: DirectoryOrCreate
         - name: tmp
           emptyDir: {}
