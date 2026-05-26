@@ -1,4 +1,5 @@
-FROM node:24-bookworm AS frontend-build
+ARG CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX
+FROM ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/library/node:24-bookworm AS frontend-build
 
 WORKDIR /frontend
 
@@ -9,7 +10,8 @@ COPY src/frontend/ ./
 RUN npm run build
 
 
-FROM node:24-bookworm AS backend-build
+ARG CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX
+FROM ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/library/node:24-bookworm AS backend-build
 
 WORKDIR /app
 
@@ -22,7 +24,8 @@ COPY src/backend/tsconfig.json ./
 RUN npm ci && npm run build
 
 
-FROM node:24-bookworm-slim AS production
+ARG CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX
+FROM ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/library/node:24-bookworm-slim AS production
 
 WORKDIR /app
 
@@ -37,6 +40,6 @@ USER node
 
 EXPOSE 3000
 
-ENV FRONTEND_DIST=./public
+ENV FRONTEND_DIST-./public
 
 CMD ["node", "dist/src/server.js"]
