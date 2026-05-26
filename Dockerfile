@@ -40,6 +40,6 @@ USER node
 
 EXPOSE 3000
 
-ENV FRONTEND_DIST-./public
+ENV FRONTEND_DIST=./public
 
 CMD ["node", "dist/src/server.js"]
