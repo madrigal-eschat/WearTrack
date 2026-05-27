@@ -10,12 +10,14 @@
         <button
           type="button"
           class="absolute left-4 text-sm text-blue-500"
+          data-testid="duration-picker-cancel"
           @click="$emit('update:open', false)"
         >Cancel</button>
         <span class="font-semibold text-sm">Duration</span>
         <button
           type="button"
           class="absolute right-4 text-sm font-semibold text-blue-500"
+          data-testid="duration-picker-done"
           @click="onDone"
         >Done</button>
       </div>

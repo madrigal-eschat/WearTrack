@@ -32,7 +32,7 @@
           </k-list-item>
           <CategoryForm
             v-if="editingCategoryId === cat.id"
-            :initialValues="toCategoryFormState(cat)"
+            :initialValues="categoryToFormState(cat)"
             submitLabel="Save"
             @submit="onSaveCategory(cat.id, $event)"
             @cancel="editingCategoryId = null"
@@ -54,9 +54,8 @@ import { useCategories } from '../composables/useCategories.js';
 import { useItems } from '../composables/useItems.js';
 import { useToast } from '../composables/useToast.js';
 import { DEFAULT_CATEGORY_FIELDS } from '../utils/categoryDefaults.js';
-import { buildRiskLevels } from '../utils/riskLevels.js';
+import { categoryToFormState, formStateToApiPayload } from '../utils/categoryForm.js';
 import type { CategoryFormState } from './CategoryForm.vue';
-import type { Category } from '../composables/useWear.js';
 import FormSectionHeader from './FormSectionHeader.vue';
 import CategoryForm from './CategoryForm.vue';
 
@@ -76,28 +75,6 @@ onMounted(async () => {
   }
 });
 
-function toCategoryFormState(cat: Category): CategoryFormState {
-  return {
-    name: cat.name,
-    icon: cat.icon,
-    initialWearSeconds: cat.initial_wear_duration_seconds,
-    restMultiplier: cat.rest_multiplier,
-    bandCount: cat.risk_levels.length,
-    crossoverPoints: cat.risk_levels
-      .slice(0, -1)
-      .map((l) => l.upper as number),
-  };
-}
-
-function formStateToApiPayload(data: CategoryFormState) {
-  return {
-    name: data.name,
-    icon: data.icon,
-    initial_wear_duration_seconds: data.initialWearSeconds,
-    rest_multiplier: data.restMultiplier,
-    risk_levels: buildRiskLevels(data.bandCount, data.crossoverPoints),
-  };
-}
 
 function onToggleAddForm() {
   showCatForm.value = !showCatForm.value;

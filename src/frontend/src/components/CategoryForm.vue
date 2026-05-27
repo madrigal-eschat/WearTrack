@@ -1,12 +1,10 @@
 <template>
   <div class="mx-4 mb-3 p-3 bg-white border border-gray-200 rounded-2xl space-y-2">
-    <!-- Name -->
-    <TextField id="cat-name" label="Name" v-model="catForm.name" />
-
-    <!-- Icon + submit row -->
+    <!-- Icon (left) + Name (right) on same row -->
     <div class="flex gap-2 items-end">
+      <IconPickerTrigger label="Icon" :modelValue="catForm.icon" @click="showIconPicker = true" />
       <div class="flex-1">
-        <IconPickerTrigger label="Icon" :modelValue="catForm.icon" @click="showIconPicker = true" />
+        <TextField id="cat-name" label="Name" v-model="catForm.name" />
       </div>
     </div>
 
@@ -66,6 +64,7 @@
               >−</button>
               <button
                 type="button"
+                data-testid="add-band"
                 class="w-7 h-7 rounded-full border border-gray-400 flex items-center justify-center text-gray-600 disabled:opacity-30"
                 :disabled="catForm.bandCount >= 5"
                 @click="addBand"
@@ -88,12 +87,19 @@
 
     <!-- Save / Cancel -->
     <div class="flex gap-2 pt-1">
-      <k-button @click="onSubmit" :disabled="!catForm.name || !catForm.icon">
-        {{ submitLabel ?? 'Save' }}
-      </k-button>
-      <k-button outline @click="$emit('cancel')">
-        Cancel
-      </k-button>
+      <button
+        type="button"
+        data-testid="category-form-submit"
+        class="px-4 py-2 rounded-lg text-sm font-medium bg-blue-500 text-white disabled:opacity-40"
+        :disabled="!catForm.name || !catForm.icon"
+        @click="onSubmit"
+      >{{ submitLabel ?? 'Save' }}</button>
+      <button
+        type="button"
+        data-testid="category-form-cancel"
+        class="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 bg-white"
+        @click="$emit('cancel')"
+      >Cancel</button>
     </div>
 
     <IconPickerSheet
@@ -114,7 +120,6 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue';
-import { kButton } from 'konsta/vue';
 import { bandNamesForCount, bandColorsForCount } from '../utils/riskLevels.js';
 import { shortDuration } from '../utils/formatDuration.js';
 import TextField from './TextField.vue';
