@@ -33,7 +33,6 @@ docker-buildah-build:
   tags:
     - buildah
   variables:
-    DOCKER_BUILD_ARGS: "CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX"
     DOCKER_BUILD_CONTEXT_VARIABLES: CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX
 
 stages:
