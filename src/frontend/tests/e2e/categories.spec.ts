@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { uid } from './helpers.js';
+import { uid, createCategoryViaApi, deleteCategoryViaApi } from './helpers.js';
 
 test.describe('Category management', () => {
   // Track categories created in each test so we can clean them up
@@ -33,8 +33,10 @@ test.describe('Category management', () => {
     await expect(page.getByLabel('Name').first()).toBeVisible();
 
     await page.getByLabel('Name').first().fill(name);
-    await page.getByLabel(/icon/i).first().fill('🧪');
-    await page.getByRole('button', { name: 'Add Category' }).click();
+    await page.getByRole('button', { name: /choose icon/i }).first().click();
+    await page.waitForSelector('.overflow-y-auto');
+    await page.locator('.overflow-y-auto button').first().click();
+    await page.getByTestId('category-form-submit').click();
 
     await expect(page.getByText(name).first()).toBeVisible();
   });
@@ -45,24 +47,26 @@ test.describe('Category management', () => {
 
     await page.getByRole('button', { name: '+ Add' }).first().click();
     await page.getByLabel('Name').first().fill(name);
-    await page.getByLabel(/icon/i).first().fill('🧪');
-    await page.getByRole('button', { name: 'Add Category' }).click();
+    await page.getByRole('button', { name: /choose icon/i }).first().click();
+    await page.waitForSelector('.overflow-y-auto');
+    await page.locator('.overflow-y-auto button').first().click();
+    await page.getByTestId('category-form-submit').click();
 
-    // Form should close: "Add Category" button gone, toggle back to "+ Add"
-    await expect(page.getByRole('button', { name: 'Add Category' })).not.toBeVisible();
+    // Form should close: submit button gone, toggle back to "+ Add"
+    await expect(page.getByTestId('category-form-submit')).not.toBeVisible();
   });
 
   test('cancel button hides the add form without saving', async ({ page }) => {
     await page.getByRole('button', { name: '+ Add' }).first().click();
     await expect(page.getByLabel('Name').first()).toBeVisible();
 
-    await page.getByRole('button', { name: 'Cancel' }).first().click();
+    await page.getByTestId('category-form-cancel').click();
     await expect(page.getByLabel('Name')).not.toBeVisible();
   });
 
-  test('Add Category button is disabled when fields are empty', async ({ page }) => {
+  test('submit button is disabled when fields are empty', async ({ page }) => {
     await page.getByRole('button', { name: '+ Add' }).first().click();
-    await expect(page.getByRole('button', { name: 'Add Category' })).toBeDisabled();
+    await expect(page.getByTestId('category-form-submit')).toBeDisabled();
   });
 
   test('can delete a category', async ({ page }) => {
@@ -72,8 +76,10 @@ test.describe('Category management', () => {
     // Create it first
     await page.getByRole('button', { name: '+ Add' }).first().click();
     await page.getByLabel('Name').first().fill(name);
-    await page.getByLabel(/icon/i).first().fill('🧪');
-    await page.getByRole('button', { name: 'Add Category' }).click();
+    await page.getByRole('button', { name: /choose icon/i }).first().click();
+    await page.waitForSelector('.overflow-y-auto');
+    await page.locator('.overflow-y-auto button').first().click();
+    await page.getByTestId('category-form-submit').click();
     await expect(page.getByText(name).first()).toBeVisible();
 
     // Delete it
@@ -110,7 +116,7 @@ test.describe('Category management', () => {
     expect(scrollTop).toBeLessThan(2 * 24 * 44);
 
     // Dismiss the picker without saving
-    await page.getByRole('button', { name: 'Cancel' }).click();
+    await page.getByTestId('duration-picker-cancel').click();
   });
 
   test('can create a category with custom initial wear, rest multiplier, and band count', async ({ page }) => {
@@ -140,16 +146,16 @@ test.describe('Category management', () => {
       el.scrollTop = 90 * 44;
     });
     await page.waitForTimeout(200); // let scroll settle
-    await page.getByRole('button', { name: 'Done' }).click();
+    await page.getByTestId('duration-picker-done').click();
 
     // Set rest multiplier to 1.5
     await page.getByLabel(/rest multiplier/i).fill('1.5');
 
     // Add a 4th band
-    await page.getByRole('button', { name: '+' }).click();
+    await page.getByTestId('add-band').click();
 
     // Submit
-    await page.getByRole('button', { name: 'Add' }).click();
+    await page.getByTestId('category-form-submit').click();
     await page.getByText(name).first().waitFor();
 
     // Verify via API
@@ -166,5 +172,129 @@ test.describe('Category management', () => {
     expect(saved!.initial_wear_duration_seconds).toBe(1 * 3600 + 30 * 60); // 5400
     expect(saved!.rest_multiplier).toBe(1.5);
     expect(saved!.risk_levels).toHaveLength(4);
+  });
+});
+
+test.describe('Category editing', () => {
+  let categoryId: number | null = null;
+  let categoryName: string;
+
+  test.beforeEach(async ({ page }) => {
+    categoryName = `EditCat-${uid()}`;
+    await page.goto('/items');
+    page.on('dialog', (d) => d.accept());
+    // Create via API for fast, reliable setup
+    const cat = await createCategoryViaApi(page, categoryName);
+    categoryId = cat.id;
+    await page.reload(); // ensure the new category appears in the list
+  });
+
+  test.afterEach(async ({ page }) => {
+    if (categoryId !== null) {
+      await deleteCategoryViaApi(page, categoryId).catch(() => {});
+      categoryId = null;
+    }
+  });
+
+  test('Edit button opens an inline form below the row', async ({ page }) => {
+    const row = page.locator('li').filter({ hasText: categoryName }).first();
+    await row.getByRole('button', { name: 'Edit' }).click();
+    // The form appears right after the row — check for the Name field
+    await expect(page.getByTestId('category-form-submit')).toBeVisible();
+  });
+
+  test('edit form is pre-filled with the existing category values', async ({ page }) => {
+    const row = page.locator('li').filter({ hasText: categoryName }).first();
+    await row.getByRole('button', { name: 'Edit' }).click();
+
+    // Name field should contain the category's name
+    await expect(page.getByLabel('Name').first()).toHaveValue(categoryName);
+  });
+
+  test('can save an edited name via the Save button', async ({ page }) => {
+    const newName = `${categoryName}-edited`;
+
+    const row = page.locator('li').filter({ hasText: categoryName }).first();
+    await row.getByRole('button', { name: 'Edit' }).click();
+
+    await page.getByLabel('Name').first().fill(newName);
+    await page.getByTestId('category-form-submit').click();
+
+    // Form closes and updated name appears in the list
+    await expect(page.getByTestId('category-form-submit')).not.toBeVisible();
+    await expect(page.getByText(newName).first()).toBeVisible();
+
+    // Verify persisted via API
+    const res = await page.request.get('/api/categories');
+    const cats: Array<{ id: number; name: string }> = await res.json();
+    const updated = cats.find((c) => c.id === categoryId);
+    expect(updated?.name).toBe(newName);
+    // update cleanup name so afterEach delete still works
+    categoryName = newName;
+  });
+
+  test('cancel edit closes the form without saving changes', async ({ page }) => {
+    const row = page.locator('li').filter({ hasText: categoryName }).first();
+    await row.getByRole('button', { name: 'Edit' }).click();
+
+    await page.getByLabel('Name').first().fill('should-not-save');
+    await page.getByTestId('category-form-cancel').click();
+
+    // Form closed
+    await expect(page.getByTestId('category-form-cancel')).not.toBeVisible();
+    // Original name still in list
+    await expect(page.getByText(categoryName).first()).toBeVisible();
+
+    // Verify API unchanged
+    const res = await page.request.get('/api/categories');
+    const cats: Array<{ id: number; name: string }> = await res.json();
+    expect(cats.find((c) => c.id === categoryId)?.name).toBe(categoryName);
+  });
+
+  test('clicking Edit a second time closes the inline form (toggle)', async ({ page }) => {
+    const row = page.locator('li').filter({ hasText: categoryName }).first();
+    await row.getByRole('button', { name: 'Edit' }).click();
+    await expect(page.getByTestId('category-form-submit')).toBeVisible();
+
+    await row.getByRole('button', { name: 'Edit' }).click();
+    await expect(page.getByTestId('category-form-submit')).not.toBeVisible();
+  });
+
+  test('opening the edit form closes the add form', async ({ page }) => {
+    // Open the add form first
+    await page.getByRole('button', { name: '+ Add', exact: false }).first().click();
+    await expect(page.getByTestId('category-form-submit')).toBeVisible();
+
+    // Open edit for the existing category
+    const row = page.locator('li').filter({ hasText: categoryName }).first();
+    await row.getByRole('button', { name: 'Edit' }).click();
+
+    // Still one form visible (the edit form), the add form should be gone
+    await expect(page.getByTestId('category-form-submit')).toHaveCount(1);
+  });
+
+  test('can edit custom fields (initial wear, rest multiplier, band count)', async ({ page }) => {
+    const row = page.locator('li').filter({ hasText: categoryName }).first();
+    await row.getByRole('button', { name: 'Edit' }).click();
+
+    // Change rest multiplier to 3
+    await page.getByLabel(/rest multiplier/i).fill('3');
+
+    // Add a 4th band
+    await page.getByTestId('add-band').click();
+
+    await page.getByTestId('category-form-submit').click();
+    await expect(page.getByTestId('category-form-submit')).not.toBeVisible();
+
+    // Verify via API
+    const res = await page.request.get('/api/categories');
+    const cats: Array<{
+      id: number;
+      rest_multiplier: number;
+      risk_levels: unknown[];
+    }> = await res.json();
+    const updated = cats.find((c) => c.id === categoryId);
+    expect(updated?.rest_multiplier).toBe(3);
+    expect(updated?.risk_levels).toHaveLength(4);
   });
 });
