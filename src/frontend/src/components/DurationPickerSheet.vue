@@ -68,7 +68,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue';
+import { ref, computed, watch, onUnmounted, nextTick } from 'vue';
 import { kSheet, kToolbar } from 'konsta/vue';
 
 const ITEM_H = 44;
@@ -94,7 +94,13 @@ const tripledMinutes = computed(() =>
   Array.from({ length: MIN_COUNT * 3 }, (_, i) => ({ key: i, value: i % MIN_COUNT }))
 );
 
+function clearScrollTimers() {
+  clearTimeout(scrollTimers['hours']);
+  clearTimeout(scrollTimers['minutes']);
+}
+
 function initScroll() {
+  clearScrollTimers();
   const h = Math.floor(props.modelValue / 3600) % HOUR_COUNT;
   const m = Math.floor((props.modelValue % 3600) / 60) % MIN_COUNT;
   curHours.value = h;
@@ -139,6 +145,15 @@ function onDone() {
 
 watch(
   () => props.open,
-  (val) => { if (val) initScroll(); },
+  (val) => {
+    if (val) {
+      clearScrollTimers();
+      initScroll();
+    } else {
+      clearScrollTimers();
+    }
+  },
 );
+
+onUnmounted(clearScrollTimers);
 </script>
