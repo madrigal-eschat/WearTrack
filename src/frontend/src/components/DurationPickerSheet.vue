@@ -32,7 +32,7 @@
       <div
         ref="hoursEl"
         data-testid="hours-col"
-        class="w-32 overflow-y-scroll overscroll-none"
+        class="relative w-32 overflow-y-scroll overscroll-none"
         style="scroll-snap-type: y mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch;"
         @scroll="onScroll('hours')"
       >
@@ -50,7 +50,7 @@
       <div
         ref="minutesEl"
         data-testid="minutes-col"
-        class="w-32 overflow-y-scroll overscroll-none"
+        class="relative w-32 overflow-y-scroll overscroll-none"
         style="scroll-snap-type: y mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch;"
         @scroll="onScroll('minutes')"
       >
