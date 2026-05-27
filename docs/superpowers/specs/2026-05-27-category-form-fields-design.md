@@ -130,5 +130,5 @@ Both are pure functions, tested in a new `riskLevels.test.ts` alongside `formatD
 ## Testing
 
 - **Unit:** `riskLevels.test.ts` covering `buildRiskLevels` (all counts, correct lower/upper/text/severity) and `bandNamesForCount` (all five counts). Crossover clamping is component logic and is not unit-tested separately.
-- **Drum-roll wrap-around:** manual / e2e verification (scroll-snap repositioning is not reliably unit-testable in jsdom)
-- **No new e2e tests required** — existing category creation e2e tests continue to pass as defaults still apply when fields are unchanged
+- **Drum-roll wrap-around:** e2e verification — scroll to the end of each column and confirm it wraps to 0
+- **E2e (new test in `categories.spec.ts`):** create a category with non-default values for initial wear, rest multiplier, and risk bands (add/remove a band, set a crossover point), then verify the saved category reflects those values via the API
