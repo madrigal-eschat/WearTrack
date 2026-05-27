@@ -32,9 +32,10 @@
       <div
         ref="hoursEl"
         data-testid="hours-col"
-        class="relative w-32 overflow-y-scroll overscroll-none"
+        class="relative w-32 overflow-y-scroll overscroll-none cursor-grab active:cursor-grabbing"
         style="scroll-snap-type: y mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch;"
         @scroll="onScroll('hours')"
+        @mousedown="(e) => onColumnMouseDown('hours', e)"
       >
         <div class="h-[88px] shrink-0" />
         <div
@@ -42,6 +43,7 @@
           :key="item.key"
           class="flex h-[44px] select-none items-center justify-center text-xl"
           style="scroll-snap-align: center;"
+          @click="(e) => onItemClick('hours', e)"
         >{{ item.value }}h</div>
         <div class="h-[88px] shrink-0" />
       </div>
@@ -50,9 +52,10 @@
       <div
         ref="minutesEl"
         data-testid="minutes-col"
-        class="relative w-32 overflow-y-scroll overscroll-none"
+        class="relative w-32 overflow-y-scroll overscroll-none cursor-grab active:cursor-grabbing"
         style="scroll-snap-type: y mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch;"
         @scroll="onScroll('minutes')"
+        @mousedown="(e) => onColumnMouseDown('minutes', e)"
       >
         <div class="h-[88px] shrink-0" />
         <div
@@ -60,6 +63,7 @@
           :key="item.key"
           class="flex h-[44px] select-none items-center justify-center text-xl"
           style="scroll-snap-align: center;"
+          @click="(e) => onItemClick('minutes', e)"
         >{{ String(item.value).padStart(2, '0') }}m</div>
         <div class="h-[88px] shrink-0" />
       </div>
@@ -87,6 +91,19 @@ const curHours = ref(0);
 const curMinutes = ref(0);
 const scrollTimers: Record<string, ReturnType<typeof setTimeout>> = {};
 
+// Drag state — plain object, not reactive (no need to trigger renders)
+const drag = {
+  active: false,
+  col: 'hours' as 'hours' | 'minutes',
+  startY: 0,
+  startScrollTop: 0,
+  moved: false,
+};
+
+function colEl(col: 'hours' | 'minutes'): HTMLElement | null {
+  return col === 'hours' ? hoursEl.value : minutesEl.value;
+}
+
 const tripledHours = computed(() =>
   Array.from({ length: HOUR_COUNT * 3 }, (_, i) => ({ key: i, value: i % HOUR_COUNT }))
 );
@@ -112,7 +129,7 @@ function initScroll() {
 }
 
 function doWrap(col: 'hours' | 'minutes') {
-  const el = col === 'hours' ? hoursEl.value : minutesEl.value;
+  const el = colEl(col);
   const count = col === 'hours' ? HOUR_COUNT : MIN_COUNT;
   if (!el) return;
   const index = Math.round(el.scrollTop / ITEM_H);
@@ -128,6 +145,56 @@ function onScroll(col: 'hours' | 'minutes') {
   clearTimeout(scrollTimers[col]);
   scrollTimers[col] = setTimeout(() => doWrap(col), 150);
 }
+
+// ── Mouse drag-to-scroll ──────────────────────────────────────────────────────
+
+function onDragMove(e: MouseEvent) {
+  if (!drag.active) return;
+  const el = colEl(drag.col);
+  if (!el) return;
+  const dy = drag.startY - e.clientY;
+  if (Math.abs(dy) > 3) drag.moved = true;
+  el.scrollTop = drag.startScrollTop + dy;
+  e.preventDefault();
+}
+
+function onDragEnd() {
+  drag.active = false;
+  document.removeEventListener('mousemove', onDragMove);
+  document.removeEventListener('mouseup', onDragEnd);
+  // Trigger snap-to-nearest-item after releasing
+  onScroll(drag.col);
+}
+
+function onColumnMouseDown(col: 'hours' | 'minutes', e: MouseEvent) {
+  const el = colEl(col);
+  if (!el) return;
+  drag.active = true;
+  drag.col = col;
+  drag.startY = e.clientY;
+  drag.startScrollTop = el.scrollTop;
+  drag.moved = false;
+  document.addEventListener('mousemove', onDragMove, { passive: false } as AddEventListenerOptions);
+  document.addEventListener('mouseup', onDragEnd);
+}
+
+// ── Click-to-select ───────────────────────────────────────────────────────────
+
+function onItemClick(col: 'hours' | 'minutes', e: MouseEvent) {
+  // If this click followed a drag, ignore it
+  if (drag.moved) return;
+  const el = colEl(col);
+  if (!el) return;
+  const item = e.currentTarget as HTMLElement;
+  const containerRect = el.getBoundingClientRect();
+  const itemRect = item.getBoundingClientRect();
+  // Scroll so the clicked item's centre aligns with the container's centre
+  const targetScrollTop =
+    el.scrollTop + (itemRect.top + ITEM_H / 2 - (containerRect.top + el.clientHeight / 2));
+  el.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
+}
+
+// ── Done ─────────────────────────────────────────────────────────────────────
 
 function onDone() {
   // Read scroll positions directly in case the debounce hasn't fired yet
@@ -155,5 +222,9 @@ watch(
   },
 );
 
-onUnmounted(clearScrollTimers);
+onUnmounted(() => {
+  clearScrollTimers();
+  document.removeEventListener('mousemove', onDragMove);
+  document.removeEventListener('mouseup', onDragEnd);
+});
 </script>
