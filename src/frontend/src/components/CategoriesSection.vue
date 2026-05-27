@@ -21,37 +21,44 @@
         </k-button>
       </div>
 
-      <!-- Initial wear -->
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Initial wear</label>
-        <button
-          type="button"
-          class="flex items-center gap-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-          @click="openDurationPicker('initialWear')"
-        >
-          <span>{{ shortDuration(catForm.initialWearSeconds) }}</span>
-          <span class="text-gray-400">▾</span>
-        </button>
+      <!-- Initial wear + rest multiplier (same row) -->
+      <div class="flex gap-4 flex-wrap items-end">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Initial wear</label>
+          <button
+            type="button"
+            class="flex items-center gap-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+            @click="openDurationPicker('initialWear')"
+          >
+            <span>{{ shortDuration(catForm.initialWearSeconds) }}</span>
+            <span class="text-gray-400">▾</span>
+          </button>
+        </div>
+        <div>
+          <label for="cat-rest-mult" class="block text-sm font-medium text-gray-700 mb-1">Rest multiplier</label>
+          <input
+            id="cat-rest-mult"
+            :value="catForm.restMultiplier"
+            @input="catForm.restMultiplier = Number(($event.target as HTMLInputElement).value)"
+            @blur="onRestMultiplierBlur"
+            type="number"
+            min="0"
+            step="0.1"
+            class="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
       </div>
-
-      <!-- Rest multiplier -->
-      <div>
-        <label for="cat-rest-mult" class="block text-sm font-medium text-gray-700 mb-1">Rest multiplier</label>
-        <input
-          id="cat-rest-mult"
-          :value="catForm.restMultiplier"
-          @input="catForm.restMultiplier = Number(($event.target as HTMLInputElement).value)"
-          @blur="onRestMultiplierBlur"
-          type="number"
-          min="0"
-          step="0.1"
-          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
+      <p class="text-xs text-gray-400 -mt-1">
+        <strong>Initial wear</strong> is the carry-over credit when starting a new session (or after a long break).
+        <strong>Rest</strong> = multiplier × wear&thinsp;+&thinsp;24&thinsp;h.
+      </p>
 
       <!-- Risk bands -->
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">Risk bands</label>
+        <p class="text-xs text-gray-400 mb-2">
+          Bands are triggered by cumulative wear time. Tap a threshold (▾) to change where one band ends and the next begins.
+        </p>
         <div class="space-y-1">
           <template v-for="(bandName, i) in bandNames" :key="i">
             <!-- Band row -->
