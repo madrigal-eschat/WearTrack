@@ -5,6 +5,16 @@ test.describe('Navigation', () => {
     await page.goto('/');
   });
 
+  // Regression guard: Vite base: './' produced relative asset paths that broke
+  // JS loading when the app was loaded on any route other than '/'.
+  // The tab bar is rendered by Vue — if it's missing, the app never mounted.
+  test('app mounts when navigating directly to a deep route (no redirect from /)', async ({ page }) => {
+    await page.goto('/items');
+    await expect(page.getByRole('link', { name: /home/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /items/i })).toBeVisible();
+  });
+
+
   test('loads home page', async ({ page }) => {
     await expect(page).toHaveTitle(/weartrack/i);
     await expect(page.getByText('Weartrack')).toBeVisible();
