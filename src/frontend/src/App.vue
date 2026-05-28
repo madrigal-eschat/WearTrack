@@ -1,7 +1,9 @@
 <template>
   <k-app theme="ios" class="h-full">
     <Toast />
-    <router-view />
+    <div data-testid="main-content">
+      <router-view />
+    </div>
     <SettingsDrawer :open="settingsOpen" @close="settingsOpen = false" />
     <k-tabbar bottom labels icons class="left-0 right-0 bottom-0 fixed z-30 !bg-white border-t border-gray-200">
         <k-tabbar-link
