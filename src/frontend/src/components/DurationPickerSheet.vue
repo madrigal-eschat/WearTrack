@@ -30,11 +30,31 @@
         style="top: calc(50% - 22px)"
       />
 
+      <!-- Days column -->
+      <div
+        ref="daysEl"
+        data-testid="days-col"
+        class="relative w-24 overflow-y-scroll overscroll-none cursor-grab active:cursor-grabbing"
+        style="scroll-snap-type: y mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch;"
+        @scroll="onScroll('days')"
+        @mousedown="(e) => onColumnMouseDown('days', e)"
+      >
+        <div class="h-[88px] shrink-0" />
+        <div
+          v-for="item in tripledDays"
+          :key="item.key"
+          class="flex h-[44px] select-none items-center justify-center text-xl"
+          style="scroll-snap-align: center;"
+          @click="(e) => onItemClick('days', e)"
+        >{{ item.value }}d</div>
+        <div class="h-[88px] shrink-0" />
+      </div>
+
       <!-- Hours column -->
       <div
         ref="hoursEl"
         data-testid="hours-col"
-        class="relative w-32 overflow-y-scroll overscroll-none cursor-grab active:cursor-grabbing"
+        class="relative w-24 overflow-y-scroll overscroll-none cursor-grab active:cursor-grabbing"
         style="scroll-snap-type: y mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch;"
         @scroll="onScroll('hours')"
         @mousedown="(e) => onColumnMouseDown('hours', e)"
@@ -54,7 +74,7 @@
       <div
         ref="minutesEl"
         data-testid="minutes-col"
-        class="relative w-32 overflow-y-scroll overscroll-none cursor-grab active:cursor-grabbing"
+        class="relative w-24 overflow-y-scroll overscroll-none cursor-grab active:cursor-grabbing"
         style="scroll-snap-type: y mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch;"
         @scroll="onScroll('minutes')"
         @mousedown="(e) => onColumnMouseDown('minutes', e)"
@@ -78,8 +98,11 @@ import { ref, computed, watch, onUnmounted, nextTick } from 'vue';
 import { kSheet, kToolbar } from 'konsta/vue';
 
 const ITEM_H = 44;
+const DAY_COUNT = 14;   // 0–13 d; covers all current and foreseeable durations
 const HOUR_COUNT = 24;
 const MIN_COUNT = 60;
+
+type Col = 'days' | 'hours' | 'minutes';
 
 const props = defineProps<{ modelValue: number; open: boolean }>();
 const emit = defineEmits<{
@@ -87,25 +110,38 @@ const emit = defineEmits<{
   'update:open': [value: boolean];
 }>();
 
-const hoursEl = ref<HTMLElement | null>(null);
+const daysEl    = ref<HTMLElement | null>(null);
+const hoursEl   = ref<HTMLElement | null>(null);
 const minutesEl = ref<HTMLElement | null>(null);
-const curHours = ref(0);
+const curDays    = ref(0);
+const curHours   = ref(0);
 const curMinutes = ref(0);
 const scrollTimers: Record<string, ReturnType<typeof setTimeout>> = {};
 
 // Drag state — plain object, not reactive (no need to trigger renders)
 const drag = {
   active: false,
-  col: 'hours' as 'hours' | 'minutes',
+  col: 'hours' as Col,
   startY: 0,
   startScrollTop: 0,
   moved: false,
 };
 
-function colEl(col: 'hours' | 'minutes'): HTMLElement | null {
-  return col === 'hours' ? hoursEl.value : minutesEl.value;
+function colEl(col: Col): HTMLElement | null {
+  if (col === 'days')    return daysEl.value;
+  if (col === 'hours')   return hoursEl.value;
+  return minutesEl.value;
 }
 
+function colCount(col: Col): number {
+  if (col === 'days')  return DAY_COUNT;
+  if (col === 'hours') return HOUR_COUNT;
+  return MIN_COUNT;
+}
+
+const tripledDays = computed(() =>
+  Array.from({ length: DAY_COUNT * 3 }, (_, i) => ({ key: i, value: i % DAY_COUNT }))
+);
 const tripledHours = computed(() =>
   Array.from({ length: HOUR_COUNT * 3 }, (_, i) => ({ key: i, value: i % HOUR_COUNT }))
 );
@@ -114,36 +150,42 @@ const tripledMinutes = computed(() =>
 );
 
 function clearScrollTimers() {
+  clearTimeout(scrollTimers['days']);
   clearTimeout(scrollTimers['hours']);
   clearTimeout(scrollTimers['minutes']);
 }
 
 function initScroll() {
   clearScrollTimers();
-  const h = Math.floor(props.modelValue / 3600) % HOUR_COUNT;
-  const m = Math.floor((props.modelValue % 3600) / 60) % MIN_COUNT;
-  curHours.value = h;
+  const totalSeconds = props.modelValue;
+  const d = Math.floor(totalSeconds / 86400) % DAY_COUNT;
+  const h = Math.floor((totalSeconds % 86400) / 3600) % HOUR_COUNT;
+  const m = Math.floor((totalSeconds % 3600) / 60) % MIN_COUNT;
+  curDays.value    = d;
+  curHours.value   = h;
   curMinutes.value = m;
   nextTick(() => {
-    if (hoursEl.value) hoursEl.value.scrollTop = (HOUR_COUNT + h) * ITEM_H;
-    if (minutesEl.value) minutesEl.value.scrollTop = (MIN_COUNT + m) * ITEM_H;
+    if (daysEl.value)    daysEl.value.scrollTop    = (DAY_COUNT  + d) * ITEM_H;
+    if (hoursEl.value)   hoursEl.value.scrollTop   = (HOUR_COUNT + h) * ITEM_H;
+    if (minutesEl.value) minutesEl.value.scrollTop = (MIN_COUNT  + m) * ITEM_H;
   });
 }
 
-function doWrap(col: 'hours' | 'minutes') {
+function doWrap(col: Col) {
   const el = colEl(col);
-  const count = col === 'hours' ? HOUR_COUNT : MIN_COUNT;
+  const count = colCount(col);
   if (!el) return;
   const index = Math.round(el.scrollTop / ITEM_H);
   const value = ((index % count) + count) % count;
-  if (col === 'hours') curHours.value = value;
-  else curMinutes.value = value;
+  if (col === 'days')    curDays.value    = value;
+  else if (col === 'hours')   curHours.value   = value;
+  else                        curMinutes.value = value;
   if (index < count || index >= count * 2) {
     el.scrollTop = (count + value) * ITEM_H;
   }
 }
 
-function onScroll(col: 'hours' | 'minutes') {
+function onScroll(col: Col) {
   clearTimeout(scrollTimers[col]);
   scrollTimers[col] = setTimeout(() => doWrap(col), 150);
 }
@@ -164,11 +206,10 @@ function onDragEnd() {
   drag.active = false;
   document.removeEventListener('mousemove', onDragMove);
   document.removeEventListener('mouseup', onDragEnd);
-  // Trigger snap-to-nearest-item after releasing
   onScroll(drag.col);
 }
 
-function onColumnMouseDown(col: 'hours' | 'minutes', e: MouseEvent) {
+function onColumnMouseDown(col: Col, e: MouseEvent) {
   const el = colEl(col);
   if (!el) return;
   drag.active = true;
@@ -182,15 +223,13 @@ function onColumnMouseDown(col: 'hours' | 'minutes', e: MouseEvent) {
 
 // ── Click-to-select ───────────────────────────────────────────────────────────
 
-function onItemClick(col: 'hours' | 'minutes', e: MouseEvent) {
-  // If this click followed a drag, ignore it
+function onItemClick(col: Col, e: MouseEvent) {
   if (drag.moved) return;
   const el = colEl(col);
   if (!el) return;
   const item = e.currentTarget as HTMLElement;
   const containerRect = el.getBoundingClientRect();
   const itemRect = item.getBoundingClientRect();
-  // Scroll so the clicked item's centre aligns with the container's centre
   const targetScrollTop =
     el.scrollTop + (itemRect.top + ITEM_H / 2 - (containerRect.top + el.clientHeight / 2));
   el.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
@@ -199,7 +238,10 @@ function onItemClick(col: 'hours' | 'minutes', e: MouseEvent) {
 // ── Done ─────────────────────────────────────────────────────────────────────
 
 function onDone() {
-  // Read scroll positions directly in case the debounce hasn't fired yet
+  if (daysEl.value) {
+    const idx = Math.round(daysEl.value.scrollTop / ITEM_H);
+    curDays.value = ((idx % DAY_COUNT) + DAY_COUNT) % DAY_COUNT;
+  }
   if (hoursEl.value) {
     const idx = Math.round(hoursEl.value.scrollTop / ITEM_H);
     curHours.value = ((idx % HOUR_COUNT) + HOUR_COUNT) % HOUR_COUNT;
@@ -208,7 +250,7 @@ function onDone() {
     const idx = Math.round(minutesEl.value.scrollTop / ITEM_H);
     curMinutes.value = ((idx % MIN_COUNT) + MIN_COUNT) % MIN_COUNT;
   }
-  emit('update:modelValue', curHours.value * 3600 + curMinutes.value * 60);
+  emit('update:modelValue', curDays.value * 86400 + curHours.value * 3600 + curMinutes.value * 60);
   emit('update:open', false);
 }
 
