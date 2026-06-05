@@ -5,7 +5,7 @@ include:
       project-dir: "src/backend"
       lint-enabled: "true"
       sbom-disabled: "true"
-  - component: $CI_SERVER_FQDN/to-be-continuous/docker/gitlab-ci-docker@8.3.0
+  - component: $CI_SERVER_FQDN/to-be-continuous/docker/gitlab-ci-docker@8.4.0
     inputs:
       build-args: "--platform linux/amd64 --platform linux/arm64"
       trivy-disabled: "true"
