@@ -21,6 +21,8 @@ include:
       environment-url: https://${K8S_INGRESS_HOST}
       prod-deploy-strategy: auto
       create-namespace-enabled: "true"
+  - project: $CI_PROJECT_ROOT_NAMESPACE/ci-templates
+    file: node-renovate-audit.yml
 
 variables:
   KUBE_CONTEXT: $CI_PROJECT_ROOT_NAMESPACE/cluster-management:home
