@@ -21,9 +21,43 @@ export interface OpenSessionWithItem extends Session {
   item_difficulty_multiplier: number;
 }
 
+export interface ItemWithLastSession {
+  item_id: number;
+  category_id: number;
+  name: string;
+  color: string;
+  difficulty_multiplier: number;
+  ended_at: number | null;
+  calculated_wear_seconds: number | null;
+  calculated_rest_seconds: number | null;
+}
+
 const GRACE_SECONDS = 24 * 3600;
 
 class SessionStore {
+  findAllLastSessions(): ItemWithLastSession[] {
+    return db
+      .prepare(
+        `SELECT
+           i.id          AS item_id,
+           i.category_id,
+           i.name,
+           i.color,
+           i.difficulty_multiplier,
+           s.ended_at,
+           s.calculated_wear_seconds,
+           s.calculated_rest_seconds
+         FROM items i
+         LEFT JOIN sessions s ON s.id = (
+           SELECT id FROM sessions
+           WHERE item_id = i.id AND ended_at IS NOT NULL
+           ORDER BY ended_at DESC
+           LIMIT 1
+         )`,
+      )
+      .all() as ItemWithLastSession[];
+  }
+
   findAll(itemId?: number): Session[] {
     if (itemId !== undefined) {
       return db

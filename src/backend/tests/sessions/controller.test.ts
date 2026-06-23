@@ -249,6 +249,72 @@ describe('GET /api/sessions/:id', () => {
   });
 });
 
+describe('GET /api/sessions/current — items field', () => {
+  it('includes an items array on every entry', async () => {
+    const res = await app.request(`${SESSIONS}/current`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    body.forEach((entry: { items: unknown }) => {
+      expect(Array.isArray(entry.items)).toBe(true);
+    });
+  });
+
+  it('lists the item with null last-session fields when it has no history', async () => {
+    // Create a fresh category + item with no sessions
+    const catRes = await app.request(CATEGORIES, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Fresh Cat',
+        icon: 'ph:sneaker',
+        initial_wear_duration_seconds: 900,
+        rest_multiplier: 6,
+        rest_constant_seconds: 86400,
+        risk_levels: [{ lower: null, upper: null, text: 'safe', severity: 1 }],
+        break_decay_multiplier: 0.75,
+        break_starts_after_seconds: 168,
+      }),
+    });
+    const cat = await catRes.json();
+
+    const itemRes = await app.request(ITEMS, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Fresh Shoe', category_id: cat.id, color: '#123456' }),
+    });
+    const item = await itemRes.json();
+
+    const res = await app.request(`${SESSIONS}/current`);
+    const body = await res.json();
+    const entry = body.find((e: { category: { id: number } }) => e.category.id === cat.id);
+    expect(entry).toBeDefined();
+    expect(entry.items).toHaveLength(1);
+
+    const ourItem = entry.items[0];
+    expect(ourItem.item_id).toBe(item.id);
+    expect(ourItem.name).toBe('Fresh Shoe');
+    expect(ourItem.difficulty_multiplier).toBeTypeOf('number');
+    expect(ourItem.ended_at).toBeNull();
+    expect(ourItem.calculated_wear_seconds).toBeNull();
+    expect(ourItem.calculated_rest_seconds).toBeNull();
+  });
+
+  it('populates last-session fields after a session ends', async () => {
+    const s = await (await startSession()).json();
+    await endSession(s.id);
+
+    const res = await app.request(`${SESSIONS}/current`);
+    const body = await res.json();
+    const entry = body.find((e: { category: { id: number } }) => e.category.id === categoryId);
+    const ourItem = entry.items.find((i: { item_id: number }) => i.item_id === itemId);
+
+    expect(ourItem).toBeDefined();
+    expect(ourItem.ended_at).toBeTypeOf('number');
+    expect(ourItem.calculated_wear_seconds).toBeTypeOf('number');
+    expect(ourItem.calculated_rest_seconds).toBeTypeOf('number');
+  });
+});
+
 describe('Stats updates after session end', () => {
   it('increments per-item session_count and total_wear_seconds', async () => {
     const statsBefore = prepare('SELECT * FROM stats WHERE item_id = ?').get(itemId) as {
