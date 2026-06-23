@@ -30,10 +30,22 @@ export interface Session {
   ended_in_injury: number;
 }
 
+export interface ItemWithLastSession {
+  item_id: number;
+  category_id: number;
+  name: string;
+  color: string;
+  difficulty_multiplier: number;
+  ended_at: number | null;
+  calculated_wear_seconds: number | null;
+  calculated_rest_seconds: number | null;
+}
+
 export interface CurrentEntry {
   category: Category;
   item: Item | null;
   session: Session | null;
+  items: ItemWithLastSession[];
 }
 
 const currentSessions = ref<CurrentEntry[]>([]);
@@ -110,8 +122,8 @@ function currentWear(session: Session): number {
 export function useWear() {
   onMounted(() => {
     fetchCurrent();
-    // Poll every 30s to keep elapsed times / rest countdowns fresh
-    pollTimer = setInterval(fetchCurrent, 30_000);
+    // Poll every 60s to keep elapsed times / rest countdowns fresh
+    pollTimer = setInterval(fetchCurrent, 60_000);
   });
   onUnmounted(() => {
     if (pollTimer !== null) clearInterval(pollTimer);
