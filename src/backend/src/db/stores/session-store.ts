@@ -1,5 +1,11 @@
 import db from '../index.js';
-import { calculateRest, calculatePostBreakWear, type Category } from '../calculations.js';
+import {
+  computeSessionStart,
+  computeRest,
+  riskLevelFor,
+  type Category,
+  type PreviousSession,
+} from '../calculations.js';
 import { statsStore } from './stats-store.js';
 import { injuryStore } from './injury-store.js';
 
@@ -8,12 +14,12 @@ export interface Session {
   item_id: number;
   started_at: number;
   ended_at: number | null;
-  calculated_wear_seconds: number;
-  calculated_rest_seconds: number | null;
+  target_wear_seconds: number;
+  max_wear_seconds: number | null;
+  rest_seconds: number | null;
   ended_in_injury: number;
 }
 
-/** Joined row returned by findOpenWithItemData — raw columns from the JOIN query. */
 export interface OpenSessionWithItem extends Session {
   category_id: number;
   item_name: string;
@@ -28,31 +34,24 @@ export interface ItemWithLastSession {
   color: string;
   difficulty_multiplier: number;
   ended_at: number | null;
-  calculated_wear_seconds: number | null;
-  calculated_rest_seconds: number | null;
+  started_at: number | null;
+  target_wear_seconds: number | null;
+  max_wear_seconds: number | null;
+  rest_seconds: number | null;
 }
-
-const GRACE_SECONDS = 24 * 3600;
 
 class SessionStore {
   findAllLastSessions(): ItemWithLastSession[] {
     return db
       .prepare(
         `SELECT
-           i.id          AS item_id,
-           i.category_id,
-           i.name,
-           i.color,
-           i.difficulty_multiplier,
-           s.ended_at,
-           s.calculated_wear_seconds,
-           s.calculated_rest_seconds
+           i.id AS item_id, i.category_id, i.name, i.color, i.difficulty_multiplier,
+           s.ended_at, s.started_at, s.target_wear_seconds, s.max_wear_seconds, s.rest_seconds
          FROM items i
          LEFT JOIN sessions s ON s.id = (
            SELECT id FROM sessions
            WHERE item_id = i.id AND ended_at IS NOT NULL
-           ORDER BY ended_at DESC
-           LIMIT 1
+           ORDER BY ended_at DESC LIMIT 1
          )`,
       )
       .all() as ItemWithLastSession[];
@@ -60,9 +59,7 @@ class SessionStore {
 
   findAll(itemId?: number): Session[] {
     if (itemId !== undefined) {
-      return db
-        .prepare('SELECT * FROM sessions WHERE item_id = ? ORDER BY started_at DESC')
-        .all(itemId) as Session[];
+      return db.prepare('SELECT * FROM sessions WHERE item_id = ? ORDER BY started_at DESC').all(itemId) as Session[];
     }
     return db.prepare('SELECT * FROM sessions ORDER BY started_at DESC').all() as Session[];
   }
@@ -71,25 +68,23 @@ class SessionStore {
     return db.prepare('SELECT * FROM sessions WHERE id = ?').get(id) as Session | undefined;
   }
 
-  findLastEnded(itemId: number): Session | undefined {
+  /** Most recently ended session for ANY item in the category (the formula's previous_session). */
+  findLastEndedInCategory(categoryId: number): PreviousSession | undefined {
     return db
       .prepare(
-        'SELECT * FROM sessions WHERE item_id = ? AND ended_at IS NOT NULL ORDER BY ended_at DESC LIMIT 1',
+        `SELECT s.target_wear_seconds, s.max_wear_seconds, s.ended_at, s.rest_seconds
+         FROM sessions s JOIN items i ON i.id = s.item_id
+         WHERE i.category_id = ? AND s.ended_at IS NOT NULL AND s.ended_in_injury = 0
+         ORDER BY s.ended_at DESC LIMIT 1`,
       )
-      .get(itemId) as Session | undefined;
+      .get(categoryId) as PreviousSession | undefined;
   }
 
-  /**
-   * Find the open session (if any) in a given category, along with item info for error messages.
-   */
-  findOpenInCategory(
-    categoryId: number,
-  ): { session_id: number; item_id: number; item_name: string } | undefined {
+  findOpenInCategory(categoryId: number): { session_id: number; item_id: number; item_name: string } | undefined {
     return db
       .prepare(
         `SELECT s.id AS session_id, i.id AS item_id, i.name AS item_name
-         FROM sessions s
-         JOIN items i ON i.id = s.item_id
+         FROM sessions s JOIN items i ON i.id = s.item_id
          WHERE i.category_id = ? AND s.ended_at IS NULL`,
       )
       .get(categoryId) as { session_id: number; item_id: number; item_name: string } | undefined;
@@ -97,80 +92,50 @@ class SessionStore {
 
   /** Find the open session for a specific item (used by the injuries controller). */
   findOpenForItem(itemId: number): { id: number } | undefined {
-    return db
-      .prepare('SELECT id FROM sessions WHERE item_id = ? AND ended_at IS NULL')
-      .get(itemId) as { id: number } | undefined;
+    return db.prepare('SELECT id FROM sessions WHERE item_id = ? AND ended_at IS NULL').get(itemId) as
+      | { id: number }
+      | undefined;
   }
 
-  /**
-   * All currently open sessions, with their item columns inlined.
-   * Used by the GET /sessions/current endpoint.
-   */
   findOpenWithItemData(): OpenSessionWithItem[] {
     return db
       .prepare(
         `SELECT s.*, i.category_id, i.name AS item_name, i.color AS item_color,
                 i.difficulty_multiplier AS item_difficulty_multiplier
-         FROM sessions s
-         JOIN items i ON i.id = s.item_id
+         FROM sessions s JOIN items i ON i.id = s.item_id
          WHERE s.ended_at IS NULL`,
       )
       .all() as OpenSessionWithItem[];
   }
 
-  /**
-   * Work out how much wear credit carries over from a previous session.
-   * If the break was within calculated_rest_seconds + grace, no decay applies.
-   * If longer, apply exponential decay.
-   */
-  resolveInitialWear(itemId: number, category: Category, startedAt: number): number {
-    const last = this.findLastEnded(itemId);
-    if (!last || last.calculated_rest_seconds === null) {
-      return category.initial_wear_duration_seconds;
-    }
+  /** Start a new session. category is the raw DB row; item supplies difficulty. */
+  start(itemId: number, category: Category, item: { difficulty_multiplier: number }, startedAt: number): Session {
+    const previous = this.findLastEndedInCategory(category.id) ?? null;
+    const injuryActive = injuryStore.hasActiveInCategory(category.id);
+    const { target, max } = computeSessionStart(category, item, previous, startedAt, injuryActive);
 
-    const breakSeconds = startedAt - last.ended_at!;
-    const graceWindow = last.calculated_rest_seconds + GRACE_SECONDS;
-
-    if (breakSeconds <= graceWindow) {
-      return last.calculated_wear_seconds;
-    }
-
-    const breakHoursOverGrace = (breakSeconds - last.calculated_rest_seconds) / 3600;
-    return calculatePostBreakWear(last.calculated_wear_seconds, breakHoursOverGrace, category);
-  }
-
-  /** Start a new session. Category must already be fetched by the caller. */
-  start(itemId: number, category: Category, startedAt: number): Session {
-    const initialWear = this.resolveInitialWear(itemId, category, startedAt);
     const result = db
       .prepare(
-        'INSERT INTO sessions (item_id, started_at, calculated_wear_seconds) VALUES (?, ?, ?)',
+        'INSERT INTO sessions (item_id, started_at, target_wear_seconds, max_wear_seconds) VALUES (?, ?, ?, ?)',
       )
-      .run(itemId, startedAt, initialWear);
+      .run(itemId, startedAt, target, max);
     return this.find(result.lastInsertRowid as number)!;
   }
 
-  /**
-   * End a session: compute final wear and rest, persist, then update cumulative stats.
-   * Runs inside a transaction.
-   */
+  /** End a session: derive elapsed, compute rest, persist; target/max stay as set at start. */
   end(session: Session, category: Category, endedAt: number): Session {
     return db.transaction(() => {
       const elapsed = endedAt - session.started_at;
-      const finalWear = session.calculated_wear_seconds + elapsed;
-      const injuryActive = injuryStore.hasActive(session.item_id);
-      const calculatedRest = calculateRest(finalWear, category, injuryActive);
+      const injuryActive = injuryStore.hasActiveInCategory(category.id);
+      const riskLevel = riskLevelFor(elapsed, category);
+      const rest = computeRest(elapsed, session.max_wear_seconds, category, riskLevel, injuryActive);
 
-      db.prepare(
-        `UPDATE sessions SET ended_at = ?, calculated_wear_seconds = ?, calculated_rest_seconds = ? WHERE id = ?`,
-      ).run(endedAt, finalWear, calculatedRest, session.id);
+      db.prepare('UPDATE sessions SET ended_at = ?, rest_seconds = ? WHERE id = ?').run(endedAt, rest, session.id);
 
       const updated = this.find(session.id)!;
-      // ended_at is guaranteed non-null after the UPDATE above
       const snapshot = { ...updated, ended_at: endedAt };
       statsStore.recordItemSession(snapshot);
-      statsStore.recordCategorySession(category.id, snapshot);
+      statsStore.recordCategorySession(category.id, category.break_grace_time, snapshot);
       return updated;
     })();
   }
@@ -179,9 +144,7 @@ class SessionStore {
    * Close an open session as ended-in-injury (no stats update — wear is not credited).
    */
   endWithInjury(sessionId: number, endedAt: number): void {
-    db.prepare(
-      'UPDATE sessions SET ended_at = ?, ended_in_injury = 1 WHERE id = ?',
-    ).run(endedAt, sessionId);
+    db.prepare('UPDATE sessions SET ended_at = ?, ended_in_injury = 1 WHERE id = ?').run(endedAt, sessionId);
   }
 }
 
