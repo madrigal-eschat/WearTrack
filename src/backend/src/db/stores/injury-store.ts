@@ -36,6 +36,17 @@ class InjuryStore {
     return this.findActive(itemId) !== undefined;
   }
 
+  hasActiveInCategory(categoryId: number): boolean {
+    const row = db
+      .prepare(
+        `SELECT 1 FROM injuries inj
+         JOIN items i ON i.id = inj.item_id
+         WHERE i.category_id = ? AND inj.healed_at IS NULL LIMIT 1`,
+      )
+      .get(categoryId);
+    return row !== undefined;
+  }
+
   record(itemId: number, severity: number): Injury {
     return db
       .prepare(
@@ -51,14 +62,15 @@ class InjuryStore {
     );
   }
 
-  /** Returns the calculated_wear_seconds of the most recent ended session for an item. */
+  /** Elapsed (ended_at - started_at) of the most recent ended session for an item. */
   lastSessionWear(itemId: number): number {
     const row = db
       .prepare(
-        'SELECT calculated_wear_seconds FROM sessions WHERE item_id = ? AND ended_at IS NOT NULL ORDER BY ended_at DESC LIMIT 1',
+        `SELECT (ended_at - started_at) AS elapsed FROM sessions
+         WHERE item_id = ? AND ended_at IS NOT NULL ORDER BY ended_at DESC LIMIT 1`,
       )
-      .get(itemId) as { calculated_wear_seconds: number } | undefined;
-    return row?.calculated_wear_seconds ?? 0;
+      .get(itemId) as { elapsed: number } | undefined;
+    return row?.elapsed ?? 0;
   }
 }
 
