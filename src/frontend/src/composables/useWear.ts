@@ -1,15 +1,17 @@
 import { ref, onMounted, onUnmounted } from 'vue';
+import { currentWear } from '../utils/wearCalculations.js';
 
 export interface Category {
   id: number;
   name: string;
   icon: string;
-  initial_wear_duration_seconds: number;
+  initial_target_wear_duration_seconds: number;
+  initial_max_wear_duration_seconds: number | null;
   rest_multiplier: number;
-  rest_constant_seconds: number;
+  minimum_rest: number;
   risk_levels: Array<{ lower: number | null; upper: number | null; text: string; severity: number }>;
   break_decay_multiplier: number;
-  break_starts_after_seconds: number;
+  break_grace_time: number;
 }
 
 export interface Item {
@@ -25,8 +27,9 @@ export interface Session {
   item_id: number;
   started_at: number;
   ended_at: number | null;
-  calculated_wear_seconds: number;
-  calculated_rest_seconds: number | null;
+  target_wear_seconds: number;
+  max_wear_seconds: number | null;
+  rest_seconds: number | null;
   ended_in_injury: number;
 }
 
@@ -37,8 +40,12 @@ export interface ItemWithLastSession {
   color: string;
   difficulty_multiplier: number;
   ended_at: number | null;
-  calculated_wear_seconds: number | null;
-  calculated_rest_seconds: number | null;
+  started_at: number | null;
+  target_wear_seconds: number | null;
+  max_wear_seconds: number | null;
+  rest_seconds: number | null;
+  expected_target: number;
+  expected_max: number | null;
 }
 
 export interface CurrentEntry {
@@ -111,12 +118,6 @@ async function reportInjury(itemId: number, wearSeconds?: number): Promise<void>
     throw new Error(resBody.error ?? `HTTP ${res.status}`);
   }
   await fetchCurrent();
-}
-
-/** Elapsed wear seconds for an active session (calculated_wear_seconds + time since start). */
-function currentWear(session: Session): number {
-  if (session.ended_at !== null) return session.calculated_wear_seconds;
-  return session.calculated_wear_seconds + (Math.floor(Date.now() / 1000) - session.started_at);
 }
 
 export function useWear() {
