@@ -16,7 +16,16 @@
         :subtitle="entrySubtitle(entry)"
       >
         <template #media>
-          <span class="font-bold text-gray-500">{{ idx + 1 }}</span>
+          <div class="flex flex-col items-center gap-0.5 w-8">
+            <Icon
+              v-if="entryIcon(entry)?.includes(':')"
+              :icon="entryIcon(entry)!"
+              class="text-2xl w-6 h-6"
+              :style="{ color: entryColor(entry) }"
+            />
+            <span v-else-if="entryIcon(entry)" class="text-xl leading-none">{{ entryIcon(entry) }}</span>
+            <span class="font-bold text-gray-400 text-xs">{{ idx + 1 }}</span>
+          </div>
         </template>
         <template #after>
           <k-badge>{{ entryBadge(entry) }}</k-badge>
@@ -32,6 +41,7 @@
 <script setup lang="ts">
 import { onMounted, computed } from 'vue';
 import { kPage, kList, kListItem, kBadge, kBlock } from 'konsta/vue';
+import { Icon } from '@iconify/vue';
 import { useStats } from '../composables/useStats.js';
 import SegmentedControl from '../components/SegmentedControl.vue';
 
@@ -44,13 +54,20 @@ const activeTypeObj = computed(() =>
 );
 
 function entryName(entry: Record<string, unknown>): string {
-  return (entry.name ?? entry.category_name ?? '—') as string;
+  return (entry.item_name ?? entry.category_name ?? '—') as string;
 }
 
 function entrySubtitle(entry: Record<string, unknown>): string {
-  if (entry.category_name) return `Category: ${entry.category_name}`;
-  if (entry.category) return String(entry.category);
+  if (entry.item_name && entry.category_name) return `Category: ${entry.category_name}`;
   return '';
+}
+
+function entryIcon(entry: Record<string, unknown>): string | null {
+  return (entry.category_icon ?? null) as string | null;
+}
+
+function entryColor(entry: Record<string, unknown>): string {
+  return (entry.item_color ?? 'currentColor') as string;
 }
 
 function entryBadge(entry: Record<string, unknown>): string {

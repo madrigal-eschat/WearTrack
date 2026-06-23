@@ -156,10 +156,12 @@ class StatsStore {
     return db
       .prepare(
         `SELECT s.item_id, i.name AS item_name, c.name AS category_name,
+                c.icon AS category_icon, i.color AS item_color,
                 s.max_single_session_wear_seconds AS score
          FROM stats s
          JOIN items i ON i.id = s.item_id
          JOIN categories c ON c.id = i.category_id
+         WHERE s.total_wear_seconds > 0
          ORDER BY s.max_single_session_wear_seconds DESC
          LIMIT 20`,
       )
@@ -170,10 +172,12 @@ class StatsStore {
     return db
       .prepare(
         `SELECT s.item_id, i.name AS item_name, c.name AS category_name,
+                c.icon AS category_icon, i.color AS item_color,
                 s.total_wear_seconds AS score
          FROM stats s
          JOIN items i ON i.id = s.item_id
          JOIN categories c ON c.id = i.category_id
+         WHERE s.total_wear_seconds > 0
          ORDER BY s.total_wear_seconds DESC
          LIMIT 20`,
       )
@@ -185,10 +189,12 @@ class StatsStore {
     return db
       .prepare(
         `SELECT cs.category_id, c.name AS category_name,
+                c.icon AS category_icon,
                 cs.best_streak_wear_seconds AS score,
                 cs.best_streak_count AS streak_sessions
          FROM category_stats cs
          JOIN categories c ON c.id = cs.category_id
+         WHERE cs.best_streak_wear_seconds > 0
          ORDER BY cs.best_streak_wear_seconds DESC
          LIMIT 20`,
       )
@@ -199,10 +205,12 @@ class StatsStore {
     return db
       .prepare(
         `SELECT s.item_id, i.name AS item_name, c.name AS category_name,
+                c.icon AS category_icon, i.color AS item_color,
                 s.session_count AS score
          FROM stats s
          JOIN items i ON i.id = s.item_id
          JOIN categories c ON c.id = i.category_id
+         WHERE s.total_wear_seconds > 0
          ORDER BY s.session_count DESC
          LIMIT 20`,
       )
