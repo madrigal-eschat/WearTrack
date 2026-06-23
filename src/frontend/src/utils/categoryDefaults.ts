@@ -4,7 +4,7 @@ export type CategoryDefaults = Omit<Category, 'id' | 'name' | 'icon'>;
 
 export const DEFAULT_CATEGORY_FIELDS: CategoryDefaults = {
   initial_target_wear_duration_seconds: 900,
-  initial_max_wear_duration_seconds: null,
+  initial_max_wear_duration_seconds: 1350,
   rest_multiplier: 2,
   minimum_rest: 86400,
   risk_levels: [
@@ -12,6 +12,6 @@ export const DEFAULT_CATEGORY_FIELDS: CategoryDefaults = {
     { lower: 3600, upper: 7200, text: 'Medium', severity: 2 },
     { lower: 7200, upper: null, text: 'High', severity: 3 },
   ],
-  break_decay_multiplier: 0.75,
-  break_grace_time: 604800,
+  break_decay_multiplier: 0.91,
+  break_grace_time: 86400,
 };

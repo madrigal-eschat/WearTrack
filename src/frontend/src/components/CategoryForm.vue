@@ -130,7 +130,11 @@ import DurationPickerSheet from './DurationPickerSheet.vue';
 export interface CategoryFormState {
   name: string;
   icon: string;
-  initialWearSeconds: number;
+  initialWearTargetSeconds: number;
+  initialWearMaxSeconds: number | null;
+  minimumRestSeconds: number;
+  breakGraceSeconds: number;
+  breakDecayMultiplier: number;
   restMultiplier: number;
   bandCount: number;
   crossoverPoints: number[];
@@ -139,7 +143,11 @@ export interface CategoryFormState {
 const DEFAULT_STATE: CategoryFormState = {
   name: '',
   icon: '',
-  initialWearSeconds: 900,
+  initialWearTargetSeconds: 900,
+  initialWearMaxSeconds: 1350,
+  minimumRestSeconds: 86400,
+  breakGraceSeconds: 86400,
+  breakDecayMultiplier: 0.91,
   restMultiplier: 2,
   bandCount: 3,
   crossoverPoints: [3600, 7200],
