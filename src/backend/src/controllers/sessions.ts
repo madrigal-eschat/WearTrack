@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { sessionStore } from '../db/stores/session-store.js';
+import { sessionStore, type ItemWithLastSession } from '../db/stores/session-store.js';
 import { itemStore } from '../db/stores/item-store.js';
 import { categoryStore } from '../db/stores/category-store.js';
 import { NotFoundError, ValidationError, ConflictError } from '../middleware/errors.js';
@@ -20,14 +20,24 @@ router.get('/', (c) => {
 router.get('/current', (c) => {
   const categories = categoryStore.findAll();
   const openSessions = sessionStore.findOpenWithItemData();
+  const allItems = sessionStore.findAllLastSessions();
 
   const sessionByCategory = new Map(openSessions.map((s) => [s.category_id, s]));
+
+  const itemsByCategory = new Map<number, ItemWithLastSession[]>();
+  for (const item of allItems) {
+    if (!itemsByCategory.has(item.category_id)) {
+      itemsByCategory.set(item.category_id, []);
+    }
+    itemsByCategory.get(item.category_id)!.push(item);
+  }
 
   return c.json(
     categories.map((cat) => {
       const s = sessionByCategory.get(cat.id);
+      const items = itemsByCategory.get(cat.id) ?? [];
       if (!s) {
-        return { category: cat, item: null, session: null };
+        return { category: cat, item: null, session: null, items };
       }
       const item = {
         id: s.item_id,
@@ -45,7 +55,7 @@ router.get('/current', (c) => {
         calculated_rest_seconds: s.calculated_rest_seconds,
         ended_in_injury: s.ended_in_injury,
       };
-      return { category: cat, item, session };
+      return { category: cat, item, session, items };
     }),
   );
 });
