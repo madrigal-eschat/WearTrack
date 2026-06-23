@@ -53,7 +53,6 @@ import { kList, kListItem, kButton, kBlock } from 'konsta/vue';
 import { useCategories } from '../composables/useCategories.js';
 import { useItems } from '../composables/useItems.js';
 import { useToast } from '../composables/useToast.js';
-import { DEFAULT_CATEGORY_FIELDS } from '../utils/categoryDefaults.js';
 import { categoryToFormState, formStateToApiPayload } from '../utils/categoryForm.js';
 import type { CategoryFormState } from './CategoryForm.vue';
 import FormSectionHeader from './FormSectionHeader.vue';
@@ -92,12 +91,7 @@ function onToggleEdit(id: number) {
 
 async function onAddCategory(data: CategoryFormState) {
   try {
-    await createCategory({
-      ...formStateToApiPayload(data),
-      rest_constant_seconds: DEFAULT_CATEGORY_FIELDS.rest_constant_seconds,
-      break_decay_multiplier: DEFAULT_CATEGORY_FIELDS.break_decay_multiplier,
-      break_starts_after_seconds: DEFAULT_CATEGORY_FIELDS.break_starts_after_seconds,
-    });
+    await createCategory(formStateToApiPayload(data));
     showCatForm.value = false;
   } catch (e) {
     showError(String(e));
