@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import app from '../../src/server.js';
-import runMigration from '../../src/db/migrations/001_initial.js';
+import { runMigrations } from '../../src/db/migrations/index.js';
 import { prepare } from '../../src/db/index.js';
 
 const SESSIONS = '/api/sessions';
@@ -10,23 +10,24 @@ const CATEGORIES = '/api/categories';
 const sampleCategory = {
   name: 'Footwear',
   icon: 'figure.walk',
-  initial_wear_duration_seconds: 900,
+  initial_target_wear_duration_seconds: 900,
+  initial_max_wear_duration_seconds: 1800,
   rest_multiplier: 6,
-  rest_constant_seconds: 86400,
+  minimum_rest: 86400,
   risk_levels: [
     { lower: null, upper: 14400, text: 'safe', severity: 1 },
     { lower: 14400, upper: 28800, text: 'moderate', severity: 2 },
     { lower: 28800, upper: null, text: 'high', severity: 3 },
   ],
-  break_decay_multiplier: 0.75,
-  break_starts_after_seconds: 168,
+  break_decay_multiplier: 0.91,
+  break_grace_time: 86400,
 };
 
 let categoryId: number;
 let itemId: number;
 
 beforeAll(async () => {
-  runMigration();
+  runMigrations();
   const catRes = await app.request(CATEGORIES, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -58,6 +59,18 @@ async function endSession(sessionId: number, body: Record<string, unknown> = {})
   });
 }
 
+describe('GET /api/sessions/current expected durations', () => {
+  it('returns expected_target/expected_max for an idle item (first session)', async () => {
+    // sampleCategory: target 900, max 1800; Test Shoe difficulty 1; idle
+    const res = await app.request(`${SESSIONS}/current`);
+    const body = await res.json();
+    const entry = body.find((e: { category: { id: number } }) => e.category.id === categoryId);
+    const ourItem = entry.items.find((i: { item_id: number }) => i.item_id === itemId);
+    expect(ourItem.expected_target).toBe(900);
+    expect(ourItem.expected_max).toBe(1800);
+  });
+});
+
 describe('POST /api/sessions/start', () => {
   it('starts a session and returns 201', async () => {
     const res = await startSession();
@@ -67,7 +80,8 @@ describe('POST /api/sessions/start', () => {
     expect(body.item_id).toBe(itemId);
     expect(body.started_at).toBeTypeOf('number');
     expect(body.ended_at).toBeNull();
-    expect(body.calculated_wear_seconds).toBeTypeOf('number');
+    expect(body.target_wear_seconds).toBeTypeOf('number');
+    expect(body.max_wear_seconds).toBeTypeOf('number');
 
     await endSession(body.id);
   });
@@ -129,15 +143,16 @@ describe('POST /api/sessions/start', () => {
 });
 
 describe('POST /api/sessions/:id/end', () => {
-  it('ends a session and sets calculated_wear_seconds and calculated_rest_seconds', async () => {
+  it('ends a session, leaves target/max unchanged, and sets rest_seconds', async () => {
     const started = await (await startSession()).json();
     const res = await endSession(started.id);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ended_at).toBeTypeOf('number');
-    expect(body.calculated_wear_seconds).toBeGreaterThanOrEqual(started.calculated_wear_seconds);
-    expect(body.calculated_rest_seconds).toBeTypeOf('number');
-    expect(body.calculated_rest_seconds).toBeGreaterThan(0);
+    expect(body.target_wear_seconds).toBe(started.target_wear_seconds);
+    expect(body.max_wear_seconds).toBe(started.max_wear_seconds);
+    expect(body.rest_seconds).toBeTypeOf('number');
+    expect(body.rest_seconds).toBeGreaterThan(0);
   });
 
   it('accepts an explicit ended_at timestamp', async () => {
@@ -148,7 +163,7 @@ describe('POST /api/sessions/:id/end', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ended_at).toBe(endTs);
-    expect(body.calculated_wear_seconds).toBeGreaterThanOrEqual(3600);
+    expect(body.rest_seconds).toBe(86400);
   });
 
   it('returns 400 when ended_at is not a number', async () => {
@@ -267,12 +282,13 @@ describe('GET /api/sessions/current — items field', () => {
       body: JSON.stringify({
         name: 'Fresh Cat',
         icon: 'ph:sneaker',
-        initial_wear_duration_seconds: 900,
+        initial_target_wear_duration_seconds: 900,
+        initial_max_wear_duration_seconds: 1800,
         rest_multiplier: 6,
-        rest_constant_seconds: 86400,
+        minimum_rest: 86400,
         risk_levels: [{ lower: null, upper: null, text: 'safe', severity: 1 }],
-        break_decay_multiplier: 0.75,
-        break_starts_after_seconds: 168,
+        break_decay_multiplier: 0.91,
+        break_grace_time: 86400,
       }),
     });
     const cat = await catRes.json();
@@ -295,8 +311,9 @@ describe('GET /api/sessions/current — items field', () => {
     expect(ourItem.name).toBe('Fresh Shoe');
     expect(ourItem.difficulty_multiplier).toBeTypeOf('number');
     expect(ourItem.ended_at).toBeNull();
-    expect(ourItem.calculated_wear_seconds).toBeNull();
-    expect(ourItem.calculated_rest_seconds).toBeNull();
+    expect(ourItem.target_wear_seconds).toBeNull();
+    expect(ourItem.max_wear_seconds).toBeNull();
+    expect(ourItem.rest_seconds).toBeNull();
   });
 
   it('populates last-session fields after a session ends', async () => {
@@ -310,8 +327,8 @@ describe('GET /api/sessions/current — items field', () => {
 
     expect(ourItem).toBeDefined();
     expect(ourItem.ended_at).toBeTypeOf('number');
-    expect(ourItem.calculated_wear_seconds).toBeTypeOf('number');
-    expect(ourItem.calculated_rest_seconds).toBeTypeOf('number');
+    expect(ourItem.max_wear_seconds).toBeTypeOf('number');
+    expect(ourItem.rest_seconds).toBeTypeOf('number');
   });
 });
 
@@ -321,7 +338,8 @@ describe('Stats updates after session end', () => {
       session_count: number;
       total_wear_seconds: number;
     };
-    const s = await (await startSession()).json();
+    const startTs = Math.floor(Date.now() / 1000) - 3600;
+    const s = await (await startSession({ started_at: startTs })).json();
     await endSession(s.id);
     const statsAfter = prepare('SELECT * FROM stats WHERE item_id = ?').get(itemId) as {
       session_count: number;
