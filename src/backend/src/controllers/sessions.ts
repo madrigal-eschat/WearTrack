@@ -2,6 +2,8 @@ import { Hono } from 'hono';
 import { sessionStore, type ItemWithLastSession } from '../db/stores/session-store.js';
 import { itemStore } from '../db/stores/item-store.js';
 import { categoryStore } from '../db/stores/category-store.js';
+import { injuryStore } from '../db/stores/injury-store.js';
+import { computeSessionStart } from '../db/calculations.js';
 import { NotFoundError, ValidationError, ConflictError } from '../middleware/errors.js';
 
 function nowSeconds(): number {
@@ -21,39 +23,42 @@ router.get('/current', (c) => {
   const categories = categoryStore.findAll();
   const openSessions = sessionStore.findOpenWithItemData();
   const allItems = sessionStore.findAllLastSessions();
+  const now = nowSeconds();
 
   const sessionByCategory = new Map(openSessions.map((s) => [s.category_id, s]));
-
   const itemsByCategory = new Map<number, ItemWithLastSession[]>();
   for (const item of allItems) {
-    if (!itemsByCategory.has(item.category_id)) {
-      itemsByCategory.set(item.category_id, []);
-    }
+    if (!itemsByCategory.has(item.category_id)) itemsByCategory.set(item.category_id, []);
     itemsByCategory.get(item.category_id)!.push(item);
   }
 
   return c.json(
     categories.map((cat) => {
+      const rawCat = categoryStore.findRaw(cat.id)!;
+      const previous = sessionStore.findLastEndedInCategory(cat.id) ?? null;
+      const injuryActive = injuryStore.hasActiveInCategory(cat.id);
+      const items = (itemsByCategory.get(cat.id) ?? []).map((it) => {
+        const { target, max } = computeSessionStart(
+          rawCat,
+          { difficulty_multiplier: it.difficulty_multiplier },
+          previous,
+          now,
+          injuryActive,
+        );
+        return { ...it, expected_target: target, expected_max: max };
+      });
+
       const s = sessionByCategory.get(cat.id);
-      const items = itemsByCategory.get(cat.id) ?? [];
-      if (!s) {
-        return { category: cat, item: null, session: null, items };
-      }
+      if (!s) return { category: cat, item: null, session: null, items };
+
       const item = {
-        id: s.item_id,
-        category_id: s.category_id,
-        name: s.item_name,
-        color: s.item_color,
-        difficulty_multiplier: s.item_difficulty_multiplier,
+        id: s.item_id, category_id: s.category_id, name: s.item_name,
+        color: s.item_color, difficulty_multiplier: s.item_difficulty_multiplier,
       };
       const session = {
-        id: s.id,
-        item_id: s.item_id,
-        started_at: s.started_at,
-        ended_at: s.ended_at,
-        calculated_wear_seconds: s.calculated_wear_seconds,
-        calculated_rest_seconds: s.calculated_rest_seconds,
-        ended_in_injury: s.ended_in_injury,
+        id: s.id, item_id: s.item_id, started_at: s.started_at, ended_at: s.ended_at,
+        target_wear_seconds: s.target_wear_seconds, max_wear_seconds: s.max_wear_seconds,
+        rest_seconds: s.rest_seconds, ended_in_injury: s.ended_in_injury,
       };
       return { category: cat, item, session, items };
     }),
@@ -91,7 +96,7 @@ router.post('/start', async (c) => {
 
   const category = categoryStore.findRaw(item.category_id)!;
   const startTs = typeof started_at === 'number' ? started_at : nowSeconds();
-  const session = sessionStore.start(item_id, category, startTs);
+  const session = sessionStore.start(item_id, category, item, startTs);
   return c.json(session, 201);
 });
 

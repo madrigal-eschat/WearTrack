@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import app from '../../src/server.js';
-import runMigration from '../../src/db/migrations/001_initial.js';
+import { runMigrations } from '../../src/db/migrations/index.js';
 
 const BASE = '/api/items';
 const SESSIONS = '/api/sessions';
@@ -9,22 +9,23 @@ const CATEGORIES_BASE = '/api/categories';
 const sampleCategory = {
   name: 'Footwear',
   icon: 'figure.walk',
-  initial_wear_duration_seconds: 900,
+  initial_target_wear_duration_seconds: 900,
+  initial_max_wear_duration_seconds: 1800,
   rest_multiplier: 6,
-  rest_constant_seconds: 86400,
+  minimum_rest: 86400,
   risk_levels: [
     { lower: null, upper: 14400, text: 'safe', severity: 1 },
     { lower: 14400, upper: 28800, text: 'moderate', severity: 2 },
     { lower: 28800, upper: null, text: 'high', severity: 3 },
   ],
-  break_decay_multiplier: 0.75,
-  break_starts_after_seconds: 168,
+  break_decay_multiplier: 0.91,
+  break_grace_time: 86400,
 };
 
 let categoryId: number;
 
 beforeAll(async () => {
-  runMigration();
+  runMigrations();
   const res = await app.request(CATEGORIES_BASE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -170,10 +171,11 @@ describe('GET /api/items/:id/stats', () => {
 
   it('reflects stats after a completed session', async () => {
     const item = await (await createItem({ name: 'Stats Item' })).json();
+    const startTs = Math.floor(Date.now() / 1000) - 3600;
     const s = await (await app.request(`${SESSIONS}/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ item_id: item.id }),
+      body: JSON.stringify({ item_id: item.id, started_at: startTs }),
     })).json();
     await app.request(`${SESSIONS}/${s.id}/end`, { method: 'POST' });
 

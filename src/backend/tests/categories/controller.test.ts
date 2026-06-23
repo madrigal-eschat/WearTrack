@@ -183,21 +183,22 @@ describe('GET /api/categories/:id/stats', () => {
       body: JSON.stringify({ name: 'Streak Item B', category_id: cat.id, color: '#bbb' }),
     })).json();
 
-    // Session on item1
+    // Session on item1 (started 2h ago to ensure non-zero wear duration)
+    const now = Math.floor(Date.now() / 1000);
     const s1 = await (await app.request(`${SESSIONS}/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ item_id: item1.id }),
+      body: JSON.stringify({ item_id: item1.id, started_at: now - 7200 }),
     })).json();
-    await app.request(`${SESSIONS}/${s1.id}/end`, { method: 'POST' });
+    await app.request(`${SESSIONS}/${s1.id}/end`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ended_at: now - 3600 }) });
 
     // Session on item2 (same category — should continue streak)
     const s2 = await (await app.request(`${SESSIONS}/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ item_id: item2.id }),
+      body: JSON.stringify({ item_id: item2.id, started_at: now - 1800 }),
     })).json();
-    await app.request(`${SESSIONS}/${s2.id}/end`, { method: 'POST' });
+    await app.request(`${SESSIONS}/${s2.id}/end`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ended_at: now - 900 }) });
 
     const res = await app.request(`${BASE}/${cat.id}/stats`);
     expect(res.status).toBe(200);

@@ -3,7 +3,7 @@ import { injuryStore } from '../db/stores/injury-store.js';
 import { itemStore } from '../db/stores/item-store.js';
 import { categoryStore } from '../db/stores/category-store.js';
 import { sessionStore } from '../db/stores/session-store.js';
-import { getRiskLevel } from '../db/calculations.js';
+import { riskLevelFor } from '../db/calculations.js';
 import { NotFoundError, ValidationError } from '../middleware/errors.js';
 
 function nowSeconds(): number {
@@ -48,7 +48,7 @@ router.post('/', async (c) => {
     typeof wear_seconds === 'number' ? wear_seconds : injuryStore.lastSessionWear(item_id);
 
   const category = categoryStore.findRaw(item.category_id)!;
-  const riskLevel = getRiskLevel(wearSeconds, category);
+  const riskLevel = riskLevelFor(wearSeconds, category);
   const severity = riskLevel?.severity ?? 1;
 
   const injury = injuryStore.record(item_id, severity);
