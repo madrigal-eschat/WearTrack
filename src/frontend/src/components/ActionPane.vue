@@ -27,14 +27,11 @@
           <span v-else class="text-2xl">{{ entry.category.icon }}</span>
         </template>
         <template v-if="entry.session && entry.item" #inner>
-          <div class="h-1.5 rounded-full bg-gray-200 overflow-hidden mt-1">
-            <div
-              class="h-full rounded-full transition-all duration-1000"
-              :style="{
-                width: wearProgress(entry) + '%',
-                background: entry.item.color,
-              }"
-            ></div>
+          <div class="relative h-1.5 rounded-full bg-gray-200 overflow-hidden mt-1">
+            <div class="h-full rounded-full transition-all duration-1000"
+              :style="{ width: wearProgress(entry) + '%', background: entry.item.color }"></div>
+            <div class="absolute top-0 bottom-0 w-0.5 bg-gray-600"
+              :style="{ left: targetMarkerPercent(entry) + '%' }" data-testid="target-marker"></div>
           </div>
         </template>
         <template #after>
@@ -43,7 +40,8 @@
             <template v-if="entry.session !== null">
               <div class="text-right tabular-nums leading-snug whitespace-nowrap">
                 <div class="text-sm text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Worn</span>{{ elapsed(entry.session) }}</div>
-                <div v-if="entry.item" class="text-sm text-gray-600 mt-0.5"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Max</span>{{ maxWear(entry) }}</div>
+                <div class="text-sm text-gray-600 mt-0.5"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Target</span>{{ targetLabel(entry) }}</div>
+                <div v-if="entry.session.max_wear_seconds !== null" class="text-sm text-gray-600 mt-0.5"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Max</span>{{ maxWear(entry) }}</div>
               </div>
               <k-button
                 small
@@ -54,9 +52,8 @@
             <!-- No session: show max/rest info + item picker + Wear button -->
             <template v-else>
               <div v-if="selectedItemData(entry)" class="text-right tabular-nums leading-snug whitespace-nowrap">
-                <div class="text-sm text-gray-600">
-                  <span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Max</span>{{ idleMaxWear(entry) }}
-                </div>
+                <div class="text-sm text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Target</span>{{ idleTarget(entry) }}</div>
+                <div v-if="idleMax(entry)" class="text-sm text-gray-600 mt-0.5"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Max</span>{{ idleMax(entry) }}</div>
                 <div v-if="restRemainingMinutes(entry) > 0" class="text-sm text-amber-600 mt-0.5">
                   <Icon icon="ph:bed" class="inline w-3.5 h-3.5 mr-0.5" />Rest {{ restRemainingMinutes(entry) }}m more
                 </div>
@@ -95,7 +92,7 @@ import { useItems } from '../composables/useItems.js';
 import { useNow } from '../composables/useNow.js';
 import { useToast } from '../composables/useToast.js';
 import { formatDuration } from '../utils/formatDuration.js';
-import { maxWearSeconds } from '../utils/wearCalculations.js';
+import { targetWearSeconds, maxWearSeconds, currentWear } from '../utils/wearCalculations.js';
 
 const { currentSessions, loaded, startSession, endSession } = useWear();
 const { loadItems, itemsForCategory } = useItems();
@@ -120,30 +117,48 @@ function subtitle(entry: CurrentEntry): string {
 }
 
 function sessionSeconds(session: Session): number {
-  return Math.floor(now.value / 1000) - session.started_at;
+  return currentWear(session, Math.floor(now.value / 1000));
 }
 
 function elapsed(session: Session): string {
   return formatDuration(sessionSeconds(session));
 }
 
+/** Denominator for the bar: max when set, else target. */
+function barCeiling(entry: CurrentEntry): number {
+  if (!entry.session) return 0;
+  const max = maxWearSeconds(entry.session);
+  return max ?? targetWearSeconds(entry.session);
+}
+
 function maxWear(entry: CurrentEntry): string {
-  if (!entry.item) return '';
-  return formatDuration(maxWearSeconds(entry.category, entry.item));
+  if (!entry.session) return '';
+  const max = maxWearSeconds(entry.session);
+  return max === null ? '—' : formatDuration(max);
+}
+
+function targetLabel(entry: CurrentEntry): string {
+  if (!entry.session) return '';
+  return formatDuration(targetWearSeconds(entry.session));
 }
 
 function wearProgress(entry: CurrentEntry): number {
-  if (!entry.session || !entry.item) return 0;
-  const max = maxWearSeconds(entry.category, entry.item);
-  if (max <= 0) return 0;
-  return Math.min((sessionSeconds(entry.session) / max) * 100, 100);
+  const ceiling = barCeiling(entry);
+  if (!entry.session || ceiling <= 0) return 0;
+  return Math.min((sessionSeconds(entry.session) / ceiling) * 100, 100);
+}
+
+/** Target marker position as a percentage of the bar ceiling. */
+function targetMarkerPercent(entry: CurrentEntry): number {
+  const ceiling = barCeiling(entry);
+  if (!entry.session || ceiling <= 0) return 100;
+  return Math.min((targetWearSeconds(entry.session) / ceiling) * 100, 100);
 }
 
 function rowBg(entry: CurrentEntry): string {
-  if (!entry.session || !entry.item) return '';
-  const max = maxWearSeconds(entry.category, entry.item);
-  if (max <= 0) return '';
-  const remaining = 1 - sessionSeconds(entry.session) / max;
+  const ceiling = barCeiling(entry);
+  if (!entry.session || ceiling <= 0) return '';
+  const remaining = 1 - sessionSeconds(entry.session) / ceiling;
   if (remaining <= 0) return 'bg-red-100';
   if (remaining <= 0.05) return 'bg-orange-100';
   if (remaining <= 0.10) return 'bg-yellow-100';
@@ -153,19 +168,24 @@ function rowBg(entry: CurrentEntry): string {
 function selectedItemData(entry: CurrentEntry): ItemWithLastSession | null {
   const id = selectedItem[entry.category.id];
   if (!id) return null;
-  return entry.items.find(i => i.item_id === id) ?? null;
+  return entry.items.find((i) => i.item_id === id) ?? null;
 }
 
-function idleMaxWear(entry: CurrentEntry): string {
+function idleTarget(entry: CurrentEntry): string {
   const item = selectedItemData(entry);
-  if (!item) return '';
-  return formatDuration(maxWearSeconds(entry.category, item));
+  return item ? formatDuration(item.expected_target) : '';
+}
+
+function idleMax(entry: CurrentEntry): string {
+  const item = selectedItemData(entry);
+  if (!item || item.expected_max === null) return '';
+  return formatDuration(item.expected_max);
 }
 
 function restRemainingMinutes(entry: CurrentEntry): number {
   const item = selectedItemData(entry);
-  if (!item || item.ended_at === null || item.calculated_rest_seconds === null) return 0;
-  const remainingSeconds = item.ended_at + item.calculated_rest_seconds - now.value / 1000;
+  if (!item || item.ended_at === null || item.rest_seconds === null) return 0;
+  const remainingSeconds = item.ended_at + item.rest_seconds - now.value / 1000;
   return Math.max(0, Math.ceil(remainingSeconds / 60));
 }
 
