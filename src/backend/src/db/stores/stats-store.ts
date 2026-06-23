@@ -28,11 +28,10 @@ export interface SessionSnapshot {
   item_id: number;
   started_at: number;
   ended_at: number;
-  calculated_wear_seconds: number;
-  calculated_rest_seconds: number | null;
+  target_wear_seconds: number;
+  max_wear_seconds: number | null;
+  rest_seconds: number | null;
 }
-
-const GRACE_SECONDS = 24 * 3600;
 
 class StatsStore {
   // ── Per-item ────────────────────────────────────────────────────────────────
@@ -47,7 +46,7 @@ class StatsStore {
 
   /** Update cumulative per-item stats when a session ends. */
   recordItemSession(session: SessionSnapshot): void {
-    const duration = session.calculated_wear_seconds;
+    const duration = session.ended_at - session.started_at;
     db.prepare(`
       UPDATE stats SET
         total_wear_seconds              = total_wear_seconds + ?,
@@ -63,12 +62,11 @@ class StatsStore {
     return db
       .prepare(
         `SELECT strftime('${format}', datetime(ended_at, 'unixepoch')) AS period,
-                SUM(calculated_wear_seconds) AS total_wear_seconds,
+                SUM(ended_at - started_at) AS total_wear_seconds,
                 COUNT(*) AS session_count
          FROM sessions
          WHERE item_id = ? AND ended_at IS NOT NULL
-         GROUP BY period
-         ORDER BY period ASC`,
+         GROUP BY period ORDER BY period ASC`,
       )
       .all(itemId);
   }
@@ -93,33 +91,33 @@ class StatsStore {
   /**
    * Update per-category cumulative stats and streak when a session ends.
    * The streak continues as long as each session starts within
-   * `previousSession.calculated_rest_seconds + 24h grace` of the previous
+   * `previousSession.rest_seconds + breakGraceTime` of the previous
    * category session (any item). Otherwise the streak resets.
    */
-  recordCategorySession(categoryId: number, session: SessionSnapshot): void {
+  recordCategorySession(categoryId: number, breakGraceTime: number, session: SessionSnapshot): void {
     const stats = db
       .prepare('SELECT * FROM category_stats WHERE category_id = ?')
       .get(categoryId) as CategoryStats | undefined;
     if (!stats) return;
 
-    const duration = session.calculated_wear_seconds;
+    const duration = session.ended_at - session.started_at;
 
-    // Last ended session for ANY item in this category, excluding the current one
     const prev = db
       .prepare(
-        `SELECT s.* FROM sessions s
-         JOIN items i ON i.id = s.item_id
+        `SELECT s.* FROM sessions s JOIN items i ON i.id = s.item_id
          WHERE i.category_id = ? AND s.ended_at IS NOT NULL AND s.id != ?
          ORDER BY s.ended_at DESC LIMIT 1`,
       )
-      .get(categoryId, session.id) as SessionSnapshot | undefined;
+      .get(categoryId, session.id) as
+      | { ended_at: number; rest_seconds: number | null }
+      | undefined;
 
     let streakWear = stats.streak_wear_seconds + duration;
     let streakCount = stats.streak_count + 1;
 
-    if (prev && prev.calculated_rest_seconds !== null) {
+    if (prev && prev.rest_seconds !== null) {
       const breakSeconds = session.started_at - prev.ended_at;
-      if (breakSeconds > prev.calculated_rest_seconds + GRACE_SECONDS) {
+      if (breakSeconds > prev.rest_seconds + breakGraceTime) {
         streakWear = duration;
         streakCount = 1;
       }
@@ -134,20 +132,10 @@ class StatsStore {
         total_wear_seconds              = total_wear_seconds + ?,
         session_count                   = session_count + 1,
         max_single_session_wear_seconds = MAX(max_single_session_wear_seconds, ?),
-        streak_wear_seconds             = ?,
-        streak_count                    = ?,
-        best_streak_wear_seconds        = ?,
-        best_streak_count               = ?
+        streak_wear_seconds             = ?, streak_count = ?,
+        best_streak_wear_seconds        = ?, best_streak_count = ?
       WHERE category_id = ?
-    `).run(
-      duration,
-      duration,
-      streakWear,
-      streakCount,
-      newBestStreakWear,
-      newBestStreakCount,
-      categoryId,
-    );
+    `).run(duration, duration, streakWear, streakCount, newBestStreakWear, newBestStreakCount, categoryId);
   }
 
   // ── Leaderboards ─────────────────────────────────────────────────────────────
