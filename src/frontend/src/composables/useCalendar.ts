@@ -42,7 +42,7 @@ const weekDays = computed<DayEntry[]>(() => {
       label,
       dayNum: date.getDate(),
       isToday: date.toDateString() === today.toDateString(),
-      totalWearSeconds: daySessions.reduce((sum, s) => sum + s.calculated_wear_seconds, 0),
+      totalWearSeconds: daySessions.reduce((sum, s) => sum + ((s.ended_at ?? s.started_at) - s.started_at), 0),
       sessionCount: daySessions.length,
       sessions: daySessions,
     };
