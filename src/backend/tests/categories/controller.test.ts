@@ -214,3 +214,35 @@ describe('GET /api/categories/:id/stats', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('target/max validation', () => {
+  it('accepts a null maximum', async () => {
+    const res = await createCategory({ name: 'NoMax', initial_max_wear_duration_seconds: null });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.initial_max_wear_duration_seconds).toBeNull();
+  });
+
+  it('rejects a non-number, non-null maximum', async () => {
+    const res = await createCategory({ initial_max_wear_duration_seconds: 'nope' });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects a missing target', async () => {
+    const res = await createCategory({ initial_target_wear_duration_seconds: undefined });
+    expect(res.status).toBe(400);
+  });
+
+  it('patches break_grace_time and minimum_rest', async () => {
+    const created = await (await createCategory({ name: 'Patchable' })).json();
+    const res = await app.request(`${BASE}/${created.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ break_grace_time: 3600, minimum_rest: 1200 }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.break_grace_time).toBe(3600);
+    expect(body.minimum_rest).toBe(1200);
+  });
+});
