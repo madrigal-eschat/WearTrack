@@ -1,3 +1,4 @@
+// src/backend/src/db/stores/category-store.ts
 import db from '../index.js';
 import type { RiskLevel } from '../calculations.js';
 
@@ -5,12 +6,13 @@ interface CategoryRow {
   id: number;
   name: string;
   icon: string;
-  initial_wear_duration_seconds: number;
+  initial_target_wear_duration_seconds: number;
+  initial_max_wear_duration_seconds: number | null;
   rest_multiplier: number;
-  rest_constant_seconds: number;
+  minimum_rest: number;
   risk_levels: string;
   break_decay_multiplier: number;
-  break_starts_after_seconds: number;
+  break_grace_time: number;
 }
 
 export interface Category extends Omit<CategoryRow, 'risk_levels'> {
@@ -20,12 +22,13 @@ export interface Category extends Omit<CategoryRow, 'risk_levels'> {
 export interface CategoryCreate {
   name: string;
   icon: string;
-  initial_wear_duration_seconds: number;
+  initial_target_wear_duration_seconds: number;
+  initial_max_wear_duration_seconds: number | null;
   rest_multiplier: number;
-  rest_constant_seconds: number;
+  minimum_rest: number;
   risk_levels: RiskLevel[];
   break_decay_multiplier: number;
-  break_starts_after_seconds: number;
+  break_grace_time: number;
 }
 
 export type CategoryUpdate = Partial<CategoryCreate>;
@@ -44,7 +47,7 @@ class CategoryStore {
     return row ? deserialize(row) : undefined;
   }
 
-  /** Returns the raw DB row (risk_levels as JSON string) — used by calculations that need the Category type. */
+  /** Raw DB row (risk_levels as JSON string) — used by calculation callers. */
   findRaw(id: number): CategoryRow | undefined {
     return db.prepare('SELECT * FROM categories WHERE id = ?').get(id) as CategoryRow | undefined;
   }
@@ -53,22 +56,22 @@ class CategoryStore {
     const result = db
       .prepare(
         `INSERT INTO categories
-           (name, icon, initial_wear_duration_seconds, rest_multiplier, rest_constant_seconds,
-            risk_levels, break_decay_multiplier, break_starts_after_seconds)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+           (name, icon, initial_target_wear_duration_seconds, initial_max_wear_duration_seconds,
+            rest_multiplier, minimum_rest, risk_levels, break_decay_multiplier, break_grace_time)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         data.name,
         data.icon,
-        data.initial_wear_duration_seconds,
+        data.initial_target_wear_duration_seconds,
+        data.initial_max_wear_duration_seconds,
         data.rest_multiplier,
-        data.rest_constant_seconds,
+        data.minimum_rest,
         JSON.stringify(data.risk_levels),
         data.break_decay_multiplier,
-        data.break_starts_after_seconds,
+        data.break_grace_time,
       );
     const category = this.find(result.lastInsertRowid as number)!;
-    // Initialise the category_stats row for this category
     db.prepare('INSERT OR IGNORE INTO category_stats (category_id) VALUES (?)').run(category.id);
     return category;
   }
