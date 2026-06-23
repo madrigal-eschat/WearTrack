@@ -51,8 +51,16 @@
                 @click="onStop(entry)"
               >Stop</k-button>
             </template>
-            <!-- No session: show item picker + Wear buttons -->
+            <!-- No session: show max/rest info + item picker + Wear button -->
             <template v-else>
+              <div v-if="selectedItemData(entry)" class="text-right tabular-nums leading-snug whitespace-nowrap">
+                <div class="text-sm text-gray-600">
+                  <span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Max</span>{{ idleMaxWear(entry) }}
+                </div>
+                <div v-if="restRemainingMinutes(entry) > 0" class="text-sm text-amber-600 mt-0.5">
+                  <Icon icon="ph:bed" class="inline w-3.5 h-3.5 mr-0.5" />Rest {{ restRemainingMinutes(entry) }}m more
+                </div>
+              </div>
               <select
                 v-if="itemsForCategory(entry.category.id).length > 0"
                 v-model="selectedItem[entry.category.id]"
@@ -82,20 +90,22 @@
 import { reactive, onMounted } from 'vue';
 import { Icon } from '@iconify/vue';
 import { kBlockTitle, kList, kListItem, kButton } from 'konsta/vue';
-import { useWear, type CurrentEntry, type Session } from '../composables/useWear.js';
+import { useWear, type CurrentEntry, type Session, type ItemWithLastSession } from '../composables/useWear.js';
 import { useItems } from '../composables/useItems.js';
+import { useNow } from '../composables/useNow.js';
 import { useToast } from '../composables/useToast.js';
 import { formatDuration } from '../utils/formatDuration.js';
+import { maxWearSeconds } from '../utils/wearCalculations.js';
 
-const { currentSessions, loaded, startSession, endSession, fetchCurrent } = useWear();
+const { currentSessions, loaded, startSession, endSession } = useWear();
 const { loadItems, itemsForCategory } = useItems();
 const { showError } = useToast();
+const now = useNow();
 
 const selectedItem = reactive<Record<number, number | null>>({});
 
 onMounted(async () => {
   await loadItems();
-  // Pre-select first item for each category
   for (const entry of currentSessions.value) {
     const first = itemsForCategory(entry.category.id)[0];
     selectedItem[entry.category.id] = first?.id ?? null;
@@ -110,7 +120,7 @@ function subtitle(entry: CurrentEntry): string {
 }
 
 function sessionSeconds(session: Session): number {
-  return Math.floor(Date.now() / 1000) - session.started_at;
+  return Math.floor(now.value / 1000) - session.started_at;
 }
 
 function elapsed(session: Session): string {
@@ -119,26 +129,44 @@ function elapsed(session: Session): string {
 
 function maxWear(entry: CurrentEntry): string {
   if (!entry.item) return '';
-  const seconds = entry.category.initial_wear_duration_seconds * entry.item.difficulty_multiplier;
-  return formatDuration(seconds);
+  return formatDuration(maxWearSeconds(entry.category, entry.item));
 }
 
 function wearProgress(entry: CurrentEntry): number {
   if (!entry.session || !entry.item) return 0;
-  const max = entry.category.initial_wear_duration_seconds * entry.item.difficulty_multiplier;
+  const max = maxWearSeconds(entry.category, entry.item);
   if (max <= 0) return 0;
   return Math.min((sessionSeconds(entry.session) / max) * 100, 100);
 }
 
 function rowBg(entry: CurrentEntry): string {
   if (!entry.session || !entry.item) return '';
-  const max = entry.category.initial_wear_duration_seconds * entry.item.difficulty_multiplier;
+  const max = maxWearSeconds(entry.category, entry.item);
   if (max <= 0) return '';
   const remaining = 1 - sessionSeconds(entry.session) / max;
   if (remaining <= 0) return 'bg-red-100';
   if (remaining <= 0.05) return 'bg-orange-100';
   if (remaining <= 0.10) return 'bg-yellow-100';
   return '';
+}
+
+function selectedItemData(entry: CurrentEntry): ItemWithLastSession | null {
+  const id = selectedItem[entry.category.id];
+  if (!id) return null;
+  return entry.items.find(i => i.item_id === id) ?? null;
+}
+
+function idleMaxWear(entry: CurrentEntry): string {
+  const item = selectedItemData(entry);
+  if (!item) return '';
+  return formatDuration(maxWearSeconds(entry.category, item));
+}
+
+function restRemainingMinutes(entry: CurrentEntry): number {
+  const item = selectedItemData(entry);
+  if (!item || item.ended_at === null || item.calculated_rest_seconds === null) return 0;
+  const remainingSeconds = item.ended_at + item.calculated_rest_seconds - now.value / 1000;
+  return Math.max(0, Math.ceil(remainingSeconds / 60));
 }
 
 async function onWear(entry: CurrentEntry) {
