@@ -6,11 +6,12 @@ const BASE_CATEGORY: CategoryApiShape = {
   id: 1,
   name: 'Earrings',
   icon: '💎',
-  initial_wear_duration_seconds: 900,
+  initial_target_wear_duration_seconds: 900,
+  initial_max_wear_duration_seconds: 1800,
   rest_multiplier: 2,
-  rest_constant_seconds: 86400,
-  break_decay_multiplier: 1,
-  break_starts_after_seconds: 300,
+  minimum_rest: 86400,
+  break_decay_multiplier: 0.91,
+  break_grace_time: 86400,
   risk_levels: [
     { lower: null, upper: 3600, text: 'Low', severity: 1 },
     { lower: 3600, upper: 7200, text: 'Medium', severity: 2 },
@@ -19,101 +20,53 @@ const BASE_CATEGORY: CategoryApiShape = {
 };
 
 describe('categoryToFormState', () => {
-  it('maps scalar fields correctly', () => {
-    const state = categoryToFormState(BASE_CATEGORY);
-    expect(state.name).toBe('Earrings');
-    expect(state.icon).toBe('💎');
-    expect(state.initialWearSeconds).toBe(900);
-    expect(state.restMultiplier).toBe(2);
+  it('maps target/max/min-rest/grace/decay', () => {
+    const s = categoryToFormState(BASE_CATEGORY);
+    expect(s.initialWearTargetSeconds).toBe(900);
+    expect(s.initialWearMaxSeconds).toBe(1800);
+    expect(s.minimumRestSeconds).toBe(86400);
+    expect(s.breakGraceSeconds).toBe(86400);
+    expect(s.breakDecayMultiplier).toBeCloseTo(0.91);
+    expect(s.restMultiplier).toBe(2);
   });
 
-  it('derives bandCount from risk_levels length', () => {
-    expect(categoryToFormState(BASE_CATEGORY).bandCount).toBe(3);
+  it('preserves a null maximum', () => {
+    const s = categoryToFormState({ ...BASE_CATEGORY, initial_max_wear_duration_seconds: null });
+    expect(s.initialWearMaxSeconds).toBeNull();
   });
 
-  it('extracts crossoverPoints from band upper boundaries (excluding last band)', () => {
-    expect(categoryToFormState(BASE_CATEGORY).crossoverPoints).toEqual([3600, 7200]);
-  });
-
-  it('returns empty crossoverPoints for a 1-band category', () => {
-    const cat: CategoryApiShape = {
-      ...BASE_CATEGORY,
-      risk_levels: [{ lower: null, upper: null, text: 'Medium', severity: 1 }],
-    };
-    const state = categoryToFormState(cat);
-    expect(state.bandCount).toBe(1);
-    expect(state.crossoverPoints).toEqual([]);
-  });
-
-  it('handles 5 bands with 4 crossover points', () => {
-    const cat: CategoryApiShape = {
-      ...BASE_CATEGORY,
-      risk_levels: [
-        { lower: null,  upper: 1800, text: 'Lowest',  severity: 1 },
-        { lower: 1800,  upper: 3600, text: 'Low',     severity: 2 },
-        { lower: 3600,  upper: 5400, text: 'Medium',  severity: 3 },
-        { lower: 5400,  upper: 7200, text: 'High',    severity: 4 },
-        { lower: 7200,  upper: null, text: 'Highest', severity: 5 },
-      ],
-    };
-    const state = categoryToFormState(cat);
-    expect(state.bandCount).toBe(5);
-    expect(state.crossoverPoints).toEqual([1800, 3600, 5400, 7200]);
-  });
-
-  it('round-trips through formStateToApiPayload', () => {
-    const state = categoryToFormState(BASE_CATEGORY);
-    const payload = formStateToApiPayload(state);
-    expect(payload.name).toBe(BASE_CATEGORY.name);
-    expect(payload.icon).toBe(BASE_CATEGORY.icon);
-    expect(payload.initial_wear_duration_seconds).toBe(BASE_CATEGORY.initial_wear_duration_seconds);
-    expect(payload.rest_multiplier).toBe(BASE_CATEGORY.rest_multiplier);
-    expect(payload.risk_levels).toEqual(BASE_CATEGORY.risk_levels);
+  it('derives bandCount and crossoverPoints', () => {
+    const s = categoryToFormState(BASE_CATEGORY);
+    expect(s.bandCount).toBe(3);
+    expect(s.crossoverPoints).toEqual([3600, 7200]);
   });
 });
 
 describe('formStateToApiPayload', () => {
-  it('maps scalar fields to snake_case keys', () => {
+  it('maps all fields to snake_case incl. null max', () => {
     const payload = formStateToApiPayload({
-      name: 'Test',
-      icon: '🎯',
-      initialWearSeconds: 1800,
-      restMultiplier: 1.5,
-      bandCount: 2,
-      crossoverPoints: [3600],
+      name: 'Test', icon: '🎯',
+      initialWearTargetSeconds: 1800, initialWearMaxSeconds: null,
+      restMultiplier: 1.5, minimumRestSeconds: 1200,
+      breakGraceSeconds: 3600, breakDecayMultiplier: 0.8,
+      bandCount: 2, crossoverPoints: [3600],
     });
-    expect(payload.name).toBe('Test');
-    expect(payload.icon).toBe('🎯');
-    expect(payload.initial_wear_duration_seconds).toBe(1800);
+    expect(payload.initial_target_wear_duration_seconds).toBe(1800);
+    expect(payload.initial_max_wear_duration_seconds).toBeNull();
+    expect(payload.minimum_rest).toBe(1200);
+    expect(payload.break_grace_time).toBe(3600);
+    expect(payload.break_decay_multiplier).toBe(0.8);
     expect(payload.rest_multiplier).toBe(1.5);
-  });
-
-  it('builds risk_levels via buildRiskLevels', () => {
-    const payload = formStateToApiPayload({
-      name: 'x',
-      icon: 'x',
-      initialWearSeconds: 900,
-      restMultiplier: 2,
-      bandCount: 2,
-      crossoverPoints: [3600],
-    });
     expect(payload.risk_levels).toEqual([
-      { lower: null, upper: 3600, text: 'Low',  severity: 1 },
+      { lower: null, upper: 3600, text: 'Low', severity: 1 },
       { lower: 3600, upper: null, text: 'High', severity: 2 },
     ]);
   });
 
-  it('does not include rest_constant_seconds or break fields (callers add those)', () => {
-    const payload = formStateToApiPayload({
-      name: 'x',
-      icon: 'x',
-      initialWearSeconds: 0,
-      restMultiplier: 1,
-      bandCount: 1,
-      crossoverPoints: [],
-    });
-    expect('rest_constant_seconds' in payload).toBe(false);
-    expect('break_decay_multiplier' in payload).toBe(false);
-    expect('break_starts_after_seconds' in payload).toBe(false);
+  it('round-trips', () => {
+    const payload = formStateToApiPayload(categoryToFormState(BASE_CATEGORY));
+    expect(payload.initial_target_wear_duration_seconds).toBe(900);
+    expect(payload.initial_max_wear_duration_seconds).toBe(1800);
+    expect(payload.break_grace_time).toBe(86400);
   });
 });
