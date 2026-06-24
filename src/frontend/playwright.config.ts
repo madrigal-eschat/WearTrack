@@ -35,9 +35,15 @@ export default defineConfig({
     { name: 'webkit',   use: { ...devices['Desktop Safari'] } },
   ],
 
-  // Start the unified dev server before tests; skip if already running.
+  // Start a server before tests; skip if already running.
+  // Local: the Vite dev server (HMR). In CI (remote browser), serve the *built*
+  // SPA via the backend instead — the Vite dev module graph + HMR websocket
+  // don't load over the remote-browser network tunnel, leaving a blank page.
+  // NODE_ENV is left unset so /api/__reset (used by globalSetup) stays enabled.
   webServer: {
-    command: 'npm run dev',
+    command: wsEndpoint
+      ? 'FRONTEND_DIST=src/frontend/dist node src/backend/dist/src/server.js'
+      : 'npm run dev',
     url: 'http://localhost:3000/api/health',
     reuseExistingServer: true,
     timeout: 120_000,
