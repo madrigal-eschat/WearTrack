@@ -13,6 +13,10 @@ include:
       trivy-disabled: "true"
       sbom-disabled: "true"
       prod-publish-strategy: "auto"
+  - component: $CI_SERVER_FQDN/to-be-continuous/playwright/gitlab-ci-playwright@1
+    inputs:
+      image: "mcr.microsoft.com/playwright:v1.60.0-noble"
+      project-dir: "src/frontend"
   - component: $CI_SERVER_FQDN/to-be-continuous/kubernetes/gitlab-ci-k8s@~latest
     inputs:
       kubectl-image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/alpine/k8s:1.33.2
@@ -34,17 +38,21 @@ node-semgrep:
   variables:
     GIT_DEPTH: 0
 
-# node-build runs build + unit tests for both workspaces, then the frontend
-# Playwright e2e suite (RUN_E2E=1). The browser runs in the playwright-server
-# service; the suite connects to it over websocket (see playwright.config.ts).
-node-build:
+# Run the Playwright e2e suite against the production image built by the docker
+# component, attached as a service container (the real app + built frontend).
+# The browser is local to this job and reaches the app at http://app:3000 — no
+# dev server, no network tunnel. NODE_ENV is unset in the image so /api/__reset
+# (used by globalSetup) stays enabled.
+playwright:
+  stage: package-test
+  needs:
+    - job: docker-buildah-build
+      artifacts: true
   services:
-    - name: ${CI_REGISTRY}/$CI_PROJECT_ROOT_NAMESPACE/playwright-server:v1.60.0-noble
-      alias: playwright
+    - name: $docker_image
+      alias: app
   variables:
-    E2E_WS_ENDPOINT: "ws://playwright:3000/test"
-    WS_PATH: test
-    RUN_E2E: "1"
+    BASE_URL: "http://app:3000"
 
 docker-buildah-build:
   tags:

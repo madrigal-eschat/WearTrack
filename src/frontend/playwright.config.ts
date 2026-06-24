@@ -1,13 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// In CI we connect to a remote Playwright browser server (the `playwright`
-// service) instead of launching local browsers. `exposeNetwork: '<loopback>'`
-// lets that remote browser reach the dev server running on localhost:3000 in
-// the job container. We read a dedicated env var (not PW_TEST_CONNECT_WS_ENDPOINT,
-// which would trigger Playwright's built-in connect and ignore exposeNetwork)
-// so the config-driven connectOptions — including exposeNetwork — always apply.
-// When the env var is unset (local dev), browsers launch normally.
-const wsEndpoint = process.env.E2E_WS_ENDPOINT;
+// Target app. Locally this is the Vite dev server started by `webServer` below.
+// In CI the app runs as a service container (the built production image) and
+// the Playwright component sets BASE_URL to it (e.g. http://app:3000), so no
+// webServer is started and the browser talks to the service directly.
+const baseURL = process.env.BASE_URL ?? 'http://localhost:3000';
 
 export default defineConfig({
   globalSetup: './tests/e2e/global-setup.ts',
@@ -15,19 +12,13 @@ export default defineConfig({
   fullyParallel: false, // sequential — tests share a live DB
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  // In CI, fail fast on a systemic break (e.g. browser can't reach the app)
-  // rather than letting all 82 tests time out one by one.
-  maxFailures: process.env.CI ? 5 : 0,
   workers: 1,
   reporter: [['html', { open: 'never' }], ['list']],
 
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    ...(wsEndpoint
-      ? { connectOptions: { wsEndpoint, exposeNetwork: '<loopback>' } }
-      : {}),
   },
 
   projects: [
@@ -35,18 +26,16 @@ export default defineConfig({
     { name: 'webkit',   use: { ...devices['Desktop Safari'] } },
   ],
 
-  // Start a server before tests; skip if already running.
-  // Local: the Vite dev server (HMR). In CI (remote browser), serve the *built*
-  // SPA via the backend instead — the Vite dev module graph + HMR websocket
-  // don't load over the remote-browser network tunnel, leaving a blank page.
-  // NODE_ENV is left unset so /api/__reset (used by globalSetup) stays enabled.
-  webServer: {
-    command: wsEndpoint
-      ? 'FRONTEND_DIST=src/frontend/dist node src/backend/dist/src/server.js'
-      : 'npm run dev',
-    url: 'http://localhost:3000/api/health',
-    reuseExistingServer: true,
-    timeout: 120_000,
-    cwd: '../..',
-  },
+  // Only start a local dev server when no external BASE_URL is provided.
+  ...(process.env.BASE_URL
+    ? {}
+    : {
+        webServer: {
+          command: 'npm run dev',
+          url: 'http://localhost:3000/api/health',
+          reuseExistingServer: true,
+          timeout: 120_000,
+          cwd: '../..',
+        },
+      }),
 });
