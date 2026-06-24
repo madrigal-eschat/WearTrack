@@ -56,7 +56,7 @@
       <div>
         <label for="cat-decay" class="block text-sm font-medium text-gray-700 mb-1">Break decay / day</label>
         <input id="cat-decay" :value="catForm.breakDecayMultiplier"
-          @input="catForm.breakDecayMultiplier = Number(($event.target as HTMLInputElement).value)"
+          @input="catForm.breakDecayMultiplier = Number(($event.target as HTMLInputElement).value)" @blur="onDecayBlur"
           type="number" min="0" max="0.99" step="0.01"
           class="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
       </div>
@@ -233,6 +233,15 @@ function onRestMultiplierBlur(e: Event) {
     catForm.restMultiplier = 2;
   } else {
     catForm.restMultiplier = Math.max(0, val);
+  }
+}
+
+function onDecayBlur(e: Event) {
+  const val = Number((e.target as HTMLInputElement).value);
+  if (!Number.isFinite(val) || (e.target as HTMLInputElement).value === '') {
+    catForm.breakDecayMultiplier = 0.91;
+  } else {
+    catForm.breakDecayMultiplier = Math.max(0, Math.min(0.99, val));
   }
 }
 
