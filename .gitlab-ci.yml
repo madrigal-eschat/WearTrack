@@ -53,6 +53,9 @@ playwright:
       alias: app
   variables:
     BASE_URL: "http://app:3000"
+    # Propagated to the `app` service container so /api/__reset is enabled even
+    # if the image ever runs with NODE_ENV=production.
+    E2E_TEST: "1"
 
 docker-buildah-build:
   tags:
