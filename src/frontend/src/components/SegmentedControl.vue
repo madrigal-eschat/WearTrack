@@ -15,12 +15,12 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup lang="ts" generic="T extends string">
 defineProps<{
-  options: ReadonlyArray<{ value: string; label: string }>;
-  modelValue: string;
+  options: ReadonlyArray<{ value: T; label: string }>;
+  modelValue: T;
 }>();
-defineEmits<{ 'update:modelValue': [value: string] }>();
+defineEmits<{ 'update:modelValue': [value: T] }>();
 </script>
 
 <style scoped>

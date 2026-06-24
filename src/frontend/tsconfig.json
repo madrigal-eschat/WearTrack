@@ -9,7 +9,7 @@
     "esModuleInterop": true,
     "allowJs": true,
     "checkJs": false,
-    "types": ["vitest/globals"]
+    "types": ["vitest/globals", "node"]
   },
   "include": ["src/**/*", "vite.config.ts", "vitest.config.ts"],
   "exclude": ["node_modules", "dist", "build"]
