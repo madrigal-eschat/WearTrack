@@ -162,16 +162,34 @@ test.describe('Category management', () => {
     const res = await page.request.get('/api/categories');
     const cats: Array<{
       name: string;
-      initial_wear_duration_seconds: number;
+      initial_target_wear_duration_seconds: number;
       rest_multiplier: number;
       risk_levels: unknown[];
     }> = await res.json();
     const saved = cats.find((c) => c.name === name);
 
     expect(saved).toBeDefined();
-    expect(saved!.initial_wear_duration_seconds).toBe(1 * 3600 + 30 * 60); // 5400
+    expect(saved!.initial_target_wear_duration_seconds).toBe(1 * 3600 + 30 * 60); // 5400
     expect(saved!.rest_multiplier).toBe(1.5);
     expect(saved!.risk_levels).toHaveLength(4);
+  });
+
+  test('clearing the maximum disables the minimum rest picker', async ({ page }) => {
+    const name = `NoMax-${uid()}`;
+    createdName = name;
+
+    await page.getByRole('button', { name: '+ Add' }).first().click();
+    await page.getByLabel('Name').first().fill(name);
+    await page.getByRole('button', { name: /choose icon/i }).first().click();
+    await page.waitForSelector('.overflow-y-auto');
+    await page.locator('.overflow-y-auto button').first().click();
+
+    await expect(page.getByTestId('min-rest')).toBeEnabled();
+    await page.getByTestId('clear-max').click();
+    await expect(page.getByTestId('min-rest')).toBeDisabled();
+
+    await page.getByTestId('category-form-submit').click();
+    await expect(page.getByText(name).first()).toBeVisible();
   });
 });
 

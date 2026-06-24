@@ -47,16 +47,17 @@ export async function createCategoryViaApi(page: Page, name: string, icon = 'ðŸ§
     data: {
       name,
       icon,
-      initial_wear_duration_seconds: 900,
+      initial_target_wear_duration_seconds: 900,
+      initial_max_wear_duration_seconds: 1800,
       rest_multiplier: 2,
-      rest_constant_seconds: 86400,
+      minimum_rest: 86400,
       risk_levels: [
         { lower: null, upper: 3600, text: 'Low', severity: 1 },
         { lower: 3600, upper: 7200, text: 'Medium', severity: 2 },
         { lower: 7200, upper: null, text: 'High', severity: 3 },
       ],
-      break_decay_multiplier: 1,
-      break_starts_after_seconds: 300,
+      break_decay_multiplier: 0.91,
+      break_grace_time: 86400,
     },
   });
   return res.json() as Promise<{ id: number; name: string; icon: string }>;
