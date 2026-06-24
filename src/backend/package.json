@@ -4,9 +4,10 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch --exclude '../frontend/**' src/dev-server.ts",
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "start": "node dist/src/server.js",
     "test": "vitest",
+    "test:ci": "vitest run",
     "lint": "eslint ."
   },
   "dependencies": {

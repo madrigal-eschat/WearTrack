@@ -1,5 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 
+// Target app. Locally this is the Vite dev server started by `webServer` below.
+// In CI the app runs as a service container (the built production image) and
+// the Playwright component sets BASE_URL to it (e.g. http://app:3000), so no
+// webServer is started and the browser talks to the service directly.
+const baseURL = process.env.BASE_URL ?? 'http://localhost:3000';
+
 export default defineConfig({
   globalSetup: './tests/e2e/global-setup.ts',
   testDir: './tests/e2e',
@@ -10,7 +16,7 @@ export default defineConfig({
   reporter: [['html', { open: 'never' }], ['list']],
 
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -20,12 +26,16 @@ export default defineConfig({
     { name: 'webkit',   use: { ...devices['Desktop Safari'] } },
   ],
 
-  // Start the unified dev server before tests; skip if already running.
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000/api/health',
-    reuseExistingServer: true,
-    timeout: 30_000,
-    cwd: '../..',
-  },
+  // Only start a local dev server when no external BASE_URL is provided.
+  ...(process.env.BASE_URL
+    ? {}
+    : {
+        webServer: {
+          command: 'npm run dev',
+          url: 'http://localhost:3000/api/health',
+          reuseExistingServer: true,
+          timeout: 120_000,
+          cwd: '../..',
+        },
+      }),
 });
