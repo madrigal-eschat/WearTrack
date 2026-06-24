@@ -8,7 +8,7 @@
     "dev:frontend": "npm run dev --prefix src/frontend",
     "build": "npm --prefix src/frontend run build && npm --prefix src/backend run build",
     "lint": "npm --prefix src/backend run lint",
-    "test:ci": "npm run build && npm --prefix src/backend run test:ci && npm --prefix src/frontend run test:ci && sh -c 'if [ \"$RUN_E2E\" = \"1\" ]; then npm run e2e; fi'",
+    "test:ci": "npm run lint && npm run build && npm --prefix src/backend run test:ci && npm --prefix src/frontend run test:ci && sh -c 'if [ \"$RUN_E2E\" = \"1\" ]; then npm run e2e; fi'",
     "e2e": "npm --prefix src/frontend run test:e2e"
   }
 }
