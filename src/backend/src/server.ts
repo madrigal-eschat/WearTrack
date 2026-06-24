@@ -22,8 +22,10 @@ app.get('/api/health', (c) => {
   return c.json({ status: 'ok' });
 });
 
-// Dev-only: wipe all data (keeps schema). Used by Playwright globalSetup.
-if (process.env.NODE_ENV !== 'production') {
+// Wipe all data (keeps schema). Used by Playwright globalSetup. Enabled outside
+// production, or explicitly via E2E_TEST=1 (e.g. the prod image run as the e2e
+// service container).
+if (process.env.NODE_ENV !== 'production' || process.env.E2E_TEST === '1') {
   app.post('/api/__reset', (c) => {
     dbExport.exec(`
       DELETE FROM sessions;
