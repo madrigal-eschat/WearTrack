@@ -19,7 +19,7 @@ COPY src/backend/package.json src/backend/package-lock.json ./
 RUN npm ci --omit=dev
 
 COPY src/backend/src ./src
-COPY src/backend/tsconfig.json ./
+COPY src/backend/tsconfig.json src/backend/tsconfig.build.json ./
 
 RUN npm ci && npm run build
 

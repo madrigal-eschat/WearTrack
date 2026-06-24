@@ -12,8 +12,10 @@ test.describe('Item management', () => {
     categoryName = `Cat-${uid()}`;
     await page.getByRole('button', { name: '+ Add' }).first().click();
     await page.getByLabel('Name').first().fill(categoryName);
-    await page.getByLabel(/icon/i).first().fill('🧪');
-    await page.getByRole('button', { name: 'Add Category' }).click();
+    await page.getByRole('button', { name: /choose icon/i }).first().click();
+    await page.waitForSelector('.overflow-y-auto');
+    await page.locator('.overflow-y-auto button').first().click();
+    await page.getByTestId('category-form-submit').click();
     await expect(page.getByText(categoryName).first()).toBeVisible();
   });
 
@@ -34,14 +36,14 @@ test.describe('Item management', () => {
     await page.getByRole('button', { name: '+ Add' }).nth(1).click();
     await page.getByLabel('Name').last().fill(name);
     // Category should be pre-selected; pick one if not
-    await page.getByRole('button', { name: 'Add Item' }).click();
+    await page.getByRole('button', { name: 'Add', exact: true }).click();
 
     await expect(page.getByText(name).first()).toBeVisible();
   });
 
   test('Add Item button is disabled when name is empty', async ({ page }) => {
     await page.getByRole('button', { name: '+ Add' }).nth(1).click();
-    await expect(page.getByRole('button', { name: 'Add Item' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Add', exact: true })).toBeDisabled();
   });
 
   test('can delete an item', async ({ page }) => {
@@ -49,7 +51,7 @@ test.describe('Item management', () => {
 
     await page.getByRole('button', { name: '+ Add' }).nth(1).click();
     await page.getByLabel('Name').last().fill(name);
-    await page.getByRole('button', { name: 'Add Item' }).click();
+    await page.getByRole('button', { name: 'Add', exact: true }).click();
     await expect(page.getByText(name).first()).toBeVisible();
 
     const row = page.locator('li').filter({ hasText: name }).first();
@@ -63,7 +65,7 @@ test.describe('Item management', () => {
 
     await page.getByRole('button', { name: '+ Add' }).nth(1).click();
     await page.getByLabel('Name').last().fill(name);
-    await page.getByRole('button', { name: 'Add Item' }).click();
+    await page.getByRole('button', { name: 'Add', exact: true }).click();
     await expect(page.getByText(name).first()).toBeVisible();
 
     // The category heading should precede the item in the DOM
@@ -86,13 +88,13 @@ test.describe('Item management', () => {
     // Click the second swatch (hue 30°)
     await page.locator('[data-testid="color-swatch"]').nth(1).click();
 
-    await page.getByRole('button', { name: 'Add Item' }).click();
+    await page.getByRole('button', { name: 'Add', exact: true }).click();
     await expect(page.getByText(name).first()).toBeVisible();
 
-    // Color circle style should contain oklch
-    const circle = page.locator('li').filter({ hasText: name }).locator('[data-testid="color-circle"]').first();
-    const style = await circle.getAttribute('style');
-    expect(style).toContain('oklch');
+    // The picked swatch is persisted as an oklch colour
+    const items = await page.request.get('/api/items').then((r) => r.json());
+    const created = items.find((i: { name: string }) => i.name === name);
+    expect(created?.color).toContain('oklch');
   });
 
   test('new items get random default colors', async ({ page }) => {
@@ -101,19 +103,13 @@ test.describe('Item management', () => {
     for (const name of names) {
       await page.getByRole('button', { name: '+ Add' }).nth(1).click();
       await page.getByLabel('Name').last().fill(name);
-      await page.getByRole('button', { name: 'Add Item' }).click();
+      await page.getByRole('button', { name: 'Add', exact: true }).click();
       await expect(page.getByText(name).first()).toBeVisible();
     }
 
-    const colors = await Promise.all(
-      names.map((name) =>
-        page
-          .locator('li')
-          .filter({ hasText: name })
-          .locator('[data-testid="color-circle"]')
-          .first()
-          .getAttribute('style')
-      )
+    const items = await page.request.get('/api/items').then((r) => r.json());
+    const colors = names.map(
+      (name) => items.find((i: { name: string }) => i.name === name)?.color,
     );
 
     const unique = new Set(colors);
@@ -139,17 +135,13 @@ test.describe('Item management', () => {
     // Close the dropdown before submitting
     await page.locator('[data-testid="color-backdrop"]').click();
 
-    await page.getByRole('button', { name: 'Add Item' }).click();
+    await page.getByRole('button', { name: 'Add', exact: true }).click();
     await expect(page.getByText(name).first()).toBeVisible();
 
-    const circle = page
-      .locator('li')
-      .filter({ hasText: name })
-      .locator('[data-testid="color-circle"]')
-      .first();
-    const style = await circle.getAttribute('style');
-    expect(style).toContain('oklch');
-    expect(style).toContain('180');
-    expect(style).toContain('0.2');
+    const items = await page.request.get('/api/items').then((r) => r.json());
+    const created = items.find((i: { name: string }) => i.name === name);
+    expect(created?.color).toContain('oklch');
+    expect(created?.color).toContain('180');
+    expect(created?.color).toContain('0.2');
   });
 });
