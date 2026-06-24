@@ -12,7 +12,9 @@ export default function phCategoriesPlugin(): Plugin {
   return {
     name: 'ph-categories',
     buildStart() {
-      const data = buildPhCategories(icons as Array<{ name: string; categories: string[]; tags: string[] }>);
+      const data = buildPhCategories(
+        icons as unknown as Array<{ name: string; categories: string[]; tags: string[] }>,
+      );
       const outDir = join(process.cwd(), 'src', 'generated');
       mkdirSync(outDir, { recursive: true });
       writeFileSync(join(outDir, 'ph-categories.json'), JSON.stringify(data));
