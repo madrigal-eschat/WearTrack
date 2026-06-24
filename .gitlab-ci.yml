@@ -42,7 +42,7 @@ node-build:
     - name: ${CI_REGISTRY}/$CI_PROJECT_ROOT_NAMESPACE/playwright-server:v1.60.0-noble
       alias: playwright
   variables:
-    PW_TEST_CONNECT_WS_ENDPOINT: "ws://playwright:3000/test"
+    E2E_WS_ENDPOINT: "ws://playwright:3000/test"
     WS_PATH: test
     RUN_E2E: "1"
 
