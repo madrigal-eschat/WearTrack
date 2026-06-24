@@ -49,32 +49,44 @@
                 @click="onStop(entry)"
               >Stop</k-button>
             </template>
-            <!-- No session: show max/rest info + item picker + Wear button -->
+            <!-- No session: show item picker + Wear button, with target/max tucked below on small screens -->
             <template v-else>
-              <div v-if="selectedItemData(entry)" class="text-right tabular-nums leading-snug whitespace-nowrap">
-                <div class="text-sm text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Target</span>{{ idleTarget(entry) }}</div>
-                <div v-if="idleMax(entry)" class="text-sm text-gray-600 mt-0.5"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Max</span>{{ idleMax(entry) }}</div>
-                <div v-if="restRemainingMinutes(entry) > 0" class="text-sm text-amber-600 mt-0.5">
-                  <Icon icon="ph:bed" class="inline w-3.5 h-3.5 mr-0.5" />Rest {{ restRemainingMinutes(entry) }}m more
+              <div class="flex flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-2">
+                <!-- controls — first on mobile, second on wide (sm:order-2) -->
+                <div class="flex gap-2 items-center sm:order-2">
+                  <select
+                    v-if="itemsForCategory(entry.category.id).length > 0"
+                    v-model="selectedItem[entry.category.id]"
+                    class="text-sm border rounded px-1 py-0.5"
+                  >
+                    <option
+                      v-for="item in itemsForCategory(entry.category.id)"
+                      :key="item.id"
+                      :value="item.id"
+                    >{{ item.name }}</option>
+                  </select>
+                  <span v-else class="text-sm text-gray-400 italic">No items</span>
+                  <k-button
+                    small
+                    :disabled="!selectedItem[entry.category.id]"
+                    @click="onWear(entry)"
+                  >Wear</k-button>
+                </div>
+                <!-- target/max — second on mobile (below), first on wide (sm:order-1) -->
+                <div v-if="selectedItemData(entry)" class="text-right tabular-nums leading-snug whitespace-nowrap sm:order-1">
+                  <div class="text-xs text-gray-600 sm:text-sm">
+                    <span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Target</span>{{ idleTarget(entry) }}
+                    <template v-if="idleMax(entry)">
+                      <span class="mx-1 text-gray-300 sm:hidden">·</span>
+                      <span class="hidden sm:inline mx-1 text-gray-300">/</span>
+                      <span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Max</span>{{ idleMax(entry) }}
+                    </template>
+                  </div>
+                  <div v-if="restRemainingMinutes(entry) > 0" class="text-xs text-amber-600 mt-0.5">
+                    <Icon icon="ph:bed" class="inline w-3 h-3 mr-0.5" />Rest {{ restRemainingMinutes(entry) }}m more
+                  </div>
                 </div>
               </div>
-              <select
-                v-if="itemsForCategory(entry.category.id).length > 0"
-                v-model="selectedItem[entry.category.id]"
-                class="text-sm border rounded px-1 py-0.5"
-              >
-                <option
-                  v-for="item in itemsForCategory(entry.category.id)"
-                  :key="item.id"
-                  :value="item.id"
-                >{{ item.name }}</option>
-              </select>
-              <span v-else class="text-sm text-gray-400 italic">No items</span>
-              <k-button
-                small
-                :disabled="!selectedItem[entry.category.id]"
-                @click="onWear(entry)"
-              >Wear</k-button>
             </template>
           </div>
         </template>
