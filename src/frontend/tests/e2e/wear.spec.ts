@@ -16,16 +16,17 @@ test.describe('Wear sessions', () => {
       data: {
         name: categoryName,
         icon: '👟',
-        initial_wear_duration_seconds: 900,
+        initial_target_wear_duration_seconds: 600,
+        initial_max_wear_duration_seconds: 900,
         rest_multiplier: 0,
-        rest_constant_seconds: 0,
+        minimum_rest: 0,
         risk_levels: [
           { lower: null, upper: 3600, text: 'Low', severity: 1 },
           { lower: 3600, upper: 7200, text: 'Medium', severity: 2 },
           { lower: 7200, upper: null, text: 'High', severity: 3 },
         ],
-        break_decay_multiplier: 0.75,
-        break_starts_after_seconds: 604800,
+        break_decay_multiplier: 0.91,
+        break_grace_time: 86400,
       },
     });
     const cat = await catRes.json();
@@ -67,7 +68,7 @@ test.describe('Wear sessions', () => {
     await wearBtn.click();
 
     // formatDuration returns "Xs", "Xm Ys", or "Xh Ym" — e.g. "0s", "5s", "1m 2s"
-    await expect(page.locator('text=/\\d+[smh]/')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=/\\d+[smh]/').first()).toBeVisible({ timeout: 5000 });
   });
 
   test('can stop a wear session', async ({ page }) => {
@@ -79,5 +80,12 @@ test.describe('Wear sessions', () => {
     await stopBtn.click();
 
     await expect(page.getByRole('button', { name: /^wear$/i }).first()).toBeVisible({ timeout: 5000 });
+  });
+
+  test('active session shows a target marker on the bar', async ({ page }) => {
+    const wearBtn = page.getByRole('button', { name: /^wear$/i }).filter({ enabled: true }).first();
+    await wearBtn.click();
+    await expect(page.getByRole('button', { name: /stop/i }).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('target-marker').first()).toBeVisible();
   });
 });
