@@ -2,7 +2,9 @@ include:
   - component: $CI_SERVER_FQDN/to-be-continuous/node/gitlab-ci-node@5.3.0
     inputs:
       image: "${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/library/node:24-bookworm"
-      project-dir: "src/backend"
+      project-dir: "."
+      build-args: "run build"
+      test-args: "run test:ci"
       lint-enabled: "true"
       sbom-disabled: "true"
   - component: $CI_SERVER_FQDN/to-be-continuous/docker/gitlab-ci-docker@8.4.0
@@ -31,6 +33,18 @@ variables:
 node-semgrep:
   variables:
     GIT_DEPTH: 0
+
+# node-build runs build + unit tests for both workspaces, then the frontend
+# Playwright e2e suite (RUN_E2E=1). The browser runs in the playwright-server
+# service; the suite connects to it over websocket (see playwright.config.ts).
+node-build:
+  services:
+    - name: ${CI_REGISTRY}/$CI_PROJECT_ROOT_NAMESPACE/playwright-server:v1.60.0-noble
+      alias: playwright
+  variables:
+    PW_TEST_CONNECT_WS_ENDPOINT: "ws://playwright:3000/test"
+    WS_PATH: test
+    RUN_E2E: "1"
 
 docker-buildah-build:
   tags:
