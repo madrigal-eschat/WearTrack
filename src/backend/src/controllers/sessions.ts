@@ -10,6 +10,12 @@ function nowSeconds(): number {
   return Math.floor(Date.now() / 1000);
 }
 
+/** A last-session item row enriched with the expected target/max for the next session. */
+interface ItemWithExpected extends ItemWithLastSession {
+  expected_target: number;
+  expected_max: number | null;
+}
+
 export const router = new Hono();
 
 // GET /api/sessions?item_id=
@@ -34,12 +40,11 @@ router.get('/current', (c) => {
 
   return c.json(
     categories.map((cat) => {
-      const rawCat = categoryStore.findRaw(cat.id)!;
       const previous = sessionStore.findLastEndedInCategory(cat.id) ?? null;
       const injuryActive = injuryStore.hasActiveInCategory(cat.id);
-      const items = (itemsByCategory.get(cat.id) ?? []).map((it) => {
+      const items: ItemWithExpected[] = (itemsByCategory.get(cat.id) ?? []).map((it) => {
         const { target, max } = computeSessionStart(
-          rawCat,
+          cat,
           { difficulty_multiplier: it.difficulty_multiplier },
           previous,
           now,
