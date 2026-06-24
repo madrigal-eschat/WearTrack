@@ -62,6 +62,10 @@ playwright:
     # Propagated to the `app` service container so /api/__reset is enabled even
     # if the image ever runs with NODE_ENV=production.
     E2E_TEST: "1"
+    # Put the job and the `app` service on one network so the browser can reach
+    # it by alias. Without this, runners using legacy service linking (e.g. the
+    # amd64 runner) can't reach app:3000 and every test times out.
+    FF_NETWORK_PER_BUILD: "true"
 
 docker-buildah-build:
   tags:
