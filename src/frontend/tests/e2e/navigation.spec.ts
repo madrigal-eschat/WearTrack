@@ -56,7 +56,10 @@ test.describe('Navigation', () => {
 
   test('loads home page', async ({ page }) => {
     await expect(page).toHaveTitle(/weartrack/i);
-    await expect(page.getByText('Weartrack')).toBeVisible();
+    // Home renders the ActionPane "Currently Wearing" block title
+    await expect(
+      page.locator('[data-testid="main-content"]').getByText('Currently Wearing').first()
+    ).toBeVisible();
   });
 
   test('tab bar is always visible', async ({ page }) => {
