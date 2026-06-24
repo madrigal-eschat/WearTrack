@@ -35,7 +35,7 @@
         ref="daysEl"
         data-testid="days-col"
         class="relative w-24 overflow-y-scroll overscroll-none cursor-grab active:cursor-grabbing"
-        style="scroll-snap-type: y mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch;"
+        style="scrollbar-width: none; -webkit-overflow-scrolling: touch;"
         @scroll="onScroll('days')"
         @mousedown="(e) => onColumnMouseDown('days', e)"
       >
@@ -44,7 +44,6 @@
           v-for="item in tripledDays"
           :key="item.key"
           class="flex h-[44px] select-none items-center justify-center text-xl"
-          style="scroll-snap-align: center;"
           @click="(e) => onItemClick('days', e)"
         >{{ item.value }}d</div>
         <div class="h-[88px] shrink-0" />
@@ -55,7 +54,7 @@
         ref="hoursEl"
         data-testid="hours-col"
         class="relative w-24 overflow-y-scroll overscroll-none cursor-grab active:cursor-grabbing"
-        style="scroll-snap-type: y mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch;"
+        style="scrollbar-width: none; -webkit-overflow-scrolling: touch;"
         @scroll="onScroll('hours')"
         @mousedown="(e) => onColumnMouseDown('hours', e)"
       >
@@ -64,7 +63,6 @@
           v-for="item in tripledHours"
           :key="item.key"
           class="flex h-[44px] select-none items-center justify-center text-xl"
-          style="scroll-snap-align: center;"
           @click="(e) => onItemClick('hours', e)"
         >{{ item.value }}h</div>
         <div class="h-[88px] shrink-0" />
@@ -75,7 +73,7 @@
         ref="minutesEl"
         data-testid="minutes-col"
         class="relative w-24 overflow-y-scroll overscroll-none cursor-grab active:cursor-grabbing"
-        style="scroll-snap-type: y mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch;"
+        style="scrollbar-width: none; -webkit-overflow-scrolling: touch;"
         @scroll="onScroll('minutes')"
         @mousedown="(e) => onColumnMouseDown('minutes', e)"
       >
@@ -84,7 +82,6 @@
           v-for="item in tripledMinutes"
           :key="item.key"
           class="flex h-[44px] select-none items-center justify-center text-xl"
-          style="scroll-snap-align: center;"
           @click="(e) => onItemClick('minutes', e)"
         >{{ String(item.value).padStart(2, '0') }}m</div>
         <div class="h-[88px] shrink-0" />
@@ -98,7 +95,7 @@ import { ref, computed, watch, onUnmounted, nextTick } from 'vue';
 import { kSheet, kToolbar } from 'konsta/vue';
 
 const ITEM_H = 44;
-const DAY_COUNT = 14;   // 0–13 d; covers all current and foreseeable durations
+const DAY_COUNT = 31;   // 0–30 d
 const HOUR_COUNT = 24;
 const MIN_COUNT = 60;
 
@@ -118,6 +115,9 @@ const curHours   = ref(0);
 const curMinutes = ref(0);
 const scrollTimers: Record<string, ReturnType<typeof setTimeout>> = {};
 
+// How far a release "flicks": projected scroll distance = velocity (px/ms) × this.
+const MOMENTUM_MS = 140;
+
 // Drag state — plain object, not reactive (no need to trigger renders)
 const drag = {
   active: false,
@@ -125,6 +125,9 @@ const drag = {
   startY: 0,
   startScrollTop: 0,
   moved: false,
+  lastY: 0,
+  lastT: 0,
+  velocity: 0, // px/ms, +ve = scrolling down (scrollTop increasing)
 };
 
 function colEl(col: Col): HTMLElement | null {
@@ -181,7 +184,16 @@ function doWrap(col: Col) {
   else if (col === 'hours')   curHours.value   = value;
   else                        curMinutes.value = value;
   if (index < count || index >= count * 2) {
+    // Out of the middle third: jump by a whole period (instant, invisible —
+    // the same value stays centred) to keep the infinite loop going.
     el.scrollTop = (count + value) * ITEM_H;
+  } else {
+    // In range: smoothly settle onto the centre of the nearest item. (CSS
+    // scroll-snap no longer does this, so free-scroll glides and then eases in.)
+    const centered = index * ITEM_H;
+    if (Math.abs(el.scrollTop - centered) > 0.5) {
+      el.scrollTo({ top: centered, behavior: 'smooth' });
+    }
   }
 }
 
@@ -199,6 +211,12 @@ function onDragMove(e: MouseEvent) {
   const dy = drag.startY - e.clientY;
   if (Math.abs(dy) > 3) drag.moved = true;
   el.scrollTop = drag.startScrollTop + dy;
+  // Track instantaneous velocity for the release flick.
+  const now = performance.now();
+  const dt = now - drag.lastT;
+  if (dt > 0) drag.velocity = (drag.lastY - e.clientY) / dt;
+  drag.lastY = e.clientY;
+  drag.lastT = now;
   e.preventDefault();
 }
 
@@ -206,6 +224,16 @@ function onDragEnd() {
   drag.active = false;
   document.removeEventListener('mousemove', onDragMove);
   document.removeEventListener('mouseup', onDragEnd);
+  const el = colEl(drag.col);
+  if (el) {
+    // Flick: glide on past the release point proportional to velocity, then
+    // settle on the nearest item. doWrap (on scroll-settle) handles the final
+    // centering + infinite-loop reposition.
+    const projected = el.scrollTop + drag.velocity * MOMENTUM_MS;
+    const targetTop = Math.round(projected / ITEM_H) * ITEM_H;
+    el.scrollTo({ top: targetTop, behavior: 'smooth' });
+  }
+  drag.velocity = 0;
   onScroll(drag.col);
 }
 
@@ -217,6 +245,9 @@ function onColumnMouseDown(col: Col, e: MouseEvent) {
   drag.startY = e.clientY;
   drag.startScrollTop = el.scrollTop;
   drag.moved = false;
+  drag.lastY = e.clientY;
+  drag.lastT = performance.now();
+  drag.velocity = 0;
   document.addEventListener('mousemove', onDragMove, { passive: false } as AddEventListenerOptions);
   document.addEventListener('mouseup', onDragEnd);
 }

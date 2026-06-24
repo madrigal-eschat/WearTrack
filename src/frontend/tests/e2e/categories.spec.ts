@@ -103,8 +103,13 @@ test.describe('Category management', () => {
       el.scrollTop = el.scrollHeight;
     });
 
-    // Wait for the debounce (150ms) + snap (allow 300ms total)
-    await page.waitForTimeout(300);
+    // Wait for the debounce (150ms) + JS smooth-scroll wrap to settle.
+    // Use waitForFunction so slow CI runners don't race against a fixed timeout.
+    await page.waitForFunction(() => {
+      const el = document.querySelector('[data-testid="hours-col"]') as HTMLElement | null;
+      if (!el) return false;
+      return el.scrollTop >= 24 * 44 && el.scrollTop < 2 * 24 * 44;
+    }, { timeout: 2000 });
 
     const scrollTop = await page.evaluate(() => {
       const el = document.querySelector('[data-testid="hours-col"]') as HTMLElement;
