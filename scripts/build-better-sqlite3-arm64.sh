@@ -12,6 +12,10 @@ fi
 # Install build tools (node:bookworm may lack them depending on variant)
 apt-get update -qq && apt-get install -y --no-install-recommends python3 make g++ 2>/dev/null || true
 
+# node-gyp is a devDependency of better-sqlite3 and won't be installed by
+# `npm ci` (production-only). Install it globally so it's on PATH.
+npm install -g node-gyp
+
 # Install backend deps (no native builds yet — we do that manually below)
 npm --prefix src/backend ci --ignore-scripts
 
@@ -48,9 +52,6 @@ if [ "${HTTP_STATUS}" = "200" ]; then
 fi
 
 echo "Building better-sqlite3 v${VERSION} napi-v${NAPI_VERSION} for linux-arm64..."
-
-# node-gyp is a local dependency — add the local .bin to PATH so it's found
-export PATH="${CI_PROJECT_DIR}/src/backend/node_modules/.bin:${PATH}"
 
 cd src/backend/node_modules/better-sqlite3
 node-gyp rebuild --release
