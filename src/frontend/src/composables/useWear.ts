@@ -53,6 +53,8 @@ export interface CurrentEntry {
   item: Item | null;
   session: Session | null;
   items: ItemWithLastSession[];
+  decay_start_time: number | null;
+  decay_state: 'none' | 'decaying' | 'fully_decayed';
 }
 
 const currentSessions = ref<CurrentEntry[]>([]);
