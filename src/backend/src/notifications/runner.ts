@@ -22,7 +22,12 @@ export async function tick(): Promise<void> {
     if (!inserted) continue;
     try {
       await send(subscription, { title: notification.title, body: notification.body, tag: notification.tag });
-    } catch (e) {
+    } catch (e: unknown) {
+      const status = (e as { statusCode?: number }).statusCode;
+      if (status === 410 || status === 404) {
+        notificationStore.deleteSubscription();
+        return;
+      }
       console.error(`[notifications] Failed to send ${notification.type} for session ${notification.session_id}:`, e);
     }
   }

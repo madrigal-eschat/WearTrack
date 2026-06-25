@@ -11,7 +11,11 @@ router.get('/vapid-public-key', (c) => {
 
 router.post('/subscribe', async (c) => {
   const body = await c.req.json();
-  if (typeof body.endpoint !== 'string' || !body.keys) {
+  if (
+    typeof body.endpoint !== 'string' ||
+    typeof body.keys?.p256dh !== 'string' ||
+    typeof body.keys?.auth !== 'string'
+  ) {
     throw new ValidationError('Invalid push subscription');
   }
   notificationStore.upsertSubscription(JSON.stringify(body));
