@@ -130,7 +130,7 @@ Environment variables:
 - `VAPID_PRIVATE_KEY`
 - `VAPID_SUBJECT` — a `mailto:` address
 
-The `web-push` library is initialised once at server startup with these values. Keys generated via `npx web-push generate-vapid-keys` and stored in `.env`.
+The `web-push` library is initialised once at server startup with these values. Keys generated via `npx web-push generate-vapid-keys` and stored in `.env`. If any VAPID variable is absent, the scheduler does not start and the notifications API returns 503; the rest of the app is unaffected.
 
 ---
 
@@ -154,10 +154,12 @@ self.addEventListener('push', (event) => {
 ```
 isSupported  — 'Notification' in window && 'PushManager' in window
 permission   — reactive Notification.permission
-isSubscribed — true when a subscription exists on the server
-enable()     — request permission → pushManager.subscribe() → POST to backend
+isSubscribed — true when pushManager.getSubscription() returns a non-null subscription
+enable()     — request permission → pushManager.subscribe() → POST to backend (upsert)
 disable()    — pushManager.unsubscribe() → DELETE from backend
 ```
+
+`isSubscribed` is determined from the browser's push manager, not the server, so no `GET /api/notifications/subscribe` endpoint is needed. `enable()` is idempotent — it upserts on the server even if the browser already has a subscription (handles the case where the server lost the subscription).
 
 The VAPID public key is fetched from `GET /api/notifications/vapid-public-key` when `enable()` is called.
 
