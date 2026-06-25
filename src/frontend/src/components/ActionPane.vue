@@ -85,19 +85,19 @@
                   <div v-if="restRemainingMinutes(entry) > 0" class="text-xs text-amber-600 mt-0.5">
                     <Icon icon="ph:bed" class="inline w-3 h-3 mr-0.5" />Rest {{ restRemainingMinutes(entry) }}m more
                   </div>
-                  <!-- Decay info: "Start before" date + warning badge -->
-                  <template v-if="entry.decay_start_time !== null">
-                    <div class="text-xs text-gray-500 mt-0.5 whitespace-nowrap">
-                      <span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Start before</span>{{ formatDecayDate(entry.decay_start_time) }}
-                    </div>
-                    <div v-if="entry.decay_state === 'decaying'" class="text-xs text-orange-500 mt-0.5">
-                      <Icon icon="ph:warning" class="inline w-3 h-3 mr-0.5" />Durations are decaying
-                    </div>
-                    <div v-else-if="entry.decay_state === 'fully_decayed'" class="text-xs text-red-500 mt-0.5">
-                      <Icon icon="ph:warning-circle" class="inline w-3 h-3 mr-0.5" />Target and max have returned to initial values
-                    </div>
-                  </template>
                 </div>
+                <!-- Decay info: "Start before" date + warning badge (category-level, always visible) -->
+                <template v-if="entry.decay_start_time !== null">
+                  <div class="text-right text-xs text-gray-500 mt-0.5 whitespace-nowrap sm:order-1">
+                    <span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Start before</span>{{ formatDecayDate(entry.decay_start_time) }}
+                  </div>
+                  <div v-if="entry.decay_state === 'decaying'" class="text-right text-xs text-orange-500 mt-0.5 sm:order-1">
+                    <Icon icon="ph:warning" class="inline w-3 h-3 mr-0.5" />Durations are decaying
+                  </div>
+                  <div v-else-if="entry.decay_state === 'fully_decayed'" class="text-right text-xs text-red-500 mt-0.5 sm:order-1">
+                    <Icon icon="ph:warning-circle" class="inline w-3 h-3 mr-0.5" />Target and max have returned to initial values
+                  </div>
+                </template>
               </div>
             </template>
           </div>
