@@ -17,13 +17,43 @@
       <p class="text-sm text-gray-500 text-center">
         Manage categories and items from the <strong>Items</strong> tab.
       </p>
+
+      <div class="mt-4">
+        <p v-if="!isSupported" class="text-sm text-gray-400 text-center">
+          Push notifications are not supported in this browser.
+        </p>
+        <p v-else-if="!isConfigured" class="text-sm text-amber-600 text-center">
+          Push notifications are not configured on the server.
+        </p>
+        <k-list v-else>
+          <k-list-item
+            title="Push notifications"
+            :after="isSubscribed ? 'On' : 'Off'"
+          >
+            <template #after>
+              <k-toggle :checked="isSubscribed" @change="onToggle" />
+            </template>
+          </k-list-item>
+        </k-list>
+      </div>
     </div>
   </k-sheet>
 </template>
 
 <script setup lang="ts">
-import { kSheet, kToolbar, kButton } from 'konsta/vue';
+import { kSheet, kToolbar, kButton, kList, kListItem, kToggle } from 'konsta/vue';
+import { useNotifications } from '../composables/useNotifications.js';
 
 defineProps<{ open: boolean }>();
 defineEmits<{ close: [] }>();
+
+const { isSupported, isConfigured, isSubscribed, enable, disable } = useNotifications();
+
+async function onToggle() {
+  if (isSubscribed.value) {
+    await disable();
+  } else {
+    await enable();
+  }
+}
 </script>
