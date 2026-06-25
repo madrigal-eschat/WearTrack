@@ -112,7 +112,7 @@ Each tick:
 2. Query live state: all categories + last ended session per category + open sessions per category (reuses existing store methods).
 3. For each category, compute due notification types (see timing tables above).
 4. Batch-query `sent_notifications` for the relevant session IDs; filter out already-sent types.
-5. For each unsent due notification: insert a `sent_notifications` row first (prevents double-send on crash), then call `sender.send()`.
+5. For each unsent due notification: insert a `sent_notifications` row first (prevents double-send on crash), then call `sender.send()` with payload `{ title, body, tag: \`category-${category.id}\` }`.
 6. Log send failures; do not throw (a missed notification is preferable to crashing the scheduler).
 
 ### API endpoints
@@ -130,7 +130,7 @@ Environment variables:
 - `VAPID_PRIVATE_KEY`
 - `VAPID_SUBJECT` — a `mailto:` address
 
-The `web-push` library is initialised once at server startup with these values. Keys generated via `npx web-push generate-vapid-keys` and stored in `.env`. If any VAPID variable is absent, the scheduler does not start and the notifications API returns 503; the rest of the app is unaffected.
+The `web-push` library is initialised once at server startup with these values. Keys generated via `npx web-push generate-vapid-keys` and stored in `.env`. If any VAPID variable is absent, the scheduler does not start and `GET /api/notifications/vapid-public-key` returns `{ publicKey: null }`; the rest of the app is unaffected.
 
 ---
 
@@ -144,28 +144,34 @@ Push handler in `sw.ts`:
 
 ```ts
 self.addEventListener('push', (event) => {
-  const { title, body } = event.data.json();
-  event.waitUntil(self.registration.showNotification(title, { body }));
+  const { title, body, tag } = event.data.json();
+  event.waitUntil(self.registration.showNotification(title, { body, tag }));
 });
 ```
+
+The `tag` field is `category-${category.id}`. Notifications sharing a tag replace each other rather than stacking, so e.g. the 30-minute overtime warning is replaced by the 5-minute warning when it arrives. Notifications for different categories have different tags and stack independently.
 
 ### `useNotifications.ts` composable
 
 ```
-isSupported  — 'Notification' in window && 'PushManager' in window
-permission   — reactive Notification.permission
-isSubscribed — true when pushManager.getSubscription() returns a non-null subscription
-enable()     — request permission → pushManager.subscribe() → POST to backend (upsert)
-disable()    — pushManager.unsubscribe() → DELETE from backend
+isSupported    — 'Notification' in window && 'PushManager' in window
+isConfigured   — true when GET /api/notifications/vapid-public-key returns a non-null publicKey
+permission     — reactive Notification.permission
+isSubscribed   — true when pushManager.getSubscription() returns a non-null subscription
+enable()       — request permission → pushManager.subscribe() → POST to backend (upsert)
+disable()      — pushManager.unsubscribe() → DELETE from backend
 ```
 
 `isSubscribed` is determined from the browser's push manager, not the server, so no `GET /api/notifications/subscribe` endpoint is needed. `enable()` is idempotent — it upserts on the server even if the browser already has a subscription (handles the case where the server lost the subscription).
 
-The VAPID public key is fetched from `GET /api/notifications/vapid-public-key` when `enable()` is called.
+The VAPID public key is fetched from `GET /api/notifications/vapid-public-key` on composable mount and cached for use by `enable()`.
 
 ### Settings UI
 
-A single toggle ("Push notifications") in the existing settings area, bound to `isSubscribed`, calling `enable()`/`disable()`. Shows a note if `!isSupported`.
+A single toggle ("Push notifications") in the existing settings area, bound to `isSubscribed`, calling `enable()`/`disable()`.
+
+- If `!isSupported`: toggle hidden, note shown ("Push notifications are not supported in this browser").
+- If `!isConfigured`: toggle hidden, warning shown ("Push notifications are not configured on the server").
 
 ---
 
