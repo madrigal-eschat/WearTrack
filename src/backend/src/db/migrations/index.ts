@@ -3,12 +3,14 @@ import runMigration001 from './001_initial.js';
 import runMigration002 from './002_oklch_colors.js';
 import runMigration003 from './003_target_max_wear.js';
 import runMigration004 from './004_drop_legacy_columns.js';
+import runMigration005 from './005_push_notifications.js';
 
 const migrations: Array<{ version: number; name: string; run: () => void }> = [
   { version: 1, name: '001_initial', run: runMigration001 },
   { version: 2, name: '002_oklch_colors', run: runMigration002 },
   { version: 3, name: '003_target_max_wear', run: runMigration003 },
   { version: 4, name: '004_drop_legacy_columns', run: runMigration004 },
+  { version: 5, name: '005_push_notifications', run: runMigration005 },
 ];
 
 export function runMigrations() {

@@ -248,7 +248,7 @@ function restRemainingSeconds(entry: CurrentEntry): number {
 }
 
 function formatDecayDate(unixSeconds: number): string {
-  return new Date(unixSeconds * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  return new Date(unixSeconds * 1000).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 }
 
 async function onWear(entry: CurrentEntry) {
