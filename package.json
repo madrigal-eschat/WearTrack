@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "postinstall": "npm --prefix src/backend ci && npm --prefix src/frontend ci",
+    "postinstall": "bash scripts/npm-postinstall.sh",
     "dev": "npm run dev --prefix src/backend",
     "dev:frontend": "npm run dev --prefix src/frontend",
     "build": "npm --prefix src/frontend run build && npm --prefix src/backend run build",
