@@ -10,6 +10,27 @@ function nowSeconds(): number {
   return Math.floor(Date.now() / 1000);
 }
 
+type DecayState = 'none' | 'decaying' | 'fully_decayed';
+
+function computeDecay(
+  previous: { ended_at: number; rest_seconds: number; target_wear_seconds: number } | null,
+  category: { break_grace_time: number; break_decay_multiplier: number; initial_target_wear_duration_seconds: number },
+  now: number,
+): { decay_start_time: number | null; decay_state: DecayState } {
+  if (!previous) return { decay_start_time: null, decay_state: 'none' };
+
+  const decayStartTime = previous.ended_at + previous.rest_seconds + category.break_grace_time;
+  if (now <= decayStartTime) return { decay_start_time: decayStartTime, decay_state: 'none' };
+
+  const daysSinceGrace = Math.floor((now - decayStartTime) / 86400);
+  const decayFactor = category.break_decay_multiplier ** daysSinceGrace;
+  const initial = category.initial_target_wear_duration_seconds;
+  const decayed = (previous.target_wear_seconds + initial) * decayFactor;
+
+  const decay_state: DecayState = decayed <= initial ? 'fully_decayed' : 'decaying';
+  return { decay_start_time: decayStartTime, decay_state };
+}
+
 /** A last-session item row enriched with the expected target/max for the next session. */
 interface ItemWithExpected extends ItemWithLastSession {
   expected_target: number;
@@ -42,6 +63,8 @@ router.get('/current', (c) => {
     categories.map((cat) => {
       const previous = sessionStore.findLastEndedInCategory(cat.id) ?? null;
       const injuryActive = injuryStore.hasActiveInCategory(cat.id);
+      const { decay_start_time, decay_state } = computeDecay(previous, cat, now);
+
       const items: ItemWithExpected[] = (itemsByCategory.get(cat.id) ?? []).map((it) => {
         const { target, max } = computeSessionStart(
           cat,
@@ -54,7 +77,7 @@ router.get('/current', (c) => {
       });
 
       const s = sessionByCategory.get(cat.id);
-      if (!s) return { category: cat, item: null, session: null, items };
+      if (!s) return { category: cat, item: null, session: null, items, decay_start_time, decay_state };
 
       const item = {
         id: s.item_id, category_id: s.category_id, name: s.item_name,
@@ -65,7 +88,7 @@ router.get('/current', (c) => {
         target_wear_seconds: s.target_wear_seconds, max_wear_seconds: s.max_wear_seconds,
         rest_seconds: s.rest_seconds, ended_in_injury: s.ended_in_injury,
       };
-      return { category: cat, item, session, items };
+      return { category: cat, item, session, items, decay_start_time, decay_state };
     }),
   );
 });
