@@ -8,6 +8,14 @@
       "cwd": "src/backend",
       "port": 3000,
       "autoPort": true
+    },
+    {
+      "name": "Weartrack Frontend",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite"],
+      "cwd": "src/frontend",
+      "port": 5173,
+      "autoPort": true
     }
   ]
 }
