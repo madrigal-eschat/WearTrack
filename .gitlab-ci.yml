@@ -14,7 +14,7 @@ include:
       prod-publish-strategy: "auto"
   - component: $CI_SERVER_FQDN/to-be-continuous/playwright/gitlab-ci-playwright@1
     inputs:
-      image: "mcr.microsoft.com/playwright:v1.60.0-noble"
+      image: "mcr.microsoft.com/playwright:v1.61.1-noble"
       project-dir: "src/frontend"
   - component: $CI_SERVER_FQDN/to-be-continuous/kubernetes/gitlab-ci-k8s@~latest
     inputs:
