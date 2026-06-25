@@ -25,6 +25,8 @@ const sampleCategory = {
 
 let categoryId: number;
 let itemId: number;
+let decayCategoryId: number;
+let decayItemId: number;
 
 beforeAll(async () => {
   runMigrations();
@@ -329,6 +331,166 @@ describe('GET /api/sessions/current — items field', () => {
     expect(ourItem.ended_at).toBeTypeOf('number');
     expect(ourItem.max_wear_seconds).toBeTypeOf('number');
     expect(ourItem.rest_seconds).toBeTypeOf('number');
+  });
+});
+
+describe('GET /api/sessions/current — decay fields', () => {
+  it('returns decay_start_time null and decay_state none when no prior session', async () => {
+    // Use the existing categoryId (fresh DB in beforeAll, all sessions ended cleanly)
+    // At test-suite start there are no sessions yet for this category
+    const catRes = await app.request(CATEGORIES, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'DecayCat',
+        icon: 'ph:sneaker',
+        initial_target_wear_duration_seconds: 900,
+        initial_max_wear_duration_seconds: 1800,
+        rest_multiplier: 6,
+        minimum_rest: 86400,
+        risk_levels: [{ lower: null, upper: null, text: 'safe', severity: 1 }],
+        break_decay_multiplier: 0.91,
+        break_grace_time: 86400,
+      }),
+    });
+    const cat = await catRes.json();
+    const itemRes = await app.request(ITEMS, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Decay Shoe', category_id: cat.id, color: '#aabbcc' }),
+    });
+    const item = await itemRes.json();
+
+    const res = await app.request(`${SESSIONS}/current`);
+    const body = await res.json();
+    const entry = body.find((e: { category: { id: number } }) => e.category.id === cat.id);
+
+    expect(entry.decay_start_time).toBeNull();
+    expect(entry.decay_state).toBe('none');
+
+    // Store for later tests
+    decayCategoryId = cat.id;
+    decayItemId = item.id;
+  });
+
+  it('returns decay_start_time and state none when within grace period', async () => {
+    // End a session 1 second ago — still in rest period (minimum_rest = 86400)
+    const now = Math.floor(Date.now() / 1000);
+    const startTs = now - 3600;
+    const endTs = now - 1;
+    const s = await (await app.request(`${SESSIONS}/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: decayItemId, started_at: startTs }),
+    })).json();
+    await app.request(`${SESSIONS}/${s.id}/end`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ended_at: endTs }),
+    });
+
+    const res = await app.request(`${SESSIONS}/current`);
+    const body = await res.json();
+    const entry = body.find((e: { category: { id: number } }) => e.category.id === decayCategoryId);
+
+    // decay_start_time = endTs + rest_seconds + break_grace_time — well in the future
+    expect(entry.decay_start_time).toBeGreaterThan(now);
+    expect(entry.decay_state).toBe('none');
+  });
+
+  it('returns decay_state decaying when past grace period', async () => {
+    // Use a fresh category so findLastEndedInCategory only sees this test's session
+    const now = Math.floor(Date.now() / 1000);
+    const decayingCatRes = await app.request(CATEGORIES, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'DecayingCat',
+        icon: 'ph:sneaker',
+        initial_target_wear_duration_seconds: 900,
+        initial_max_wear_duration_seconds: 1800,
+        rest_multiplier: 6,
+        minimum_rest: 86400,
+        risk_levels: [{ lower: null, upper: null, text: 'safe', severity: 1 }],
+        break_decay_multiplier: 0.91,
+        break_grace_time: 86400,
+      }),
+    });
+    const decayingCat = await decayingCatRes.json();
+    const decayingItemRes = await app.request(ITEMS, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Decaying Shoe', category_id: decayingCat.id, color: '#ccddee' }),
+    });
+    const decayingItem = await decayingItemRes.json();
+
+    // End a session 5 days ago so decay_start_time is in the past but not fully decayed
+    // (0.91^3 ≈ 0.75 * 1800 > 900 initial, so still decaying)
+    const endTs = now - 5 * 86400;
+    const s = await (await app.request(`${SESSIONS}/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: decayingItem.id, started_at: endTs - 3600 }),
+    })).json();
+    // End with ended_at so rest_seconds is minimal (elapsed is small → rest ≈ minimum)
+    await app.request(`${SESSIONS}/${s.id}/end`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ended_at: endTs }),
+    });
+
+    const res = await app.request(`${SESSIONS}/current`);
+    const body = await res.json();
+    const entry = body.find((e: { category: { id: number } }) => e.category.id === decayingCat.id);
+
+    expect(entry.decay_state).toBe('decaying');
+    expect(entry.decay_start_time).toBeLessThan(now);
+  });
+
+  it('returns decay_state fully_decayed when target has decayed to initial', async () => {
+    // Use a fresh category so findLastEndedInCategory only sees this test's session
+    const now = Math.floor(Date.now() / 1000);
+    const fullyCatRes = await app.request(CATEGORIES, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'FullyDecayedCat',
+        icon: 'ph:sneaker',
+        initial_target_wear_duration_seconds: 900,
+        initial_max_wear_duration_seconds: 1800,
+        rest_multiplier: 6,
+        minimum_rest: 86400,
+        risk_levels: [{ lower: null, upper: null, text: 'safe', severity: 1 }],
+        break_decay_multiplier: 0.91,
+        break_grace_time: 86400,
+      }),
+    });
+    const fullyCat = await fullyCatRes.json();
+    const fullyItemRes = await app.request(ITEMS, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Fully Decayed Shoe', category_id: fullyCat.id, color: '#ffeedd' }),
+    });
+    const fullyItem = await fullyItemRes.json();
+
+    // End a session 10 000 days ago — 0.91^10000 rounds to 0, definitely fully decayed
+    const endTs = now - 10_000 * 86400;
+    const s = await (await app.request(`${SESSIONS}/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: fullyItem.id, started_at: endTs - 3600 }),
+    })).json();
+    await app.request(`${SESSIONS}/${s.id}/end`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ended_at: endTs }),
+    });
+
+    const res = await app.request(`${SESSIONS}/current`);
+    const body = await res.json();
+    const entry = body.find((e: { category: { id: number } }) => e.category.id === fullyCat.id);
+
+    expect(entry.decay_state).toBe('fully_decayed');
   });
 });
 
