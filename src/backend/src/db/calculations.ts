@@ -51,6 +51,71 @@ export function riskLevelFor(elapsed: number, category: Category): RiskLevel | n
   return null;
 }
 
+/** Previous durations grown by one category increment, scaled by difficulty modifier. */
+function growDurations(
+  previous: PreviousSession,
+  category: Category,
+  dm: number,
+): { target: number; max: number | null } {
+  const maxIsSet = category.initial_max_wear_duration_seconds !== null;
+  return {
+    target: dm * (previous.target_wear_seconds + category.initial_target_wear_duration_seconds),
+    max: maxIsSet
+      ? dm * ((previous.max_wear_seconds ?? 0) + category.initial_max_wear_duration_seconds!)
+      : null,
+  };
+}
+
+/** Compound daily decay applied for each full day past the grace period. */
+function applyBreakDecay(
+  target: number,
+  max: number | null,
+  daysSinceGrace: number,
+  decayMultiplier: number,
+): { target: number; max: number | null } {
+  const decay = decayMultiplier ** daysSinceGrace;
+  return { target: target * decay, max: max === null ? null : max * decay };
+}
+
+/** Raw durations for the three start situations: first session, inside rest (halve), or post-rest (grow + optional decay). */
+function rawDurations(
+  previous: PreviousSession | null,
+  category: Category,
+  dm: number,
+  startTime: number,
+): { target: number; max: number | null } {
+  const maxIsSet = category.initial_max_wear_duration_seconds !== null;
+
+  if (!previous) {
+    return {
+      target: dm * category.initial_target_wear_duration_seconds,
+      max: maxIsSet ? dm * category.initial_max_wear_duration_seconds! : null,
+    };
+  }
+
+  const earliestStart = previous.ended_at + previous.rest_seconds;
+  const latestStart = earliestStart + category.break_grace_time;
+
+  let { target, max } = startTime < earliestStart
+    ? { target: previous.target_wear_seconds / 2, max: maxIsSet ? (previous.max_wear_seconds ?? 0) / 2 : null }
+    : growDurations(previous, category, dm);
+
+  if (startTime > latestStart) {
+    const daysSinceGrace = Math.floor((startTime - latestStart) / 86400);
+    ({ target, max } = applyBreakDecay(target, max, daysSinceGrace, category.break_decay_multiplier));
+  }
+
+  return { target, max };
+}
+
+/** Halve durations when an injury is active. */
+function applyInjury(
+  target: number,
+  max: number | null,
+): { target: number; max: number | null } {
+  return { target: target / 2, max: max === null ? null : max / 2 };
+}
+
 /** Session-Start formula from docs/design/duration-formula.md. */
 export function computeSessionStart(
   category: Category,
@@ -60,46 +125,27 @@ export function computeSessionStart(
   injuryActive: boolean,
 ): { target: number; max: number | null } {
   const dm = 1 / item.difficulty_multiplier;
-  const maxIsSet = category.initial_max_wear_duration_seconds !== null;
 
-  let target: number;
-  let max: number | null;
-
-  if (previous) {
-    const earliestStart = previous.ended_at + previous.rest_seconds;
-    const latestStart = earliestStart + category.break_grace_time;
-
-    if (startTime < earliestStart) {
-      target = previous.target_wear_seconds / 2;
-      max = maxIsSet ? (previous.max_wear_seconds ?? 0) / 2 : null;
-    } else {
-      target = dm * (previous.target_wear_seconds + category.initial_target_wear_duration_seconds);
-      max = maxIsSet
-        ? dm * ((previous.max_wear_seconds ?? 0) + category.initial_max_wear_duration_seconds!)
-        : null;
-    }
-
-    if (startTime > latestStart) {
-      const daysSinceGrace = Math.floor((startTime - latestStart) / 86400);
-      const decay = category.break_decay_multiplier ** daysSinceGrace;
-      target *= decay;
-      if (max !== null) max *= decay;
-    }
-  } else {
-    target = dm * category.initial_target_wear_duration_seconds;
-    max = maxIsSet ? dm * category.initial_max_wear_duration_seconds! : null;
-  }
+  let { target, max } = rawDurations(previous, category, dm, startTime);
 
   // Never go below what the first session would give (with the same difficulty modifier).
   target = Math.max(target, dm * category.initial_target_wear_duration_seconds);
   if (max !== null) max = Math.max(max, dm * category.initial_max_wear_duration_seconds!);
 
-  if (injuryActive) {
-    target /= 2;
-    if (max !== null) max /= 2;
-  }
+  if (injuryActive) ({ target, max } = applyInjury(target, max));
 
   return { target: Math.floor(target), max: max === null ? null : Math.floor(max) };
+}
+
+/** Base rest before any penalty or floor: elapsed scaled by risk level and category multiplier. */
+function baseRestSeconds(elapsed: number, riskLevel: RiskLevel | null, category: Category): number {
+  const weight = riskLevel?.rest_weight ?? 0;
+  return elapsed * (1 + weight) * category.rest_multiplier;
+}
+
+/** Extra rest added when elapsed exceeds the session max: 2 seconds per second over. */
+function overMaxPenaltySeconds(elapsed: number, sessionMax: number): number {
+  return (elapsed - sessionMax) * 2;
 }
 
 /** Session-End rest formula from docs/design/duration-formula.md. */
@@ -110,12 +156,10 @@ export function computeRest(
   riskLevel: RiskLevel | null,
   injuryActive: boolean,
 ): number {
-  const weight = riskLevel?.rest_weight ?? 0;
-  const combined = (1 + weight) * category.rest_multiplier;
-  let rest = elapsed * combined;
+  let rest = baseRestSeconds(elapsed, riskLevel, category);
 
   if (sessionMax !== null && elapsed > sessionMax) {
-    rest += (elapsed - sessionMax) * 2;
+    rest += overMaxPenaltySeconds(elapsed, sessionMax);
   }
 
   const maxIsSet = category.initial_max_wear_duration_seconds !== null;
