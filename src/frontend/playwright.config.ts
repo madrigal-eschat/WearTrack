@@ -22,7 +22,16 @@ export default defineConfig({
   },
 
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        // Chromium 130+ silently upgrades http:// to https:// for some
+        // hostnames. Disable so the browser reaches the plain-HTTP app
+        // service container at http://app:3000 in CI.
+        launchOptions: { args: ['--disable-features=HttpsUpgrades'] },
+      },
+    },
     { name: 'webkit',   use: { ...devices['Desktop Safari'] } },
   ],
 
