@@ -10,6 +10,7 @@ class NotificationStore {
       LEFT JOIN sessions s ON s.id = (
         SELECT s2.id FROM sessions s2 JOIN items i2 ON i2.id = s2.item_id
         WHERE i2.category_id = c.id AND s2.ended_at IS NOT NULL AND s2.ended_in_injury = 0
+          AND s2.rest_seconds IS NOT NULL
         ORDER BY s2.ended_at DESC LIMIT 1
       )
     `).all() as Array<{
