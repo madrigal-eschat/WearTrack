@@ -90,6 +90,10 @@ export function computeSessionStart(
     max = maxIsSet ? dm * category.initial_max_wear_duration_seconds! : null;
   }
 
+  // Never go below what the first session would give (with the same difficulty modifier).
+  target = Math.max(target, dm * category.initial_target_wear_duration_seconds);
+  if (max !== null) max = Math.max(max, dm * category.initial_max_wear_duration_seconds!);
+
   if (injuryActive) {
     target /= 2;
     if (max !== null) max /= 2;
