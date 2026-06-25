@@ -83,8 +83,8 @@
                       <span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Max</span>{{ idleMax(entry) }}
                     </template>
                   </div>
-                  <div v-if="restRemainingMinutes(entry) > 0" class="text-xs text-amber-600 mt-0.5">
-                    <Icon icon="ph:bed" class="inline w-3 h-3 mr-0.5" />Rest {{ restRemainingMinutes(entry) }}m more
+                  <div v-if="restRemainingSeconds(entry) > 0" class="text-xs text-amber-600 mt-0.5">
+                    <Icon icon="ph:bed" class="inline w-3 h-3 mr-0.5" />Rest {{ shortDuration(restRemainingSeconds(entry)) }} more
                   </div>
                 </div>
                 <!-- Decay info: "Start before" date + warning badge (category-level, always visible) -->
@@ -135,7 +135,7 @@ import { useWear, type CurrentEntry, type Session, type ItemWithLastSession } fr
 import { useItems } from '../composables/useItems.js';
 import { useNow } from '../composables/useNow.js';
 import { useToast } from '../composables/useToast.js';
-import { formatDuration } from '../utils/formatDuration.js';
+import { formatDuration, shortDuration } from '../utils/formatDuration.js';
 import { targetWearSeconds, maxWearSeconds, currentWear } from '../utils/wearCalculations.js';
 
 const { currentSessions, loaded, startSession, endSession } = useWear();
@@ -241,11 +241,10 @@ function idleMax(entry: CurrentEntry): string {
   return formatDuration(item.expected_max);
 }
 
-function restRemainingMinutes(entry: CurrentEntry): number {
+function restRemainingSeconds(entry: CurrentEntry): number {
   const item = selectedItemData(entry);
   if (!item || item.ended_at === null || item.rest_seconds === null) return 0;
-  const remainingSeconds = item.ended_at + item.rest_seconds - now.value / 1000;
-  return Math.max(0, Math.ceil(remainingSeconds / 60));
+  return Math.max(0, Math.ceil(item.ended_at + item.rest_seconds - now.value / 1000));
 }
 
 function formatDecayDate(unixSeconds: number): string {
