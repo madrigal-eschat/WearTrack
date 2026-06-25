@@ -151,6 +151,22 @@ self.addEventListener('push', (event) => {
 
 The `tag` field is `category-${category.id}`. Notifications sharing a tag replace each other rather than stacking, so e.g. the 30-minute overtime warning is replaced by the 5-minute warning when it arrives. Notifications for different categories have different tags and stack independently.
 
+The SW also handles `notificationclick`: close the notification, then focus an existing PWA window if one is open, otherwise open a new one at `/`.
+
+```ts
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) return client.focus();
+      }
+      return clients.openWindow('/');
+    }),
+  );
+});
+```
+
 ### `useNotifications.ts` composable
 
 ```
