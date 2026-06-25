@@ -49,9 +49,10 @@ class SessionStore {
            s.ended_at, s.started_at, s.target_wear_seconds, s.max_wear_seconds, s.rest_seconds
          FROM items i
          LEFT JOIN sessions s ON s.id = (
-           SELECT id FROM sessions
-           WHERE item_id = i.id AND ended_at IS NOT NULL
-           ORDER BY ended_at DESC LIMIT 1
+           SELECT sess.id FROM sessions sess
+           JOIN items it ON it.id = sess.item_id
+           WHERE it.category_id = i.category_id AND sess.ended_at IS NOT NULL
+           ORDER BY sess.ended_at DESC LIMIT 1
          )`,
       )
       .all() as ItemWithLastSession[];

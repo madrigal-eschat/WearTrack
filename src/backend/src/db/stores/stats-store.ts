@@ -145,7 +145,7 @@ class StatsStore {
       .prepare(
         `SELECT s.item_id, i.name AS item_name, c.name AS category_name,
                 c.icon AS category_icon, i.color AS item_color,
-                s.max_single_session_wear_seconds AS score
+                s.max_single_session_wear_seconds
          FROM stats s
          JOIN items i ON i.id = s.item_id
          JOIN categories c ON c.id = i.category_id
@@ -161,7 +161,7 @@ class StatsStore {
       .prepare(
         `SELECT s.item_id, i.name AS item_name, c.name AS category_name,
                 c.icon AS category_icon, i.color AS item_color,
-                s.total_wear_seconds AS score
+                s.total_wear_seconds
          FROM stats s
          JOIN items i ON i.id = s.item_id
          JOIN categories c ON c.id = i.category_id
@@ -178,7 +178,7 @@ class StatsStore {
       .prepare(
         `SELECT cs.category_id, c.name AS category_name,
                 c.icon AS category_icon,
-                cs.best_streak_wear_seconds AS score,
+                cs.best_streak_wear_seconds,
                 cs.best_streak_count AS streak_sessions
          FROM category_stats cs
          JOIN categories c ON c.id = cs.category_id
@@ -194,7 +194,7 @@ class StatsStore {
       .prepare(
         `SELECT s.item_id, i.name AS item_name, c.name AS category_name,
                 c.icon AS category_icon, i.color AS item_color,
-                s.session_count AS score
+                s.session_count
          FROM stats s
          JOIN items i ON i.id = s.item_id
          JOIN categories c ON c.id = i.category_id
