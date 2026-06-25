@@ -26,10 +26,15 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        // Chromium 130+ silently upgrades http:// to https:// for some
-        // hostnames. Disable so the browser reaches the plain-HTTP app
-        // service container at http://app:3000 in CI.
-        launchOptions: { args: ['--disable-features=HttpsUpgrades'] },
+        // Chromium 130+ has multiple HTTPS-upgrade mechanisms. In CI the browser
+        // reaches the app service container at http://app:3000 (plain HTTP);
+        // any upgrade attempt gets ERR_SSL_PROTOCOL_ERROR. Disable all known
+        // variants: HttpsUpgrades (original), HttpsFirstBalancedMode and its
+        // auto-enable flag (Chrome 130 default-on), HttpsFirstModeV2, and
+        // AutomaticHttpsRewrites.
+        launchOptions: {
+          args: ['--disable-features=HttpsUpgrades,HttpsFirstBalancedMode,HttpsFirstBalancedModeAutoEnable,HttpsFirstModeV2,AutomaticHttpsRewrites'],
+        },
       },
     },
     { name: 'webkit',   use: { ...devices['Desktop Safari'] } },
