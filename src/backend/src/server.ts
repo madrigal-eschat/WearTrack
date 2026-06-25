@@ -10,8 +10,11 @@ import { router as itemsRouter } from './controllers/items.js';
 import { router as sessionsRouter } from './controllers/sessions.js';
 import { router as injuriesRouter } from './controllers/injuries.js';
 import { router as leaderboardsRouter } from './controllers/leaderboards.js';
+import { router as notificationsRouter } from './controllers/notifications.js';
+import { startScheduler } from './notifications/runner.js';
 
 runMigrations();
+startScheduler();
 
 const app = new Hono();
 
@@ -22,9 +25,6 @@ app.get('/api/health', (c) => {
   return c.json({ status: 'ok' });
 });
 
-// Wipe all data (keeps schema). Used by Playwright globalSetup. Enabled outside
-// production, or explicitly via E2E_TEST=1 (e.g. the prod image run as the e2e
-// service container).
 if (process.env.NODE_ENV !== 'production' || process.env.E2E_TEST === '1') {
   app.post('/api/__reset', (c) => {
     dbExport.exec(`
@@ -34,6 +34,8 @@ if (process.env.NODE_ENV !== 'production' || process.env.E2E_TEST === '1') {
       DELETE FROM category_stats;
       DELETE FROM items;
       DELETE FROM categories;
+      DELETE FROM push_subscriptions;
+      DELETE FROM sent_notifications;
     `);
     return c.json({ ok: true });
   });
@@ -44,9 +46,8 @@ app.route('/api/items', itemsRouter);
 app.route('/api/sessions', sessionsRouter);
 app.route('/api/injuries', injuriesRouter);
 app.route('/api/leaderboards', leaderboardsRouter);
+app.route('/api/notifications', notificationsRouter);
 
-// Serve the built frontend. FRONTEND_DIST must be set in production (Docker).
-// Not used in dev — dev-server.ts handles the frontend via Vite middleware.
 if (process.env.FRONTEND_DIST) {
   app.use('/*', serveStatic({ root: process.env.FRONTEND_DIST }));
   app.get('/*', serveStatic({ path: `${process.env.FRONTEND_DIST}/index.html` }));
@@ -55,8 +56,6 @@ if (process.env.FRONTEND_DIST) {
 export { app };
 export default app;
 
-// Only start the HTTP server when this file is the direct entry point.
-// In dev, dev-server.ts starts its own server and imports { app } without triggering this.
 const entryFile = process.argv[1] ?? '';
 if (entryFile.endsWith('/server.ts') || entryFile.endsWith('/server.js')) {
   const port = Number(process.env.PORT ?? 3000);
