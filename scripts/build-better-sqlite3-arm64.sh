@@ -49,6 +49,9 @@ fi
 
 echo "Building better-sqlite3 v${VERSION} napi-v${NAPI_VERSION} for linux-arm64..."
 
+# node-gyp is a local dependency — add the local .bin to PATH so it's found
+export PATH="${CI_PROJECT_DIR}/src/backend/node_modules/.bin:${PATH}"
+
 cd src/backend/node_modules/better-sqlite3
 node-gyp rebuild --release
 
