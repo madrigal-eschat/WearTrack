@@ -69,7 +69,8 @@
                   <k-button
                     small
                     :disabled="!selectedItem[entry.category.id]"
-                    @click="onWear(entry)"
+                    :class="{ 'opacity-60': restRemainingMinutes(entry) > 0 }"
+                    @click="restRemainingMinutes(entry) > 0 ? showRestWarning(entry) : onWear(entry)"
                   >Wear</k-button>
                 </div>
                 <!-- target/max — second on mobile (below), first on wide (sm:order-1) -->
@@ -105,12 +106,31 @@
       </k-list-item>
     </k-list>
   </div>
+
+  <!-- Rest-period confirmation dialog -->
+  <k-dialog
+    :opened="restWarning.visible"
+    @backdropclick="restWarning.visible = false"
+  >
+    <template #title>Start during rest?</template>
+    <template #content>
+      <template v-if="restWarning.entry">
+        {{ restRemainingMinutes(restWarning.entry) }} min of rest remaining.
+        Starting early will halve your target:
+        <strong>{{ idleTarget(restWarning.entry) }}</strong> instead of the normal value.
+      </template>
+    </template>
+    <template #buttons>
+      <k-dialog-button @click="restWarning.visible = false">Cancel</k-dialog-button>
+      <k-dialog-button strong @click="onWearConfirmed">Start anyway</k-dialog-button>
+    </template>
+  </k-dialog>
 </template>
 
 <script setup lang="ts">
 import { reactive, onMounted } from 'vue';
 import { Icon } from '@iconify/vue';
-import { kBlockTitle, kList, kListItem, kButton } from 'konsta/vue';
+import { kBlockTitle, kList, kListItem, kButton, kDialog, kDialogButton } from 'konsta/vue';
 import { useWear, type CurrentEntry, type Session, type ItemWithLastSession } from '../composables/useWear.js';
 import { useItems } from '../composables/useItems.js';
 import { useNow } from '../composables/useNow.js';
@@ -124,6 +144,21 @@ const { showError } = useToast();
 const now = useNow();
 
 const selectedItem = reactive<Record<number, number | null>>({});
+
+const restWarning = reactive<{
+  visible: boolean;
+  entry: CurrentEntry | null;
+}>({ visible: false, entry: null });
+
+function showRestWarning(entry: CurrentEntry) {
+  restWarning.entry = entry;
+  restWarning.visible = true;
+}
+
+async function onWearConfirmed() {
+  restWarning.visible = false;
+  if (restWarning.entry) await onWear(restWarning.entry);
+}
 
 onMounted(async () => {
   await loadItems();
