@@ -69,7 +69,8 @@
                   <k-button
                     small
                     :disabled="!selectedItem[entry.category.id]"
-                    @click="onWear(entry)"
+                    :class="{ 'opacity-60': restRemainingMinutes(entry) > 0 }"
+                    @click="restRemainingMinutes(entry) > 0 ? showRestWarning(entry) : onWear(entry)"
                   >Wear</k-button>
                 </div>
                 <!-- target/max — second on mobile (below), first on wide (sm:order-1) -->
@@ -86,6 +87,18 @@
                     <Icon icon="ph:bed" class="inline w-3 h-3 mr-0.5" />Rest {{ restRemainingMinutes(entry) }}m more
                   </div>
                 </div>
+                <!-- Decay info: "Start before" date + warning badge (category-level, always visible) -->
+                <template v-if="entry.decay_start_time !== null">
+                  <div class="text-right text-xs text-gray-500 mt-0.5 whitespace-nowrap sm:order-1">
+                    <span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Start before</span>{{ formatDecayDate(entry.decay_start_time) }}
+                  </div>
+                  <div v-if="entry.decay_state === 'decaying'" class="text-right text-xs text-orange-500 mt-0.5 sm:order-1">
+                    <Icon icon="ph:warning" class="inline w-3 h-3 mr-0.5" />Durations are decaying
+                  </div>
+                  <div v-else-if="entry.decay_state === 'fully_decayed'" class="text-right text-xs text-red-500 mt-0.5 sm:order-1">
+                    <Icon icon="ph:warning-circle" class="inline w-3 h-3 mr-0.5" />Target and max have returned to initial values
+                  </div>
+                </template>
               </div>
             </template>
           </div>
@@ -93,12 +106,31 @@
       </k-list-item>
     </k-list>
   </div>
+
+  <!-- Rest-period confirmation dialog -->
+  <k-dialog
+    :opened="restWarning.visible"
+    @backdropclick="restWarning.visible = false"
+  >
+    <template #title>Start during rest?</template>
+    <template #content>
+      <template v-if="restWarning.entry">
+        {{ restRemainingMinutes(restWarning.entry) }} min of rest remaining.
+        Starting early reduces your target to
+        <strong>{{ idleTarget(restWarning.entry) }}</strong>.
+      </template>
+    </template>
+    <template #buttons>
+      <k-dialog-button @click="restWarning.visible = false">Cancel</k-dialog-button>
+      <k-dialog-button strong @click="onWearConfirmed">Start anyway</k-dialog-button>
+    </template>
+  </k-dialog>
 </template>
 
 <script setup lang="ts">
 import { reactive, onMounted } from 'vue';
 import { Icon } from '@iconify/vue';
-import { kBlockTitle, kList, kListItem, kButton } from 'konsta/vue';
+import { kBlockTitle, kList, kListItem, kButton, kDialog, kDialogButton } from 'konsta/vue';
 import { useWear, type CurrentEntry, type Session, type ItemWithLastSession } from '../composables/useWear.js';
 import { useItems } from '../composables/useItems.js';
 import { useNow } from '../composables/useNow.js';
@@ -112,6 +144,21 @@ const { showError } = useToast();
 const now = useNow();
 
 const selectedItem = reactive<Record<number, number | null>>({});
+
+const restWarning = reactive<{
+  visible: boolean;
+  entry: CurrentEntry | null;
+}>({ visible: false, entry: null });
+
+function showRestWarning(entry: CurrentEntry) {
+  restWarning.entry = entry;
+  restWarning.visible = true;
+}
+
+async function onWearConfirmed() {
+  restWarning.visible = false;
+  if (restWarning.entry) await onWear(restWarning.entry);
+}
 
 onMounted(async () => {
   await loadItems();
@@ -199,6 +246,10 @@ function restRemainingMinutes(entry: CurrentEntry): number {
   if (!item || item.ended_at === null || item.rest_seconds === null) return 0;
   const remainingSeconds = item.ended_at + item.rest_seconds - now.value / 1000;
   return Math.max(0, Math.ceil(remainingSeconds / 60));
+}
+
+function formatDecayDate(unixSeconds: number): string {
+  return new Date(unixSeconds * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 }
 
 async function onWear(entry: CurrentEntry) {
