@@ -116,8 +116,8 @@
     <template #content>
       <template v-if="restWarning.entry">
         {{ restRemainingMinutes(restWarning.entry) }} min of rest remaining.
-        Starting early will halve your target:
-        <strong>{{ idleTarget(restWarning.entry) }}</strong> instead of the normal value.
+        Starting early reduces your target to
+        <strong>{{ idleTarget(restWarning.entry) }}</strong>.
       </template>
     </template>
     <template #buttons>
