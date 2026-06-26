@@ -1,5 +1,6 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { currentWear } from '../utils/wearCalculations.js';
+import { apiFetch } from '../utils/apiFetch.js';
 
 export interface Category {
   id: number;
@@ -67,7 +68,7 @@ let pollTimer: ReturnType<typeof setInterval> | null = null;
 async function fetchCurrent() {
   loading.value = true;
   try {
-    const res = await fetch('/api/sessions/current');
+    const res = await apiFetch('/api/sessions/current');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     currentSessions.value = await res.json();
   } catch (e) {
@@ -79,7 +80,7 @@ async function fetchCurrent() {
 }
 
 async function startSession(itemId: number): Promise<Session> {
-  const res = await fetch('/api/sessions/start', {
+  const res = await apiFetch('/api/sessions/start', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ item_id: itemId }),
@@ -94,7 +95,7 @@ async function startSession(itemId: number): Promise<Session> {
 }
 
 async function endSession(sessionId: number): Promise<Session> {
-  const res = await fetch(`/api/sessions/${sessionId}/end`, {
+  const res = await apiFetch(`/api/sessions/${sessionId}/end`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({}),
@@ -111,7 +112,7 @@ async function endSession(sessionId: number): Promise<Session> {
 async function reportInjury(itemId: number, wearSeconds?: number): Promise<void> {
   const body: Record<string, unknown> = { item_id: itemId };
   if (wearSeconds !== undefined) body.wear_seconds = wearSeconds;
-  const res = await fetch('/api/injuries', {
+  const res = await apiFetch('/api/injuries', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
