@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue';
 import type { Session } from './useWear.js';
+import { apiFetch } from '../utils/apiFetch.js';
 
 export interface DayEntry {
   date: Date;
@@ -54,7 +55,7 @@ async function loadWeekSessions(): Promise<void> {
   const from = Math.floor(weekStart.value.getTime() / 1000);
   const to = from + 7 * 86400;
   // Fetch all sessions; filter client-side (API has no date range filter)
-  const res = await fetch('/api/sessions');
+  const res = await apiFetch('/api/sessions');
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const all: Session[] = await res.json();
   sessions.value = all.filter((s) => s.started_at >= from && s.started_at < to);

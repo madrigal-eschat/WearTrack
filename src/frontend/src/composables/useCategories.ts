@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import type { Category } from './useWear.js';
+import { apiFetch } from '../utils/apiFetch.js';
 
 export interface CategoryStats {
   category_id: number;
@@ -20,19 +21,19 @@ export type CategoryUpdate = Partial<CategoryCreate>;
 const categories = ref<Category[]>([]);
 
 async function loadCategories(): Promise<void> {
-  const res = await fetch('/api/categories');
+  const res = await apiFetch('/api/categories');
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   categories.value = await res.json();
 }
 
 async function loadCategoryStats(id: number): Promise<CategoryStats> {
-  const res = await fetch(`/api/categories/${id}/stats`);
+  const res = await apiFetch(`/api/categories/${id}/stats`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
 
 async function createCategory(data: CategoryCreate): Promise<Category> {
-  const res = await fetch('/api/categories', {
+  const res = await apiFetch('/api/categories', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -47,7 +48,7 @@ async function createCategory(data: CategoryCreate): Promise<Category> {
 }
 
 async function updateCategory(id: number, data: CategoryUpdate): Promise<Category> {
-  const res = await fetch(`/api/categories/${id}`, {
+  const res = await apiFetch(`/api/categories/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -63,7 +64,7 @@ async function updateCategory(id: number, data: CategoryUpdate): Promise<Categor
 }
 
 async function deleteCategory(id: number): Promise<void> {
-  const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+  const res = await apiFetch(`/api/categories/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   categories.value = categories.value.filter((c) => c.id !== id);
 }
