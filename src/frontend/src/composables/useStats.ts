@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import { formatDuration } from '../utils/formatDuration.js';
+import { apiFetch } from '../utils/apiFetch.js';
 
 export interface LeaderboardEntry {
   [key: string]: unknown;
@@ -41,7 +42,7 @@ const loading = ref(false);
 async function loadLeaderboard(type: LeaderboardType): Promise<void> {
   loading.value = true;
   try {
-    const res = await fetch(`/api/leaderboards/${type}`);
+    const res = await apiFetch(`/api/leaderboards/${type}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     leaderboard.value = await res.json();
     activeType.value = type;
