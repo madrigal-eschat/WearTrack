@@ -5,10 +5,7 @@ import { categoryStore } from '../db/stores/category-store.js';
 import { sessionStore } from '../db/stores/session-store.js';
 import { riskLevelFor } from '../db/calculations.js';
 import { NotFoundError, ValidationError } from '../middleware/errors.js';
-
-function nowSeconds(): number {
-  return Math.floor(Date.now() / 1000);
-}
+import { nowSeconds } from '../utils/time.js';
 
 export const router = new Hono();
 

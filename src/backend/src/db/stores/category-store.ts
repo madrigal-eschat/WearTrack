@@ -77,13 +77,25 @@ class CategoryStore {
   }
 
   update(id: number, data: CategoryUpdate): Category {
+    const ALLOWED_COLUMNS = new Set([
+      'name',
+      'icon',
+      'initial_target_wear_duration_seconds',
+      'initial_max_wear_duration_seconds',
+      'rest_multiplier',
+      'minimum_rest',
+      'break_decay_multiplier',
+      'break_grace_time',
+      'risk_levels',
+    ]);
+
     const dbData: Record<string, unknown> = { ...data };
     if (data.risk_levels !== undefined) {
       dbData.risk_levels = JSON.stringify(data.risk_levels);
     }
-    const keys = Object.keys(dbData);
-    const setClauses = keys.map((k) => `${k} = ?`).join(', ');
-    db.prepare(`UPDATE categories SET ${setClauses} WHERE id = ?`).run(...Object.values(dbData), id);
+    const entries = Object.entries(dbData).filter(([k]) => ALLOWED_COLUMNS.has(k));
+    const setClauses = entries.map(([k]) => `${k} = ?`).join(', ');
+    db.prepare(`UPDATE categories SET ${setClauses} WHERE id = ?`).run(...entries.map(([, v]) => v), id);
     return this.find(id)!;
   }
 

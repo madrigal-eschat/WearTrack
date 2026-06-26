@@ -1,39 +1,15 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import app from '../../src/server.js';
 import { runMigrations } from '../../src/db/migrations/index.js';
+import { sampleCategory, createCategory } from '../fixtures.js';
 
 const BASE = '/api/categories';
 const ITEMS = '/api/items';
 const SESSIONS = '/api/sessions';
 
-const sampleCategory = {
-  name: 'Footwear',
-  icon: 'figure.walk',
-  initial_target_wear_duration_seconds: 900,
-  initial_max_wear_duration_seconds: 1800,
-  rest_multiplier: 6,
-  minimum_rest: 86400,
-  risk_levels: [
-    { lower: null, upper: 14400, text: 'safe', severity: 1 },
-    { lower: 14400, upper: 28800, text: 'moderate', severity: 2 },
-    { lower: 28800, upper: null, text: 'high', severity: 3 },
-  ],
-  break_decay_multiplier: 0.91,
-  break_grace_time: 86400,
-};
-
 beforeAll(() => {
   runMigrations();
 });
-
-async function createCategory(overrides = {}) {
-  const res = await app.request(BASE, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...sampleCategory, ...overrides }),
-  });
-  return res;
-}
 
 describe('POST /api/categories', () => {
   it('creates a category and returns 201', async () => {
@@ -70,6 +46,42 @@ describe('POST /api/categories', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...sampleCategory, risk_levels: 'not-an-array' }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when rest_multiplier is missing', async () => {
+    const res = await app.request(BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...sampleCategory, rest_multiplier: undefined }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when minimum_rest is missing', async () => {
+    const res = await app.request(BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...sampleCategory, minimum_rest: undefined }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when break_decay_multiplier is missing', async () => {
+    const res = await app.request(BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...sampleCategory, break_decay_multiplier: undefined }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when break_grace_time is missing', async () => {
+    const res = await app.request(BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...sampleCategory, break_grace_time: undefined }),
     });
     expect(res.status).toBe(400);
   });
@@ -135,6 +147,45 @@ describe('PATCH /api/categories/:id', () => {
     });
     expect(res.status).toBe(404);
   });
+
+  it('patches icon', async () => {
+    const created = await (await createCategory({ name: 'Icon Patch' })).json();
+    const res = await app.request(`${BASE}/${created.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ icon: 'figure.run' }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.icon).toBe('figure.run');
+    expect(body.name).toBe('Icon Patch');
+  });
+
+  it('patches break_decay_multiplier', async () => {
+    const created = await (await createCategory({ name: 'Decay Patch' })).json();
+    const res = await app.request(`${BASE}/${created.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ break_decay_multiplier: 0.75 }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.break_decay_multiplier).toBe(0.75);
+  });
+
+  it('empty-body PATCH returns existing category unchanged (200)', async () => {
+    const created = await (await createCategory({ name: 'Empty Patch' })).json();
+    const res = await app.request(`${BASE}/${created.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.name).toBe('Empty Patch');
+    expect(body.icon).toBe(created.icon);
+    expect(body.rest_multiplier).toBe(created.rest_multiplier);
+  });
 });
 
 describe('DELETE /api/categories/:id', () => {
@@ -149,6 +200,31 @@ describe('DELETE /api/categories/:id', () => {
   it('returns 404 for unknown id', async () => {
     const res = await app.request(`${BASE}/99999`, { method: 'DELETE' });
     expect(res.status).toBe(404);
+  });
+
+  it('cascade deletes items when category is deleted', async () => {
+    const cat = await (await createCategory({ name: 'Cascade Cat' })).json();
+    // Create two items under this category
+    const item1 = await (await app.request(ITEMS, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Cascade Item A', category_id: cat.id, color: '#111111' }),
+    })).json();
+    const item2 = await (await app.request(ITEMS, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Cascade Item B', category_id: cat.id, color: '#222222' }),
+    })).json();
+
+    // Delete the category
+    const delRes = await app.request(`${BASE}/${cat.id}`, { method: 'DELETE' });
+    expect(delRes.status).toBe(204);
+
+    // Items should also be gone
+    const check1 = await app.request(`${ITEMS}/${item1.id}`);
+    expect(check1.status).toBe(404);
+    const check2 = await app.request(`${ITEMS}/${item2.id}`);
+    expect(check2.status).toBe(404);
   });
 });
 

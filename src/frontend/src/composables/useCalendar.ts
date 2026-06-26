@@ -20,6 +20,7 @@ function startOfWeek(date: Date): Date {
   return d;
 }
 
+// Module-level state shared across all component instances
 const weekStart = ref<Date>(startOfWeek(new Date()));
 const sessions = ref<Session[]>([]);
 
