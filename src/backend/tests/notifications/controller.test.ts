@@ -53,6 +53,33 @@ describe('POST /api/notifications/subscribe', () => {
     expect(row).toBeDefined();
     expect(JSON.parse(row!.subscription_json).endpoint).toBe('https://push.example.com/second');
   });
+
+  it('returns 400 when body is missing endpoint', async () => {
+    const res = await app.request(`${NOTIFICATIONS}/subscribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keys: { p256dh: 'x', auth: 'y' } }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when body is missing keys.p256dh', async () => {
+    const res = await app.request(`${NOTIFICATIONS}/subscribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint: 'https://push.example.com/x', keys: { auth: 'y' } }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when body is missing keys.auth', async () => {
+    const res = await app.request(`${NOTIFICATIONS}/subscribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint: 'https://push.example.com/x', keys: { p256dh: 'x' } }),
+    });
+    expect(res.status).toBe(400);
+  });
 });
 
 describe('DELETE /api/notifications/subscribe', () => {
@@ -70,5 +97,14 @@ describe('DELETE /api/notifications/subscribe', () => {
     const { prepare } = await import('../../src/db/index.js');
     const row = prepare('SELECT * FROM push_subscriptions').get();
     expect(row).toBeUndefined();
+  });
+
+  it('returns 200 when nothing is subscribed (idempotent delete)', async () => {
+    // Ensure there's no subscription by clearing first
+    const { prepare } = await import('../../src/db/index.js');
+    prepare('DELETE FROM push_subscriptions').run();
+
+    const res = await app.request(`${NOTIFICATIONS}/subscribe`, { method: 'DELETE' });
+    expect(res.status).toBe(200);
   });
 });

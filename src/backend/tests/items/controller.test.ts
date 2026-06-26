@@ -1,51 +1,26 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import app from '../../src/server.js';
 import { runMigrations } from '../../src/db/migrations/index.js';
+import { createCategory, createItem } from '../fixtures.js';
 
 const BASE = '/api/items';
 const SESSIONS = '/api/sessions';
-const CATEGORIES_BASE = '/api/categories';
-
-const sampleCategory = {
-  name: 'Footwear',
-  icon: 'figure.walk',
-  initial_target_wear_duration_seconds: 900,
-  initial_max_wear_duration_seconds: 1800,
-  rest_multiplier: 6,
-  minimum_rest: 86400,
-  risk_levels: [
-    { lower: null, upper: 14400, text: 'safe', severity: 1 },
-    { lower: 14400, upper: 28800, text: 'moderate', severity: 2 },
-    { lower: 28800, upper: null, text: 'high', severity: 3 },
-  ],
-  break_decay_multiplier: 0.91,
-  break_grace_time: 86400,
-};
 
 let categoryId: number;
 
 beforeAll(async () => {
   runMigrations();
-  const res = await app.request(CATEGORIES_BASE, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(sampleCategory),
-  });
-  const cat = await res.json();
+  const cat = await (await createCategory()).json();
   categoryId = cat.id;
 });
 
-async function createItem(overrides: Record<string, unknown> = {}) {
-  return app.request(BASE, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: 'Test Shoe', category_id: categoryId, color: '#ff0000', ...overrides }),
-  });
+async function createItemLocal(overrides: Record<string, unknown> = {}) {
+  return createItem(categoryId, overrides);
 }
 
 describe('POST /api/items', () => {
   it('creates an item and returns 201', async () => {
-    const res = await createItem({ name: 'Running Shoe' });
+    const res = await createItemLocal({ name: 'Running Shoe' });
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.id).toBeDefined();
@@ -56,7 +31,7 @@ describe('POST /api/items', () => {
   });
 
   it('returns 400 when name is missing', async () => {
-    const res = await createItem({ name: undefined });
+    const res = await createItemLocal({ name: undefined });
     expect(res.status).toBe(400);
   });
 
@@ -70,19 +45,19 @@ describe('POST /api/items', () => {
   });
 
   it('returns 400 when color is missing', async () => {
-    const res = await createItem({ color: undefined });
+    const res = await createItemLocal({ color: undefined });
     expect(res.status).toBe(400);
   });
 
   it('returns 400 when category does not exist', async () => {
-    const res = await createItem({ category_id: 99999 });
+    const res = await createItemLocal({ category_id: 99999 });
     expect(res.status).toBe(400);
   });
 });
 
 describe('GET /api/items', () => {
   it('returns an array of items', async () => {
-    await createItem({ name: 'List Item' });
+    await createItemLocal({ name: 'List Item' });
     const res = await app.request(BASE);
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -103,7 +78,7 @@ describe('GET /api/items', () => {
 
 describe('GET /api/items/:id', () => {
   it('returns a single item', async () => {
-    const created = await (await createItem({ name: 'Single Item' })).json();
+    const created = await (await createItemLocal({ name: 'Single Item' })).json();
     const res = await app.request(`${BASE}/${created.id}`);
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -119,7 +94,7 @@ describe('GET /api/items/:id', () => {
 
 describe('PATCH /api/items/:id', () => {
   it('updates name', async () => {
-    const created = await (await createItem({ name: 'Patchable' })).json();
+    const created = await (await createItemLocal({ name: 'Patchable' })).json();
     const res = await app.request(`${BASE}/${created.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -138,11 +113,59 @@ describe('PATCH /api/items/:id', () => {
     });
     expect(res.status).toBe(404);
   });
+
+  it('patches color', async () => {
+    const created = await (await createItemLocal({ name: 'Color Patch' })).json();
+    const res = await app.request(`${BASE}/${created.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ color: '#0000ff' }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.color).toBe('#0000ff');
+    expect(body.name).toBe('Color Patch');
+  });
+
+  it('patches difficulty_multiplier', async () => {
+    const created = await (await createItemLocal({ name: 'Difficulty Patch' })).json();
+    const res = await app.request(`${BASE}/${created.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ difficulty_multiplier: 1.5 }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.difficulty_multiplier).toBe(1.5);
+  });
+
+  it('patches category_id to another valid category', async () => {
+    const cat2 = await (await createCategory({ name: 'Second Cat' })).json();
+    const created = await (await createItemLocal({ name: 'Cat Mover' })).json();
+    const res = await app.request(`${BASE}/${created.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category_id: cat2.id }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.category_id).toBe(cat2.id);
+  });
+
+  it('patches category_id to a nonexistent category returns 400', async () => {
+    const created = await (await createItemLocal({ name: 'Cat Move Fail' })).json();
+    const res = await app.request(`${BASE}/${created.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category_id: 99999 }),
+    });
+    expect(res.status).toBe(400);
+  });
 });
 
 describe('DELETE /api/items/:id', () => {
   it('deletes an item and returns 204', async () => {
-    const created = await (await createItem({ name: 'Delete Me' })).json();
+    const created = await (await createItemLocal({ name: 'Delete Me' })).json();
     const res = await app.request(`${BASE}/${created.id}`, { method: 'DELETE' });
     expect(res.status).toBe(204);
     const check = await app.request(`${BASE}/${created.id}`);
@@ -157,7 +180,7 @@ describe('DELETE /api/items/:id', () => {
 
 describe('GET /api/items/:id/stats', () => {
   it('returns zeroed stats for an item with no sessions', async () => {
-    const item = await (await createItem({ name: 'No Sessions' })).json();
+    const item = await (await createItemLocal({ name: 'No Sessions' })).json();
     const res = await app.request(`${BASE}/${item.id}/stats`);
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -170,7 +193,7 @@ describe('GET /api/items/:id/stats', () => {
   });
 
   it('reflects stats after a completed session', async () => {
-    const item = await (await createItem({ name: 'Stats Item' })).json();
+    const item = await (await createItemLocal({ name: 'Stats Item' })).json();
     const startTs = Math.floor(Date.now() / 1000) - 3600;
     const s = await (await app.request(`${SESSIONS}/start`, {
       method: 'POST',
@@ -195,7 +218,7 @@ describe('GET /api/items/:id/stats', () => {
 
 describe('GET /api/items/:id/stats/history', () => {
   it('returns monthly time-series', async () => {
-    const item = await (await createItem({ name: 'History Item' })).json();
+    const item = await (await createItemLocal({ name: 'History Item' })).json();
     const s = await (await app.request(`${SESSIONS}/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -215,14 +238,14 @@ describe('GET /api/items/:id/stats/history', () => {
   });
 
   it('returns weekly time-series', async () => {
-    const item = await (await createItem({ name: 'History Item Weekly' })).json();
+    const item = await (await createItemLocal({ name: 'History Item Weekly' })).json();
     const res = await app.request(`${BASE}/${item.id}/stats/history?unit=week`);
     expect(res.status).toBe(200);
     expect(Array.isArray(await res.json())).toBe(true);
   });
 
   it('returns 400 for invalid unit', async () => {
-    const item = await (await createItem({ name: 'History Bad Unit' })).json();
+    const item = await (await createItemLocal({ name: 'History Bad Unit' })).json();
     const res = await app.request(`${BASE}/${item.id}/stats/history?unit=day`);
     expect(res.status).toBe(400);
   });

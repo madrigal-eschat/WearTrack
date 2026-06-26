@@ -2,26 +2,12 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import app from '../../src/server.js';
 import { runMigrations } from '../../src/db/migrations/index.js';
 import { prepare } from '../../src/db/index.js';
+import { createCategory, createItem } from '../fixtures.js';
 
 const SESSIONS = '/api/sessions';
 const ITEMS = '/api/items';
 const CATEGORIES = '/api/categories';
-
-const sampleCategory = {
-  name: 'Footwear',
-  icon: 'figure.walk',
-  initial_target_wear_duration_seconds: 900,
-  initial_max_wear_duration_seconds: 1800,
-  rest_multiplier: 6,
-  minimum_rest: 86400,
-  risk_levels: [
-    { lower: null, upper: 14400, text: 'safe', severity: 1 },
-    { lower: 14400, upper: 28800, text: 'moderate', severity: 2 },
-    { lower: 28800, upper: null, text: 'high', severity: 3 },
-  ],
-  break_decay_multiplier: 0.91,
-  break_grace_time: 86400,
-};
+const INJURIES = '/api/injuries';
 
 let categoryId: number;
 let itemId: number;
@@ -30,19 +16,11 @@ let decayItemId: number;
 
 beforeAll(async () => {
   runMigrations();
-  const catRes = await app.request(CATEGORIES, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(sampleCategory),
-  });
-  categoryId = (await catRes.json()).id;
+  const cat = await (await createCategory()).json();
+  categoryId = cat.id;
 
-  const itemRes = await app.request(ITEMS, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: 'Test Shoe', category_id: categoryId, color: '#ff0000' }),
-  });
-  itemId = (await itemRes.json()).id;
+  const item = await (await createItem(categoryId, { name: 'Test Shoe' })).json();
+  itemId = item.id;
 });
 
 async function startSession(overrides: Record<string, unknown> = {}) {
@@ -70,6 +48,38 @@ describe('GET /api/sessions/current expected durations', () => {
     const ourItem = entry.items.find((i: { item_id: number }) => i.item_id === itemId);
     expect(ourItem.expected_target).toBe(900);
     expect(ourItem.expected_max).toBe(1800);
+  });
+
+  it('halves expected_target and expected_max when an active injury exists for an item', async () => {
+    // Create a fresh category and item with no history
+    const cat = await (await createCategory({ name: 'Injury Halve Cat' })).json();
+    const item = await (await createItem(cat.id, { name: 'Injury Shoe', color: '#aabbcc' })).json();
+
+    // Verify baseline expected values (first session: target=900, max=1800)
+    const resBefore = await app.request(`${SESSIONS}/current`);
+    const bodyBefore = await resBefore.json();
+    const entryBefore = bodyBefore.find((e: { category: { id: number } }) => e.category.id === cat.id);
+    const itemBefore = entryBefore.items.find((i: { item_id: number }) => i.item_id === item.id);
+    expect(itemBefore.expected_target).toBe(900);
+    expect(itemBefore.expected_max).toBe(1800);
+
+    // Record an injury for the item
+    const injury = await (await app.request(INJURIES, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: item.id }),
+    })).json();
+
+    // Now expected_target and expected_max should be halved
+    const resAfter = await app.request(`${SESSIONS}/current`);
+    const bodyAfter = await resAfter.json();
+    const entryAfter = bodyAfter.find((e: { category: { id: number } }) => e.category.id === cat.id);
+    const itemAfter = entryAfter.items.find((i: { item_id: number }) => i.item_id === item.id);
+    expect(itemAfter.expected_target).toBe(450);   // 900 / 2
+    expect(itemAfter.expected_max).toBe(900);      // 1800 / 2
+
+    // Heal the injury to clean up
+    await app.request(`${INJURIES}/${injury.id}/heal`, { method: 'POST' });
   });
 });
 
