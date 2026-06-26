@@ -51,6 +51,7 @@
             </template>
             <!-- No session: show item picker + Wear button, with target/max tucked below on small screens -->
             <template v-else>
+              <div class="flex flex-col items-end gap-1">
               <div class="flex flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-2">
                 <!-- controls — first on mobile, second on wide (sm:order-2) -->
                 <div class="flex gap-2 items-center sm:order-2">
@@ -83,9 +84,6 @@
                       <span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Max</span>{{ idleMax(entry) }}
                     </template>
                   </div>
-                  <div v-if="restRemainingSeconds(entry) > 0" class="text-xs text-amber-600 mt-0.5">
-                    <Icon icon="ph:bed" class="inline w-3 h-3 mr-0.5" />Rest {{ shortDuration(restRemainingSeconds(entry)) }} more
-                  </div>
                 </div>
                 <!-- Decay info: "Start before" date + warning badge (category-level, always visible) -->
                 <template v-if="entry.decay_start_time !== null">
@@ -99,6 +97,10 @@
                     <Icon icon="ph:warning-circle" class="inline w-3 h-3 mr-0.5" />Target and max have returned to initial values
                   </div>
                 </template>
+              </div>
+              <div v-if="restRemainingSeconds(entry) > 0" class="text-xs text-amber-600">
+                <Icon icon="ph:bed" class="inline w-3 h-3 mr-0.5" />Rest {{ shortDuration(restRemainingSeconds(entry)) }} more
+              </div>
               </div>
             </template>
           </div>
