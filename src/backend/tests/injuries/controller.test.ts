@@ -1,10 +1,9 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import app from '../../src/server.js';
 import { runMigrations } from '../../src/db/migrations/index.js';
-import { sampleCategory, createCategory, createItem } from '../fixtures.js';
+import { createCategory, createItem } from '../fixtures.js';
 
 const INJURIES = '/api/injuries';
-const ITEMS = '/api/items';
 const SESSIONS = '/api/sessions';
 
 let categoryId: number;
