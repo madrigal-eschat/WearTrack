@@ -36,6 +36,9 @@ spec:
               value: production
             - name: DB_PATH
               value: /data/weartrack.db
+          envFrom:
+            - secretRef:
+                name: weartrack-vapid
           readinessProbe:
             httpGet:
               path: /

@@ -10,3 +10,10 @@ kubectl create secret docker-registry ${K8S_IMAGE_PULL_SECRET_NAME} \
   --docker-password="${K8S_REGISTRY_PULL_TOKEN}" \
   --namespace="${k8s_namespace}" \
   --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl create secret generic weartrack-vapid \
+  --from-literal=VAPID_PUBLIC_KEY="${VAPID_PUBLIC_KEY}" \
+  --from-literal=VAPID_PRIVATE_KEY="${VAPID_PRIVATE_KEY}" \
+  --from-literal=VAPID_SUBJECT="${VAPID_SUBJECT}" \
+  --namespace="${k8s_namespace}" \
+  --dry-run=client -o yaml | kubectl apply -f -
