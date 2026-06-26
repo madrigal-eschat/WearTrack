@@ -25,6 +25,11 @@ app.get('/api/health', (c) => {
   return c.json({ status: 'ok' });
 });
 
+app.get('/api/version', (c) => {
+  const version = process.env.COMMIT_HASH || 'unknown';
+  return c.json({ version });
+});
+
 if (process.env.NODE_ENV !== 'production' || process.env.E2E_TEST === '1') {
   app.post('/api/__reset', (c) => {
     dbExport.exec(`
