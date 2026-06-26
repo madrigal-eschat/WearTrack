@@ -44,6 +44,8 @@ describe('shortDuration', () => {
   it('returns hours and minutes when not a whole hour', () => {
     expect(shortDuration(3723)).toBe('1h 2m');
     expect(shortDuration(5400)).toBe('1h 30m');
+    // Regression: 18300 s = 305 min = 5h 5m — must not display as "305m"
+    expect(shortDuration(18300)).toBe('5h 5m');
   });
 
   it('returns days only when whole days', () => {
