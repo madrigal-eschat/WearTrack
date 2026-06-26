@@ -33,6 +33,29 @@ export interface SessionSnapshot {
   rest_seconds: number | null;
 }
 
+type PrevSession = { ended_at: number; rest_seconds: number | null };
+
+function computeNewStreak(
+  stats: CategoryStats,
+  prevSession: PrevSession | null,
+  session: SessionSnapshot,
+  breakGraceTime: number,
+): { streak_count: number; streak_wear: number } {
+  const duration = session.ended_at - session.started_at;
+  let streakWear = stats.streak_wear_seconds + duration;
+  let streakCount = stats.streak_count + 1;
+
+  if (prevSession && prevSession.rest_seconds !== null) {
+    const breakSeconds = session.started_at - prevSession.ended_at;
+    if (breakSeconds > prevSession.rest_seconds + breakGraceTime) {
+      streakWear = duration;
+      streakCount = 1;
+    }
+  }
+
+  return { streak_count: streakCount, streak_wear: streakWear };
+}
+
 class StatsStore {
   // ── Per-item ────────────────────────────────────────────────────────────────
 
@@ -108,20 +131,10 @@ class StatsStore {
          WHERE i.category_id = ? AND s.ended_at IS NOT NULL AND s.id != ?
          ORDER BY s.ended_at DESC LIMIT 1`,
       )
-      .get(categoryId, session.id) as
-      | { ended_at: number; rest_seconds: number | null }
-      | undefined;
+      .get(categoryId, session.id) as PrevSession | undefined;
 
-    let streakWear = stats.streak_wear_seconds + duration;
-    let streakCount = stats.streak_count + 1;
-
-    if (prev && prev.rest_seconds !== null) {
-      const breakSeconds = session.started_at - prev.ended_at;
-      if (breakSeconds > prev.rest_seconds + breakGraceTime) {
-        streakWear = duration;
-        streakCount = 1;
-      }
-    }
+    const { streak_count: streakCount, streak_wear: streakWear } =
+      computeNewStreak(stats, prev ?? null, session, breakGraceTime);
 
     const newBestStreakWear = Math.max(stats.best_streak_wear_seconds, streakWear);
     const newBestStreakCount =

@@ -17,6 +17,7 @@ export interface HistoryEntry {
 export type ItemCreate = { name: string; category_id: number; color: string; difficulty_multiplier?: number };
 export type ItemUpdate = Partial<ItemCreate>;
 
+// Module-level state shared across all component instances
 const items = ref<Item[]>([]);
 
 async function loadItems(categoryId?: number): Promise<void> {

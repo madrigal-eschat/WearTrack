@@ -148,6 +148,29 @@ function overMaxPenaltySeconds(elapsed: number, sessionMax: number): number {
   return (elapsed - sessionMax) * 2;
 }
 
+// ─── Decay ────────────────────────────────────────────────────────────────────
+
+export type DecayState = 'none' | 'decaying' | 'fully_decayed';
+
+export function computeDecay(
+  previous: { ended_at: number; rest_seconds: number; target_wear_seconds: number } | null,
+  category: { break_grace_time: number; break_decay_multiplier: number; initial_target_wear_duration_seconds: number },
+  now: number,
+): { decay_start_time: number | null; decay_state: DecayState } {
+  if (!previous) return { decay_start_time: null, decay_state: 'none' };
+
+  const decayStartTime = previous.ended_at + previous.rest_seconds + category.break_grace_time;
+  if (now <= decayStartTime) return { decay_start_time: decayStartTime, decay_state: 'none' };
+
+  const daysSinceGrace = Math.floor((now - decayStartTime) / 86400);
+  const decayFactor = category.break_decay_multiplier ** daysSinceGrace;
+  const initial = category.initial_target_wear_duration_seconds;
+  const decayed = (previous.target_wear_seconds + initial) * decayFactor;
+
+  const decay_state: DecayState = decayed <= initial ? 'fully_decayed' : 'decaying';
+  return { decay_start_time: decayStartTime, decay_state };
+}
+
 /** Session-End rest formula from docs/design/duration-formula.md. */
 export function computeRest(
   elapsed: number,

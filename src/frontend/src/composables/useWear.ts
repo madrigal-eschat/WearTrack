@@ -57,6 +57,7 @@ export interface CurrentEntry {
   decay_state: 'none' | 'decaying' | 'fully_decayed';
 }
 
+// Module-level state shared across all component instances
 const currentSessions = ref<CurrentEntry[]>([]);
 const loading = ref(false);
 const loaded = ref(false);
