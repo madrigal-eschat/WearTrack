@@ -69,8 +69,8 @@
                   <k-button
                     small
                     :disabled="!selectedItem[entry.category.id]"
-                    :class="{ 'opacity-60': restRemainingMinutes(entry) > 0 }"
-                    @click="restRemainingMinutes(entry) > 0 ? showRestWarning(entry) : onWear(entry)"
+                    :class="{ 'opacity-60': restRemainingSeconds(entry) > 0 }"
+                    @click="restRemainingSeconds(entry) > 0 ? showRestWarning(entry) : onWear(entry)"
                   >Wear</k-button>
                 </div>
                 <!-- target/max — second on mobile (below), first on wide (sm:order-1) -->
@@ -115,7 +115,7 @@
     <template #title>Start during rest?</template>
     <template #content>
       <template v-if="restWarning.entry">
-        {{ restRemainingMinutes(restWarning.entry) }} min of rest remaining.
+        {{ shortDuration(restRemainingSeconds(restWarning.entry)) }} of rest remaining.
         Starting early reduces your target to
         <strong>{{ idleTarget(restWarning.entry) }}</strong>.
       </template>
