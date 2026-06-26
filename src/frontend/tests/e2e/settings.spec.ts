@@ -48,8 +48,9 @@ test.describe('SettingsDrawer', () => {
   test('clicking the Settings tab opens the settings sheet', async ({ page }) => {
     await openSettings(page);
 
-    // The sheet toolbar contains a "Settings" heading
-    await expect(page.getByText('Settings', { exact: true })).toBeVisible();
+    // The sheet toolbar contains a "Settings" heading (use .first() to avoid
+    // strict-mode violation — the tab bar link also contains "Settings" text)
+    await expect(page.getByText('Settings', { exact: true }).first()).toBeVisible();
     // And a "Done" button
     await expect(page.getByRole('button', { name: 'Done' })).toBeVisible();
   });
