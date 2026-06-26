@@ -1,9 +1,10 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import type { Ref } from 'vue';
+import { apiFetch } from '../utils/apiFetch.js';
 
 export async function fetchVersion(): Promise<string | null> {
   try {
-    const res = await fetch('/api/version');
+    const res = await apiFetch('/api/version');
     if (!res.ok) return null;
     const { version } = await res.json() as { version: string };
     return version;

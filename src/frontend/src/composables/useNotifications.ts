@@ -1,4 +1,5 @@
 import { ref, onMounted } from 'vue';
+import { apiFetch } from '../utils/apiFetch.js';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -19,7 +20,7 @@ export function useNotifications() {
   async function init() {
     if (!isSupported) return;
     permission.value = Notification.permission;
-    const res = await fetch('/api/notifications/vapid-public-key');
+    const res = await apiFetch('/api/notifications/vapid-public-key');
     if (!res.ok) return;
     const { publicKey } = (await res.json()) as { publicKey: string | null };
     if (!publicKey) return;
@@ -40,7 +41,7 @@ export function useNotifications() {
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(cachedPublicKey),
     });
-    const res = await fetch('/api/notifications/subscribe', {
+    const res = await apiFetch('/api/notifications/subscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(sub.toJSON()),
@@ -57,7 +58,7 @@ export function useNotifications() {
     } catch {
       // Proceed to delete server-side subscription regardless
     }
-    await fetch('/api/notifications/subscribe', { method: 'DELETE' });
+    await apiFetch('/api/notifications/subscribe', { method: 'DELETE' });
     isSubscribed.value = false;
   }
 

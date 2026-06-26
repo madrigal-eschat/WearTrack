@@ -31,6 +31,6 @@ describe('fetchVersion', () => {
     });
     vi.stubGlobal('fetch', mockFetch);
     await fetchVersion();
-    expect(mockFetch).toHaveBeenCalledWith('/api/version');
+    expect(mockFetch).toHaveBeenCalledWith('/api/version', undefined);
   });
 });

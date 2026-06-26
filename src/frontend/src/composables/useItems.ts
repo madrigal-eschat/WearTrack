@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import type { Item } from './useWear.js';
+import { apiFetch } from '../utils/apiFetch.js';
 
 export interface ItemStats {
   item_id: number;
@@ -22,25 +23,25 @@ const items = ref<Item[]>([]);
 
 async function loadItems(categoryId?: number): Promise<void> {
   const url = categoryId !== undefined ? `/api/items?category_id=${categoryId}` : '/api/items';
-  const res = await fetch(url);
+  const res = await apiFetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   items.value = await res.json();
 }
 
 async function loadItemStats(id: number): Promise<ItemStats> {
-  const res = await fetch(`/api/items/${id}/stats`);
+  const res = await apiFetch(`/api/items/${id}/stats`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
 
 async function loadHistory(id: number, unit: 'month' | 'week' = 'month'): Promise<HistoryEntry[]> {
-  const res = await fetch(`/api/items/${id}/stats/history?unit=${unit}`);
+  const res = await apiFetch(`/api/items/${id}/stats/history?unit=${unit}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
 
 async function createItem(data: ItemCreate): Promise<Item> {
-  const res = await fetch('/api/items', {
+  const res = await apiFetch('/api/items', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -55,7 +56,7 @@ async function createItem(data: ItemCreate): Promise<Item> {
 }
 
 async function updateItem(id: number, data: ItemUpdate): Promise<Item> {
-  const res = await fetch(`/api/items/${id}`, {
+  const res = await apiFetch(`/api/items/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -71,7 +72,7 @@ async function updateItem(id: number, data: ItemUpdate): Promise<Item> {
 }
 
 async function deleteItem(id: number): Promise<void> {
-  const res = await fetch(`/api/items/${id}`, { method: 'DELETE' });
+  const res = await apiFetch(`/api/items/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   items.value = items.value.filter((i) => i.id !== id);
 }
