@@ -40,9 +40,9 @@ Replace `fetch(` with `apiFetch(` in:
 
 No other changes to composables are required — error handling already exists for non-ok responses.
 
-### Project skill
+### Project rule
 
-A Claude Code project skill added to `.claude/skills/frontend-api-requests.md` instructing that all frontend HTTP requests must use `apiFetch` from `src/utils/apiFetch.ts` instead of calling `fetch` directly.
+A rule added to a new `CLAUDE.md` at the repo root instructing that all frontend HTTP requests must use `apiFetch` from `src/utils/apiFetch.ts` instead of calling `fetch` directly.
 
 ## Testing
 
