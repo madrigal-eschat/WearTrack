@@ -93,9 +93,9 @@ class CategoryStore {
     if (data.risk_levels !== undefined) {
       dbData.risk_levels = JSON.stringify(data.risk_levels);
     }
-    const keys = Object.keys(dbData).filter((k) => ALLOWED_COLUMNS.has(k));
-    const setClauses = keys.map((k) => `${k} = ?`).join(', ');
-    db.prepare(`UPDATE categories SET ${setClauses} WHERE id = ?`).run(...keys.map((k) => dbData[k]), id);
+    const entries = Object.entries(dbData).filter(([k]) => ALLOWED_COLUMNS.has(k));
+    const setClauses = entries.map(([k]) => `${k} = ?`).join(', ');
+    db.prepare(`UPDATE categories SET ${setClauses} WHERE id = ?`).run(...entries.map(([, v]) => v), id);
     return this.find(id)!;
   }
 
