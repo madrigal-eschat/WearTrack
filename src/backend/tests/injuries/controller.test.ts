@@ -1,45 +1,21 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import app from '../../src/server.js';
 import { runMigrations } from '../../src/db/migrations/index.js';
+import { createCategory, createItem } from '../fixtures.js';
 
 const INJURIES = '/api/injuries';
-const ITEMS = '/api/items';
-const CATEGORIES = '/api/categories';
-
-const sampleCategory = {
-  name: 'Footwear',
-  icon: 'figure.walk',
-  initial_target_wear_duration_seconds: 900,
-  initial_max_wear_duration_seconds: 1800,
-  rest_multiplier: 6,
-  minimum_rest: 86400,
-  risk_levels: [
-    { lower: null, upper: 14400, text: 'safe', severity: 1 },
-    { lower: 14400, upper: 28800, text: 'moderate', severity: 2 },
-    { lower: 28800, upper: null, text: 'high', severity: 3 },
-  ],
-  break_decay_multiplier: 0.91,
-  break_grace_time: 86400,
-};
+const SESSIONS = '/api/sessions';
 
 let categoryId: number;
 let itemId: number;
 
 beforeAll(async () => {
   runMigrations();
-  const catRes = await app.request(CATEGORIES, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(sampleCategory),
-  });
-  categoryId = (await catRes.json()).id;
+  const cat = await (await createCategory()).json();
+  categoryId = cat.id;
 
-  const itemRes = await app.request(ITEMS, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: 'Test Shoe', category_id: categoryId, color: '#ff0000' }),
-  });
-  itemId = (await itemRes.json()).id;
+  const item = await (await createItem(categoryId, { name: 'Test Shoe' })).json();
+  itemId = item.id;
 });
 
 async function createInjury(overrides: Record<string, unknown> = {}) {
@@ -70,12 +46,7 @@ describe('POST /api/injuries', () => {
 
   it('severity defaults to 1 when no wear data', async () => {
     // Create a fresh item with no sessions
-    const freshItemRes = await app.request(ITEMS, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'Fresh Shoe', category_id: categoryId, color: '#00ff00' }),
-    });
-    const freshItem = await freshItemRes.json();
+    const freshItem = await (await createItem(categoryId, { name: 'Fresh Shoe', color: '#00ff00' })).json();
 
     const res = await app.request(INJURIES, {
       method: 'POST',
@@ -108,6 +79,60 @@ describe('POST /api/injuries', () => {
   it('returns 404 when item does not exist', async () => {
     const res = await createInjury({ item_id: 99999 });
     expect(res.status).toBe(404);
+  });
+
+  it('ends an open session when one exists for the item', async () => {
+    const item = await (await createItem(categoryId, { name: 'Session Shoe', color: '#abcdef' })).json();
+
+    // Start a session for the item
+    const session = await (await app.request(`${SESSIONS}/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: item.id }),
+    })).json();
+    expect(session.ended_at).toBeNull();
+
+    // Record an injury — should end the open session
+    const injury = await (await app.request(INJURIES, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: item.id }),
+    })).json();
+    expect(injury.id).toBeDefined();
+
+    // The session should now be ended
+    const sessionCheck = await (await app.request(`${SESSIONS}/${session.id}`)).json();
+    expect(sessionCheck.ended_at).not.toBeNull();
+    expect(typeof sessionCheck.ended_at).toBe('number');
+
+    await healInjury(injury.id);
+  });
+
+  it('derives severity from last session wear when wear_seconds is omitted', async () => {
+    const item = await (await createItem(categoryId, { name: 'Wear Derive Shoe', color: '#fedcba' })).json();
+
+    // Start and end a session with substantial wear (5h = 18000s → moderate = severity 2)
+    const now = Math.floor(Date.now() / 1000);
+    const session = await (await app.request(`${SESSIONS}/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: item.id, started_at: now - 18000 }),
+    })).json();
+    await app.request(`${SESSIONS}/${session.id}/end`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ended_at: now }),
+    });
+
+    // Create an injury without specifying wear_seconds — should pick up 18000s from last session
+    const injury = await (await app.request(INJURIES, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: item.id }),
+    })).json();
+    expect(injury.severity).toBe(2); // 18000s is in the moderate band (14400..28800)
+
+    await healInjury(injury.id);
   });
 });
 

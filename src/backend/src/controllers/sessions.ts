@@ -3,38 +3,33 @@ import { sessionStore, type ItemWithLastSession } from '../db/stores/session-sto
 import { itemStore } from '../db/stores/item-store.js';
 import { categoryStore } from '../db/stores/category-store.js';
 import { injuryStore } from '../db/stores/injury-store.js';
-import { computeSessionStart } from '../db/calculations.js';
+import { computeSessionStart, computeDecay, type PreviousSession, type Category } from '../db/calculations.js';
 import { NotFoundError, ValidationError, ConflictError } from '../middleware/errors.js';
-
-function nowSeconds(): number {
-  return Math.floor(Date.now() / 1000);
-}
-
-type DecayState = 'none' | 'decaying' | 'fully_decayed';
-
-function computeDecay(
-  previous: { ended_at: number; rest_seconds: number; target_wear_seconds: number } | null,
-  category: { break_grace_time: number; break_decay_multiplier: number; initial_target_wear_duration_seconds: number },
-  now: number,
-): { decay_start_time: number | null; decay_state: DecayState } {
-  if (!previous) return { decay_start_time: null, decay_state: 'none' };
-
-  const decayStartTime = previous.ended_at + previous.rest_seconds + category.break_grace_time;
-  if (now <= decayStartTime) return { decay_start_time: decayStartTime, decay_state: 'none' };
-
-  const daysSinceGrace = Math.floor((now - decayStartTime) / 86400);
-  const decayFactor = category.break_decay_multiplier ** daysSinceGrace;
-  const initial = category.initial_target_wear_duration_seconds;
-  const decayed = (previous.target_wear_seconds + initial) * decayFactor;
-
-  const decay_state: DecayState = decayed <= initial ? 'fully_decayed' : 'decaying';
-  return { decay_start_time: decayStartTime, decay_state };
-}
+import { nowSeconds } from '../utils/time.js';
 
 /** A last-session item row enriched with the expected target/max for the next session. */
 interface ItemWithExpected extends ItemWithLastSession {
   expected_target: number;
   expected_max: number | null;
+}
+
+function enrichItemsWithExpected(
+  items: ItemWithLastSession[],
+  category: Category,
+  previous: PreviousSession | null,
+  now: number,
+  injuryActive: boolean,
+): ItemWithExpected[] {
+  return items.map((it) => {
+    const { target, max } = computeSessionStart(
+      category,
+      { difficulty_multiplier: it.difficulty_multiplier },
+      previous,
+      now,
+      injuryActive,
+    );
+    return { ...it, expected_target: target, expected_max: max };
+  });
 }
 
 export const router = new Hono();
@@ -65,16 +60,7 @@ router.get('/current', (c) => {
       const injuryActive = injuryStore.hasActiveInCategory(cat.id);
       const { decay_start_time, decay_state } = computeDecay(previous, cat, now);
 
-      const items: ItemWithExpected[] = (itemsByCategory.get(cat.id) ?? []).map((it) => {
-        const { target, max } = computeSessionStart(
-          cat,
-          { difficulty_multiplier: it.difficulty_multiplier },
-          previous,
-          now,
-          injuryActive,
-        );
-        return { ...it, expected_target: target, expected_max: max };
-      });
+      const items = enrichItemsWithExpected(itemsByCategory.get(cat.id) ?? [], cat, previous, now, injuryActive);
 
       const s = sessionByCategory.get(cat.id);
       if (!s) return { category: cat, item: null, session: null, items, decay_start_time, decay_state };

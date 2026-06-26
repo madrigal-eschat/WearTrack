@@ -145,3 +145,123 @@ test.describe('Item management', () => {
     expect(created?.color).toContain('0.2');
   });
 });
+
+test.describe('Item editing', () => {
+  let categoryName: string;
+  let itemName: string;
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/items');
+    page.on('dialog', (d) => d.accept());
+
+    // Create a fresh category via the UI form
+    categoryName = `EditItemCat-${uid()}`;
+    await page.getByRole('button', { name: '+ Add' }).first().click();
+    await page.getByLabel('Name').first().fill(categoryName);
+    await page.getByRole('button', { name: /choose icon/i }).first().click();
+    await page.waitForSelector('.overflow-y-auto');
+    await page.locator('.overflow-y-auto button').first().click();
+    await page.getByTestId('category-form-submit').click();
+    await expect(page.getByText(categoryName).first()).toBeVisible();
+
+    // Create a fresh item under that category
+    itemName = `EditItem-${uid()}`;
+    await page.getByRole('button', { name: '+ Add' }).nth(1).click();
+    await page.getByLabel('Name').last().fill(itemName);
+    await page.getByRole('button', { name: 'Add', exact: true }).click();
+    await expect(page.getByText(itemName).first()).toBeVisible();
+  });
+
+  test.afterEach(async ({ page }) => {
+    // Delete the category (cascades to items)
+    const row = page.locator('li').filter({ hasText: categoryName }).first();
+    await row.getByRole('button', { name: 'Delete' }).click().catch(() => {});
+  });
+
+  test('Edit button opens an inline edit form below the item row', async ({ page }) => {
+    const row = page.locator('li').filter({ hasText: itemName }).first();
+    await row.getByRole('button', { name: 'Edit' }).click();
+
+    // The edit form contains a Name field (id="edit-item-name") and a Save button
+    await expect(page.getByLabel('Name').last()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeVisible();
+  });
+
+  test('edit form is pre-filled with the item name', async ({ page }) => {
+    const row = page.locator('li').filter({ hasText: itemName }).first();
+    await row.getByRole('button', { name: 'Edit' }).click();
+
+    // The edit-item-name field should contain the current name
+    await expect(page.locator('#edit-item-name')).toHaveValue(itemName);
+  });
+
+  test('can rename an item and the new name appears in the list', async ({ page }) => {
+    const newName = `${itemName}-renamed`;
+
+    const row = page.locator('li').filter({ hasText: itemName }).first();
+    await row.getByRole('button', { name: 'Edit' }).click();
+
+    await page.locator('#edit-item-name').fill(newName);
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
+
+    // Form closes and updated name appears
+    await expect(page.getByRole('button', { name: 'Save', exact: true })).not.toBeVisible();
+    await expect(page.getByText(newName).first()).toBeVisible();
+
+    // Verify persisted via API
+    const items: Array<{ name: string; id: number }> = await page.request
+      .get('/api/items')
+      .then((r) => r.json());
+    expect(items.some((i) => i.name === newName)).toBe(true);
+
+    // Update cleanup reference so afterEach doesn't break on the category row
+    itemName = newName;
+  });
+
+  test('can change difficulty multiplier and the change persists', async ({ page }) => {
+    const row = page.locator('li').filter({ hasText: itemName }).first();
+    await row.getByRole('button', { name: 'Edit' }).click();
+
+    // Set difficulty to 1.5
+    await page.locator('#edit-item-difficulty').fill('1.5');
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
+
+    await expect(page.getByRole('button', { name: 'Save', exact: true })).not.toBeVisible();
+
+    // Verify via API
+    const items: Array<{ name: string; difficulty_multiplier: number }> = await page.request
+      .get('/api/items')
+      .then((r) => r.json());
+    const saved = items.find((i) => i.name === itemName);
+    expect(saved?.difficulty_multiplier).toBe(1.5);
+  });
+
+  test('Cancel button closes the edit form without saving changes', async ({ page }) => {
+    const row = page.locator('li').filter({ hasText: itemName }).first();
+    await row.getByRole('button', { name: 'Edit' }).click();
+
+    await page.locator('#edit-item-name').fill('should-not-save');
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+
+    // Form closes; original name still in list
+    await expect(page.getByRole('button', { name: 'Save', exact: true })).not.toBeVisible();
+    await expect(page.getByText(itemName).first()).toBeVisible();
+
+    // Verify API unchanged
+    const items: Array<{ name: string }> = await page.request
+      .get('/api/items')
+      .then((r) => r.json());
+    expect(items.some((i) => i.name === itemName)).toBe(true);
+    expect(items.some((i) => i.name === 'should-not-save')).toBe(false);
+  });
+
+  test('clicking Edit a second time closes the form (toggle)', async ({ page }) => {
+    const row = page.locator('li').filter({ hasText: itemName }).first();
+    await row.getByRole('button', { name: 'Edit' }).click();
+    await expect(page.locator('#edit-item-name')).toBeVisible();
+
+    // Click Edit again — form should close
+    await row.getByRole('button', { name: 'Edit' }).click();
+    await expect(page.locator('#edit-item-name')).not.toBeVisible();
+  });
+});

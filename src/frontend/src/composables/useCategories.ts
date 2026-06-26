@@ -16,6 +16,7 @@ export interface CategoryStats {
 export type CategoryCreate = Omit<Category, 'id'>;
 export type CategoryUpdate = Partial<CategoryCreate>;
 
+// Module-level state shared across all component instances
 const categories = ref<Category[]>([]);
 
 async function loadCategories(): Promise<void> {

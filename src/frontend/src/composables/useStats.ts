@@ -33,6 +33,7 @@ export const LEADERBOARD_TYPES = [
 
 export type LeaderboardType = typeof LEADERBOARD_TYPES[number]['value'];
 
+// Module-level state shared across all component instances
 const leaderboard = ref<LeaderboardEntry[]>([]);
 const activeType = ref<LeaderboardType>('longest-wear');
 const loading = ref(false);
