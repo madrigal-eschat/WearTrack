@@ -54,6 +54,14 @@ app.route('/api/leaderboards', leaderboardsRouter);
 app.route('/api/notifications', notificationsRouter);
 
 if (process.env.FRONTEND_DIST) {
+  // Content-hashed bundles are immutable; everything else (index.html, sw.js, manifest) must revalidate.
+  app.use('/*', async (c, next) => {
+    await next();
+    c.res.headers.set(
+      'Cache-Control',
+      c.req.path.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache',
+    );
+  });
   app.use('/*', serveStatic({ root: process.env.FRONTEND_DIST }));
   app.get('/*', serveStatic({ path: `${process.env.FRONTEND_DIST}/index.html` }));
 }
