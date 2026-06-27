@@ -41,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { onMounted } from 'vue';
 import { Icon } from '@iconify/vue';
 import { useCalendar, type DayEntry } from '../composables/useCalendar.js';
 import { useItems } from '../composables/useItems.js';

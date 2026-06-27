@@ -10,7 +10,9 @@ if [ "$(uname -m)" != "aarch64" ]; then
 fi
 
 # Install build tools (node:bookworm may lack them depending on variant)
-apt-get update -qq && apt-get install -y --no-install-recommends python3 make g++ 2>/dev/null || true
+if apt-get update -qq; then
+  apt-get install -y --no-install-recommends python3 make g++ 2>/dev/null || true
+fi
 
 # node-gyp is a devDependency of better-sqlite3 and won't be installed by
 # `npm ci` (production-only). Install it globally so it's on PATH.
