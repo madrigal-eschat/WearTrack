@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2154  # environment_type, k8s_namespace injected by the k8s CI component
 set -euo pipefail
 
 # After applying manifests, force a rollout restart so pods always pick up the
