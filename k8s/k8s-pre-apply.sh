@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2154  # k8s_namespace injected by the k8s CI component
 set -euo pipefail
 
 # Create/update image pull secret for the GitLab container registry.

@@ -158,7 +158,7 @@ test.describe('Wear session conflict (409)', () => {
 
   test('starting a second session in the same category shows an error toast', async ({ page }) => {
     // Select item1 in the category's picker and start a session
-    const categoryRow = page.locator('.action-pane k-list-item, .action-pane li').filter({
+    page.locator('.action-pane k-list-item, .action-pane li').filter({
       // ActionPane renders one k-list-item per category; locate by the select containing item1
       hasText: '',
     });
