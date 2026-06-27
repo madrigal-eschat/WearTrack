@@ -3,6 +3,7 @@ include:
     inputs:
       pre-commit-file: ".pre-commit-config.yaml"
       pre-commit-args: "--show-diff-on-failure"
+      pre-commit-skip: "no-commit-to-branch,eslint-backend,eslint-frontend"
   - component: $CI_SERVER_FQDN/to-be-continuous/node/gitlab-ci-node@5.3.0
     inputs:
       image: "${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/library/node:24-bookworm"
