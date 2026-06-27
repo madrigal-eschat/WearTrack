@@ -106,7 +106,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onUnmounted } from 'vue';
 import { Icon } from '@iconify/vue';
-import { kSheet, kToolbar, kButton } from 'konsta/vue';
+import { kSheet, kToolbar } from 'konsta/vue';
 import type { PhCategories } from '../utils/phCategories.js';
 import { filterIcons } from '../utils/phCategories.js';
 import categoriesData from '../generated/ph-categories.json';

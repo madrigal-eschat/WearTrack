@@ -1,0 +1,29 @@
+repos:
+  - repo: local
+    hooks:
+      - id: eslint-backend
+        name: ESLint (backend)
+        language: system
+        entry: npm --prefix src/backend run lint
+        files: ^src/backend/
+        types_or: [javascript, ts]
+        pass_filenames: false
+      - id: eslint-frontend
+        name: ESLint (frontend)
+        language: system
+        entry: npm --prefix src/frontend run lint
+        files: ^src/frontend/
+        types_or: [javascript, ts, vue]
+        pass_filenames: false
+
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-json
+      - id: check-yaml
+      - id: detect-private-key

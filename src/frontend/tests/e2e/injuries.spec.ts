@@ -97,7 +97,7 @@ test.describe('Injury recording and healing (API)', () => {
     }
 
     // Attempting to start another session while injured should fail
-    const retry = await request.post('/api/sessions/start', {
+    await request.post('/api/sessions/start', {
       data: { item_id: itemId },
     });
     // The server rejects a second injury, but a new session can still be started
