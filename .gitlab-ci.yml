@@ -93,6 +93,10 @@ playwright:
     # amd64 runner) can't reach app:3000 and every test times out.
     FF_NETWORK_PER_BUILD: "true"
 
+pre-commit:
+  rules:
+    - when: on_success
+
 docker-buildah-build:
   tags:
     - buildah
