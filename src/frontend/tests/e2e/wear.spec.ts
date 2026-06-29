@@ -67,8 +67,11 @@ test.describe('Wear sessions', () => {
     const wearBtn = page.getByRole('button', { name: /^wear$/i }).filter({ enabled: true }).first();
     await wearBtn.click();
 
-    // formatDuration returns "Xs", "Xm Ys", or "Xh Ym" — e.g. "0s", "5s", "1m 2s"
-    await expect(page.locator('text=/\\d+[smh]/').first()).toBeVisible({ timeout: 5000 });
+    // Wait for session to start (Stop button appears), then check elapsed time.
+    // Scope to .tabular-nums to avoid matching hidden <option> elements whose
+    // text content also contains digits + letters (e.g. item names like "Item-7m").
+    await expect(page.getByRole('button', { name: /stop/i }).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.tabular-nums').first()).toBeVisible();
   });
 
   test('can stop a wear session', async ({ page }) => {
