@@ -68,8 +68,11 @@ test.describe('Item management', () => {
     await page.getByRole('button', { name: 'Add', exact: true }).click();
     await expect(page.getByText(name).first()).toBeVisible();
 
-    // The category heading should precede the item in the DOM
-    const categoryHeading = page.getByText(categoryName).last();
+    // The category heading should precede the item in the DOM.
+    // Use the specific heading div (uppercase tracking-wide) to avoid matching
+    // hidden <option> elements inside the item form's category dropdown.
+    const categoryHeading = page.locator('div.uppercase', { hasText: categoryName }).first();
+    await expect(categoryHeading).toBeVisible();
     const itemEntry = page.getByText(name).first();
     const catBox = await categoryHeading.boundingBox();
     const itemBox = await itemEntry.boundingBox();
