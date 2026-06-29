@@ -158,12 +158,10 @@ describe('leaderboards', () => {
     }
   });
 
-  it('bestStreak returns results in descending best_streak_wear_seconds order', () => {
-    const rows = statsStore.bestStreak() as Array<{ best_streak_wear_seconds: number }>;
+  it('bestStreak returns results in descending best_streak_count order', () => {
+    const rows = statsStore.bestStreak() as Array<{ streak_sessions: number }>;
     for (let i = 1; i < rows.length; i++) {
-      expect(rows[i].best_streak_wear_seconds).toBeLessThanOrEqual(
-        rows[i - 1].best_streak_wear_seconds,
-      );
+      expect(rows[i].streak_sessions).toBeLessThanOrEqual(rows[i - 1].streak_sessions);
     }
   });
 

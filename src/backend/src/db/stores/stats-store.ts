@@ -137,8 +137,7 @@ class StatsStore {
       computeNewStreak(stats, prev ?? null, session, breakGraceTime);
 
     const newBestStreakWear = Math.max(stats.best_streak_wear_seconds, streakWear);
-    const newBestStreakCount =
-      streakWear > stats.best_streak_wear_seconds ? streakCount : stats.best_streak_count;
+    const newBestStreakCount = Math.max(stats.best_streak_count, streakCount);
 
     db.prepare(`
       UPDATE category_stats SET
@@ -196,7 +195,7 @@ class StatsStore {
          FROM category_stats cs
          JOIN categories c ON c.id = cs.category_id
          WHERE cs.best_streak_wear_seconds > 0
-         ORDER BY cs.best_streak_wear_seconds DESC
+         ORDER BY cs.best_streak_count DESC
          LIMIT 20`,
       )
       .all();

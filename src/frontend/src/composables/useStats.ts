@@ -21,9 +21,9 @@ export const LEADERBOARD_TYPES = [
   },
   {
     value: 'best-streak' as const,
-    label: 'Best Streak',
+    label: 'Longest Streak',
     badge: (entry: Record<string, unknown>) =>
-      formatDuration((entry.best_streak_wear_seconds ?? 0) as number),
+      `${entry.streak_sessions ?? 0} sessions`,
   },
   {
     value: 'most-sessions' as const,
