@@ -12,18 +12,18 @@ test.describe('Stats / leaderboard', () => {
   test('shows all four leaderboard type tabs', async ({ page }) => {
     await expect(page.getByRole('button', { name: /total wear/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /sessions/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /longest/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /streak/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /longest wear/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /longest streak/i })).toBeVisible();
   });
 
   test('can switch between leaderboard types', async ({ page }) => {
     await page.getByRole('button', { name: /sessions/i }).click();
     await expect(page.getByRole('button', { name: /sessions/i })).toBeVisible();
 
-    await page.getByRole('button', { name: /longest/i }).click();
-    await expect(page.getByRole('button', { name: /longest/i })).toBeVisible();
+    await page.getByRole('button', { name: /longest wear/i }).click();
+    await expect(page.getByRole('button', { name: /longest wear/i })).toBeVisible();
 
-    await page.getByRole('button', { name: /streak/i }).click();
-    await expect(page.getByRole('button', { name: /streak/i })).toBeVisible();
+    await page.getByRole('button', { name: /longest streak/i }).click();
+    await expect(page.getByRole('button', { name: /longest streak/i })).toBeVisible();
   });
 });
