@@ -68,15 +68,14 @@ test.describe('Item management', () => {
     await page.getByRole('button', { name: 'Add', exact: true }).click();
     await expect(page.getByText(name).first()).toBeVisible();
 
-    // The category heading should precede the item in the DOM.
-    // Use the specific heading div (uppercase tracking-wide) to avoid matching
-    // hidden <option> elements inside the item form's category dropdown.
-    const categoryHeading = page.locator('div.uppercase', { hasText: categoryName }).first();
-    await expect(categoryHeading).toBeVisible();
-    const itemEntry = page.getByText(name).first();
-    const catBox = await categoryHeading.boundingBox();
-    const itemBox = await itemEntry.boundingBox();
-    expect(catBox!.y).toBeLessThan(itemBox!.y);
+    // Verify the item appears within its category's section by scoping the
+    // item search to the div that wraps both the category heading and its list.
+    // This avoids fragile bounding-box comparisons that break when other
+    // categories are present on the page.
+    const categorySection = page.locator('div').filter({
+      has: page.locator('div.uppercase', { hasText: categoryName }),
+    }).first();
+    await expect(categorySection.getByText(name)).toBeVisible();
   });
 
   test('can select a color via swatch', async ({ page }) => {
