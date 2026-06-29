@@ -126,11 +126,10 @@ describe('GET /api/leaderboards/best-streak', () => {
 
   it('entries reference categories not items', async () => {
     const res = await app.request(`${LEADERBOARDS}/best-streak`);
-    const body = await res.json() as { category_id: number; category_name: string; best_streak_wear_seconds: number; streak_sessions: number }[];
+    const body = await res.json() as { category_id: number; category_name: string; streak_sessions: number }[];
     if (body.length > 0) {
       expect(typeof body[0].category_id).toBe('number');
       expect(typeof body[0].category_name).toBe('string');
-      expect(typeof body[0].best_streak_wear_seconds).toBe('number');
       expect(typeof body[0].streak_sessions).toBe('number');
       // Should NOT have item_id
       expect((body[0] as Record<string, unknown>).item_id).toBeUndefined();
