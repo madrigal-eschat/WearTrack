@@ -5,7 +5,7 @@ set -euo pipefail
 # Create/update image pull secret for the GitLab container registry.
 # Uses a long-lived deploy token (K8S_REGISTRY_PULL_USER / K8S_REGISTRY_PULL_TOKEN)
 # stored as group-level CI/CD variables, so the secret survives beyond the pipeline run.
-kubectl create secret docker-registry ${K8S_IMAGE_PULL_SECRET_NAME} \
+kubectl create secret docker-registry "${K8S_IMAGE_PULL_SECRET_NAME}" \
   --docker-server="${CI_REGISTRY}" \
   --docker-username="${K8S_REGISTRY_PULL_USER}" \
   --docker-password="${K8S_REGISTRY_PULL_TOKEN}" \
