@@ -27,7 +27,7 @@ spec:
         - name: ${K8S_IMAGE_PULL_SECRET_NAME}
       containers:
         - name: weartrack
-          image: ${CI_REGISTRY_IMAGE}:latest
+          image: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME}
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
