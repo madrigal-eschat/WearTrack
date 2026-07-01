@@ -3,12 +3,12 @@ kind: Ingress
 metadata:
   name: weartrack
   annotations:
-    traefik.ingress.kubernetes.io/router.middlewares: ${K8S_INGRESS_AUTH_MIDDLEWARE}
+    traefik.ingress.kubernetes.io/router.middlewares: "${K8S_INGRESS_AUTH_MIDDLEWARE}"
     traefik.ingress.kubernetes.io/router.tls: "true"
 spec:
   ingressClassName: traefik
   rules:
-    - host: ${K8S_INGRESS_HOST}
+    - host: "${K8S_INGRESS_HOST}"
       http:
         paths:
           - path: /
@@ -20,4 +20,4 @@ spec:
                   number: 3000
   tls:
     - hosts:
-        - ${K8S_INGRESS_HOST}
+        - "${K8S_INGRESS_HOST}"

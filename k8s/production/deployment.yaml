@@ -17,17 +17,17 @@ spec:
         app: weartrack
     spec:
       nodeSelector:
-        kubernetes.io/hostname: ${K8S_NODE_HOSTNAME}
+        kubernetes.io/hostname: "${K8S_NODE_HOSTNAME}"
       securityContext:
         runAsUser: 1000
         runAsGroup: 1000
         runAsNonRoot: true
         fsGroup: 1000
       imagePullSecrets:
-        - name: ${K8S_IMAGE_PULL_SECRET_NAME}
+        - name: "${K8S_IMAGE_PULL_SECRET_NAME}"
       containers:
         - name: weartrack
-          image: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME}
+          image: "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_NAME}"
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
