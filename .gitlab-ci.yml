@@ -36,6 +36,10 @@ include:
 
 variables:
   KUBE_CONTEXT: $CI_PROJECT_ROOT_NAMESPACE/cluster-management:home
+  K8S_NODE_HOSTNAME: ${K8S_NODE_HOSTNAME}
+  K8S_INGRESS_HOST: ${K8S_INGRESS_HOST}
+  K8S_INGRESS_AUTH_MIDDLEWARE: ${K8S_INGRESS_AUTH_MIDDLEWARE}
+  K8S_IMAGE_PULL_SECRET_NAME: ${K8S_IMAGE_PULL_SECRET_NAME}
 
 # Compile better-sqlite3 for arm64 and publish to the GitLab Package Registry.
 # Almost always a no-op (exits immediately if the prebuilt already exists for
