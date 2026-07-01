@@ -13,3 +13,4 @@ dist/
 .DS_Store
 .*.sw*
 test-results/
+coverage/
