@@ -39,9 +39,14 @@
             <!-- Active session: show elapsed + Stop -->
             <template v-if="entry.session !== null">
               <div class="text-right tabular-nums leading-snug whitespace-nowrap">
-                <div class="text-sm text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Worn</span>{{ elapsed(entry.session) }}</div>
-                <div class="text-sm text-gray-600 mt-0.5"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Target</span>{{ targetLabel(entry) }}</div>
-                <div v-if="entry.session.max_wear_seconds !== null" class="text-sm text-gray-600 mt-0.5"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Max</span>{{ maxWear(entry) }}</div>
+                <div class="flex gap-3 justify-end">
+                  <span class="text-sm text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Worn</span>{{ elapsed(entry.session) }}</span>
+                  <span class="text-sm" :class="isOverdue(entry) ? 'text-red-600 font-semibold' : 'text-gray-600'"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Remaining</span>{{ remainingLabel(entry) }}</span>
+                </div>
+                <div class="flex gap-3 justify-end mt-0.5">
+                  <span class="text-sm text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Target</span>{{ targetLabel(entry) }}</span>
+                  <span v-if="entry.session.max_wear_seconds !== null" class="text-sm text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Max</span>{{ maxWear(entry) }}</span>
+                </div>
               </div>
               <k-button
                 small
@@ -138,7 +143,7 @@ import { useItems } from '../composables/useItems.js';
 import { useNow } from '../composables/useNow.js';
 import { useToast } from '../composables/useToast.js';
 import { formatDuration, shortDuration } from '../utils/formatDuration.js';
-import { targetWearSeconds, maxWearSeconds, currentWear } from '../utils/wearCalculations.js';
+import { targetWearSeconds, maxWearSeconds, currentWear, remainingWearSeconds } from '../utils/wearCalculations.js';
 
 const { currentSessions, loaded, startSession, endSession } = useWear();
 const { loadItems, itemsForCategory } = useItems();
@@ -201,6 +206,21 @@ function maxWear(entry: CurrentEntry): string {
 function targetLabel(entry: CurrentEntry): string {
   if (!entry.session) return '';
   return formatDuration(targetWearSeconds(entry.session));
+}
+
+function remainingSecondsFor(session: Session): number | null {
+  return remainingWearSeconds(session, Math.floor(now.value / 1000));
+}
+
+function remainingLabel(entry: CurrentEntry): string {
+  if (!entry.session) return '';
+  const remaining = remainingSecondsFor(entry.session);
+  return remaining === null ? 'Stop wearing' : formatDuration(remaining);
+}
+
+function isOverdue(entry: CurrentEntry): boolean {
+  if (!entry.session) return false;
+  return remainingSecondsFor(entry.session) === null;
 }
 
 function wearProgress(entry: CurrentEntry): number {
