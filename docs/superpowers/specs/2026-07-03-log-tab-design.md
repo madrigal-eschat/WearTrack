@@ -149,7 +149,7 @@ excluding the deleted session). If no other session shares that
 row — the one case where the index needs cleanup, since deletion (unlike
 editing) can remove a day's only session.
 
-**UI:** each Log row gets a meatball (⋮) menu with **Edit** and **Delete**.
+**UI:** each Log row gets a kebab (⋯) menu with **Edit** and **Delete**.
 Edit opens a sheet with synced end-time/duration fields, clamped to
 whichever range applies per the policy above. Delete asks for confirmation
 before calling the API.
@@ -180,4 +180,4 @@ before calling the API.
 - Frontend: component test that `loadMore()` fires on sentinel visibility
   and appends rather than replaces; that changing a filter resets the list;
   that jumping to a bucket entry reloads from the correct cursor; that the
-  meatball menu's Delete requires confirmation before calling the API.
+  kebab menu's Delete requires confirmation before calling the API.
