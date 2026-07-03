@@ -104,6 +104,56 @@ Tapping an entry resets the current list and calls `loadInitial()` with
 the first row shown is the latest session at-or-before that point — the
 same cursor mechanism infinite scroll uses.
 
+### Editing a session after the fact
+
+Sessions' `started_at` is immutable; only the end time (equivalently,
+duration — editing one derives the other) can be corrected.
+
+**API:** `PATCH /api/sessions/:id`, body is either `{ ended_at }` or
+`{ duration_seconds }` (the other is derived from the existing
+`started_at`). Only server-side validation: `started_at < new ended_at`. No
+overlap-with-next-session or shrink-only enforcement server-side — that
+policy lives entirely in the UI (below). On success:
+
+- Recompute `rest_seconds` using the same `riskLevelFor`/`computeRest` logic
+  `session-store.ts`'s `end()` already uses for the new elapsed duration.
+- If the session is not `ended_in_injury`, recompute that item's and
+  category's stats from scratch: reset their `stats`/`category_stats` rows
+  and replay every completed, non-injury session for that item/category in
+  chronological order through the existing `recordItemSession`/
+  `recordCategorySession` functions. This is simpler and more robust than
+  patching deltas, since an older session's duration change can ripple
+  through the category's streak chaining for every session after it.
+- `started_at` is untouched, so `session_day_index` needs no update.
+
+**UI policy (enforced only client-side, not persisted):** the Log
+composable keeps in-memory state `lastEdited: { sessionId, originalEndedAt } | null`.
+
+- Editing a session for the first time (or when it isn't the
+  `lastEdited` one) only allows shrinking: new end must fall in
+  `(started_at, current ended_at]`. Applying the edit records the pre-edit
+  `ended_at` into `lastEdited` for that session.
+- If the session being edited **is** the current `lastEdited` one, the
+  allowed range widens to `(started_at, lastEdited.originalEndedAt]` — one
+  extra chance to move the end anywhere back up to what it originally was,
+  to fix a mis-edit.
+- Editing a *different* session, or a page reload (this state is
+  module-level, in-memory only — never persisted), replaces/clears that
+  memory, permanently locking the previous session back to shrink-only from
+  its now-current end.
+
+**Deleting a session:** `DELETE /api/sessions/:id`. Deletes the row, then
+recomputes that item's/category's stats the same way (replay from scratch,
+excluding the deleted session). If no other session shares that
+(day, category, item) combo, also deletes the matching `session_day_index`
+row — the one case where the index needs cleanup, since deletion (unlike
+editing) can remove a day's only session.
+
+**UI:** each Log row gets a meatball (⋮) menu with **Edit** and **Delete**.
+Edit opens a sheet with synced end-time/duration fields, clamped to
+whichever range applies per the policy above. Delete asks for confirmation
+before calling the API.
+
 ### Testing
 
 - Backend: unit tests for `before`/`limit` pagination boundaries, combined
@@ -112,8 +162,22 @@ same cursor mechanism infinite scroll uses.
   case).
 - Backend: unit tests for the dates endpoint across all four filter
   combinations.
+- Backend: unit tests for `PATCH /api/sessions/:id` — rejects
+  `ended_at <= started_at`; derives duration/end-time correctly from
+  either input; recomputes `rest_seconds`; recomputes item/category stats
+  correctly for an edit to a non-final session in a category's streak
+  chain; skips stats recompute for `ended_in_injury` sessions.
+- Backend: unit tests for `DELETE /api/sessions/:id` — recomputes stats
+  correctly; removes the `session_day_index` row only when it was the last
+  session for that (day, category, item); leaves it when a sibling session
+  remains.
 - Frontend: unit test the bucketing/dedup logic (given a list of day
   strings, produces the right tiered index with no overlap).
+- Frontend: unit test the `lastEdited` shrink-only/full-range policy:
+  first edit is shrink-only; immediate re-edit of the same session allows
+  the full original range; editing a different session locks the first
+  back to shrink-only.
 - Frontend: component test that `loadMore()` fires on sentinel visibility
   and appends rather than replaces; that changing a filter resets the list;
-  that jumping to a bucket entry reloads from the correct cursor.
+  that jumping to a bucket entry reloads from the correct cursor; that the
+  meatball menu's Delete requires confirmation before calling the API.
