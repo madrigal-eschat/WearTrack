@@ -533,3 +533,66 @@ describe('Stats updates after session end', () => {
     expect(catStatsAfter.streak_count).toBe(catStatsBefore.streak_count + 1);
   });
 });
+
+describe('session_day_index population', () => {
+  it('adds a row when a session ends normally', async () => {
+    const startTs = Math.floor(Date.now() / 1000) - 3600;
+    const s = await (await startSession({ started_at: startTs })).json();
+    const day = new Date(startTs * 1000).toISOString().slice(0, 10);
+
+    prepare('DELETE FROM session_day_index WHERE day = ?').run(day);
+    await endSession(s.id);
+
+    const row = prepare(
+      'SELECT * FROM session_day_index WHERE day = ? AND item_id = ?',
+    ).get(day, itemId);
+    expect(row).toBeDefined();
+  });
+
+  it('is a no-op on a second session ending the same day for the same item', async () => {
+    const startTs = Math.floor(Date.now() / 1000) - 3600;
+    const day = new Date(startTs * 1000).toISOString().slice(0, 10);
+
+    const s1 = await (await startSession({ started_at: startTs })).json();
+    await endSession(s1.id);
+    const countAfterFirst = (
+      prepare('SELECT COUNT(*) AS n FROM session_day_index WHERE day = ? AND item_id = ?').get(day, itemId) as {
+        n: number;
+      }
+    ).n;
+
+    const s2 = await (await startSession({ started_at: startTs + 60 })).json();
+    await endSession(s2.id);
+    const countAfterSecond = (
+      prepare('SELECT COUNT(*) AS n FROM session_day_index WHERE day = ? AND item_id = ?').get(day, itemId) as {
+        n: number;
+      }
+    ).n;
+
+    expect(countAfterSecond).toBe(countAfterFirst);
+  });
+
+  it('also adds a row when a session ends in injury', async () => {
+    const startTs = Math.floor(Date.now() / 1000) - 3600;
+    const day = new Date(startTs * 1000).toISOString().slice(0, 10);
+    await startSession({ started_at: startTs });
+
+    await app.request(`${INJURIES}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemId }),
+    });
+
+    const row = prepare(
+      'SELECT * FROM session_day_index WHERE day = ? AND item_id = ?',
+    ).get(day, itemId);
+    expect(row).toBeDefined();
+
+    // Heal to clean up for later tests
+    const injury = await (
+      await app.request(`${INJURIES}?item_id=${itemId}`)
+    ).json();
+    const active = injury.find((i: { healed_at: number | null }) => i.healed_at === null);
+    if (active) await app.request(`${INJURIES}/${active.id}/heal`, { method: 'POST' });
+  });
+});
