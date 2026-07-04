@@ -123,6 +123,16 @@ class SessionStore {
     return this.find(result.lastInsertRowid as number)!;
   }
 
+  /** Write-through derived index: one row per (day, category, item) the first time a session on it completes. */
+  recordDayIndex(sessionId: number): void {
+    db.prepare(
+      `INSERT OR IGNORE INTO session_day_index (day, category_id, item_id)
+       SELECT date(s.started_at, 'unixepoch'), i.category_id, s.item_id
+       FROM sessions s JOIN items i ON i.id = s.item_id
+       WHERE s.id = ?`,
+    ).run(sessionId);
+  }
+
   /** End a session: derive elapsed, compute rest, persist; target/max stay as set at start. */
   end(session: Session, category: Category, endedAt: number): Session {
     return db.transaction(() => {
@@ -137,6 +147,7 @@ class SessionStore {
       const snapshot = { ...updated, ended_at: endedAt };
       statsStore.recordItemSession(snapshot);
       statsStore.recordCategorySession(category.id, category.break_grace_time, snapshot);
+      this.recordDayIndex(session.id);
       return updated;
     })();
   }
@@ -146,6 +157,7 @@ class SessionStore {
    */
   endWithInjury(sessionId: number, endedAt: number): void {
     db.prepare('UPDATE sessions SET ended_at = ?, ended_in_injury = 1 WHERE id = ?').run(endedAt, sessionId);
+    this.recordDayIndex(sessionId);
   }
 }
 
