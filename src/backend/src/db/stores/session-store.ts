@@ -27,6 +27,14 @@ export interface OpenSessionWithItem extends Session {
   item_difficulty_multiplier: number;
 }
 
+export interface SessionWithDetails extends Session {
+  category_id: number;
+  item_name: string;
+  item_color: string;
+  category_name: string;
+  category_icon: string;
+}
+
 export interface ItemWithLastSession {
   item_id: number;
   category_id: number;
@@ -58,11 +66,54 @@ class SessionStore {
       .all() as ItemWithLastSession[];
   }
 
-  findAll(itemId?: number): Session[] {
+  findAll(opts: { itemId?: number; categoryId?: number; before?: number; limit?: number } = {}): SessionWithDetails[] {
+    const { itemId, categoryId, before, limit = 100 } = opts;
+    const clauses: string[] = ['s.ended_at IS NOT NULL'];
+    const params: number[] = [];
     if (itemId !== undefined) {
-      return db.prepare('SELECT * FROM sessions WHERE item_id = ? ORDER BY started_at DESC').all(itemId) as Session[];
+      clauses.push('s.item_id = ?');
+      params.push(itemId);
     }
-    return db.prepare('SELECT * FROM sessions ORDER BY started_at DESC').all() as Session[];
+    if (categoryId !== undefined) {
+      clauses.push('i.category_id = ?');
+      params.push(categoryId);
+    }
+    if (before !== undefined) {
+      clauses.push('s.started_at < ?');
+      params.push(before);
+    }
+    params.push(limit);
+
+    return db
+      .prepare(
+        `SELECT s.*, i.category_id, i.name AS item_name, i.color AS item_color,
+                c.name AS category_name, c.icon AS category_icon
+         FROM sessions s
+         JOIN items i ON i.id = s.item_id
+         JOIN categories c ON c.id = i.category_id
+         WHERE ${clauses.join(' AND ')}
+         ORDER BY s.started_at DESC
+         LIMIT ?`,
+      )
+      .all(...params) as SessionWithDetails[];
+  }
+
+  dates(categoryId?: number, itemId?: number): string[] {
+    const clauses: string[] = [];
+    const params: number[] = [];
+    if (categoryId !== undefined) {
+      clauses.push('category_id = ?');
+      params.push(categoryId);
+    }
+    if (itemId !== undefined) {
+      clauses.push('item_id = ?');
+      params.push(itemId);
+    }
+    const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+    const rows = db
+      .prepare(`SELECT DISTINCT day FROM session_day_index ${where} ORDER BY day`)
+      .all(...params) as { day: string }[];
+    return rows.map((r) => r.day);
   }
 
   find(id: number): Session | undefined {

@@ -34,10 +34,20 @@ function enrichItemsWithExpected(
 
 export const router = new Hono();
 
-// GET /api/sessions?item_id=
+// GET /api/sessions?item_id=&category_id=&before=&limit=
 router.get('/', (c) => {
   const itemId = c.req.query('item_id');
-  return c.json(sessionStore.findAll(itemId !== undefined ? Number(itemId) : undefined));
+  const categoryId = c.req.query('category_id');
+  const before = c.req.query('before');
+  const limit = c.req.query('limit');
+  return c.json(
+    sessionStore.findAll({
+      itemId: itemId !== undefined ? Number(itemId) : undefined,
+      categoryId: categoryId !== undefined ? Number(categoryId) : undefined,
+      before: before !== undefined ? Number(before) : undefined,
+      limit: limit !== undefined ? Number(limit) : undefined,
+    }),
+  );
 });
 
 // GET /api/sessions/current — one entry per category with active session or nulls
@@ -76,6 +86,18 @@ router.get('/current', (c) => {
       };
       return { category: cat, item, session, items, decay_start_time, decay_state };
     }),
+  );
+});
+
+// GET /api/sessions/dates?item_id=&category_id= — distinct days with completed sessions, for the Log jump index
+router.get('/dates', (c) => {
+  const categoryId = c.req.query('category_id');
+  const itemId = c.req.query('item_id');
+  return c.json(
+    sessionStore.dates(
+      categoryId !== undefined ? Number(categoryId) : undefined,
+      itemId !== undefined ? Number(itemId) : undefined,
+    ),
   );
 });
 
