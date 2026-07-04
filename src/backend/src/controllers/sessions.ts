@@ -157,3 +157,30 @@ router.post('/:id/end', async (c) => {
   const updated = sessionStore.end(session, category, endTs);
   return c.json(updated);
 });
+
+// PATCH /api/sessions/:id — correct a completed session's end time or duration
+router.patch('/:id', async (c) => {
+  const id = Number(c.req.param('id'));
+  const session = sessionStore.find(id);
+  if (!session) throw new NotFoundError(`Session ${id} not found`);
+  if (session.ended_at === null) throw new ValidationError(`Session ${id} has not ended yet`);
+
+  const body = (await c.req.json().catch(() => ({}))) as { ended_at?: number; duration_seconds?: number };
+
+  let newEndedAt: number;
+  if (typeof body.ended_at === 'number') {
+    newEndedAt = body.ended_at;
+  } else if (typeof body.duration_seconds === 'number') {
+    newEndedAt = session.started_at + body.duration_seconds;
+  } else {
+    throw new ValidationError('ended_at or duration_seconds (number) is required');
+  }
+  if (newEndedAt <= session.started_at) throw new ValidationError('ended_at must be after started_at');
+
+  const item = itemStore.find(session.item_id);
+  if (!item) throw new NotFoundError(`Item ${session.item_id} not found`);
+  const category = categoryStore.findRaw(item.category_id)!;
+
+  const updated = sessionStore.updateEnd(session, category, newEndedAt);
+  return c.json(updated);
+});

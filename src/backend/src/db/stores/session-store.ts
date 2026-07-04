@@ -210,6 +210,36 @@ class SessionStore {
     db.prepare('UPDATE sessions SET ended_at = ?, ended_in_injury = 1 WHERE id = ?').run(endedAt, sessionId);
     this.recordDayIndex(sessionId);
   }
+
+  /**
+   * Correct a completed session's end time (duration is derived by the caller).
+   * `started_at` never changes. Injury-ended sessions never had rest_seconds/stats
+   * contributions, so they're skipped for both here, matching endWithInjury().
+   */
+  updateEnd(session: Session, category: Category, newEndedAt: number): Session {
+    return db.transaction(() => {
+      if (session.ended_in_injury) {
+        db.prepare('UPDATE sessions SET ended_at = ? WHERE id = ?').run(newEndedAt, session.id);
+        return this.find(session.id)!;
+      }
+
+      const elapsed = newEndedAt - session.started_at;
+      const injuryActive = injuryStore.hasActiveInCategory(category.id);
+      const riskLevel = riskLevelFor(elapsed, category);
+      const rest = computeRest(elapsed, session.max_wear_seconds, category, riskLevel, injuryActive);
+
+      db.prepare('UPDATE sessions SET ended_at = ?, rest_seconds = ? WHERE id = ?').run(
+        newEndedAt,
+        rest,
+        session.id,
+      );
+
+      statsStore.recomputeItem(session.item_id);
+      statsStore.recomputeCategory(category.id, category.break_grace_time);
+
+      return this.find(session.id)!;
+    })();
+  }
 }
 
 export const sessionStore = new SessionStore();
