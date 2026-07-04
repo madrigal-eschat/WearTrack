@@ -714,3 +714,89 @@ describe('GET /api/sessions/dates', () => {
     expect(body.length).toBeGreaterThan(0);
   });
 });
+
+describe('stats recompute-from-scratch', () => {
+  it('recomputeItem reproduces the same totals as incremental recording', async () => {
+    const cat = await (await createCategory({ name: 'Recompute Cat' })).json();
+    const item = await (await createItem(cat.id, { name: 'Recompute Shoe' })).json();
+
+    const now = Math.floor(Date.now() / 1000);
+    for (const offset of [300, 200, 100]) {
+      const s = await (
+        await app.request(`${SESSIONS}/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ item_id: item.id, started_at: now - offset }),
+        })
+      ).json();
+      await app.request(`${SESSIONS}/${s.id}/end`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ended_at: now - offset + 10 }),
+      });
+    }
+
+    const before = prepare('SELECT * FROM stats WHERE item_id = ?').get(item.id) as {
+      total_wear_seconds: number;
+      session_count: number;
+      max_single_session_wear_seconds: number;
+    };
+
+    const { statsStore } = await import('../../src/db/stores/stats-store.js');
+    statsStore.recomputeItem(item.id);
+
+    const after = prepare('SELECT * FROM stats WHERE item_id = ?').get(item.id) as typeof before;
+    expect(after).toEqual(before);
+  });
+
+  it('recomputeCategory reproduces the same streak state as incremental recording', async () => {
+    const cat = await (await createCategory({ name: 'Recompute Streak Cat' })).json();
+    const item = await (await createItem(cat.id, { name: 'Recompute Streak Shoe' })).json();
+
+    const now = Math.floor(Date.now() / 1000);
+    for (const offset of [300, 200, 100]) {
+      const s = await (
+        await app.request(`${SESSIONS}/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ item_id: item.id, started_at: now - offset }),
+        })
+      ).json();
+      await app.request(`${SESSIONS}/${s.id}/end`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ended_at: now - offset + 10 }),
+      });
+    }
+
+    const before = prepare('SELECT * FROM category_stats WHERE category_id = ?').get(cat.id);
+
+    const { statsStore } = await import('../../src/db/stores/stats-store.js');
+    statsStore.recomputeCategory(cat.id, cat.break_grace_time);
+
+    const after = prepare('SELECT * FROM category_stats WHERE category_id = ?').get(cat.id);
+    expect(after).toEqual(before);
+  });
+
+  it('recomputeItem excludes injury-ended sessions, same as incremental recording', async () => {
+    const cat = await (await createCategory({ name: 'Recompute Injury Cat' })).json();
+    const item = await (await createItem(cat.id, { name: 'Recompute Injury Shoe' })).json();
+
+    await app.request(`${SESSIONS}/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: item.id }),
+    });
+    await app.request(INJURIES, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: item.id }),
+    });
+
+    const { statsStore } = await import('../../src/db/stores/stats-store.js');
+    statsStore.recomputeItem(item.id);
+
+    const stats = prepare('SELECT * FROM stats WHERE item_id = ?').get(item.id) as { session_count: number };
+    expect(stats.session_count).toBe(0);
+  });
+});
