@@ -941,3 +941,114 @@ describe('PATCH /api/sessions/:id', () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe('DELETE /api/sessions/:id', () => {
+  it('deletes the session row', async () => {
+    const s = await (await startSession()).json();
+    await endSession(s.id);
+
+    const res = await app.request(`${SESSIONS}/${s.id}`, { method: 'DELETE' });
+    expect(res.status).toBe(204);
+
+    const getRes = await app.request(`${SESSIONS}/${s.id}`);
+    expect(getRes.status).toBe(404);
+  });
+
+  it('recomputes item/category stats after deletion', async () => {
+    const cat = await (await createCategory({ name: 'Delete Stats Cat' })).json();
+    const item = await (await createItem(cat.id, { name: 'Delete Stats Shoe' })).json();
+    const startTs = Math.floor(Date.now() / 1000) - 3600;
+    const s = await (
+      await app.request(`${SESSIONS}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: item.id, started_at: startTs }),
+      })
+    ).json();
+    await app.request(`${SESSIONS}/${s.id}/end`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ended_at: startTs + 1000 }),
+    });
+
+    await app.request(`${SESSIONS}/${s.id}`, { method: 'DELETE' });
+
+    const stats = prepare('SELECT session_count, total_wear_seconds FROM stats WHERE item_id = ?').get(
+      item.id,
+    ) as { session_count: number; total_wear_seconds: number };
+    expect(stats.session_count).toBe(0);
+    expect(stats.total_wear_seconds).toBe(0);
+  });
+
+  it('removes the session_day_index row when it was the only session for that day', async () => {
+    const cat = await (await createCategory({ name: 'Delete Index Cat' })).json();
+    const item = await (await createItem(cat.id, { name: 'Delete Index Shoe' })).json();
+    const startTs = Math.floor(Date.now() / 1000) - 3600;
+    const day = new Date(startTs * 1000).toISOString().slice(0, 10);
+    const s = await (
+      await app.request(`${SESSIONS}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: item.id, started_at: startTs }),
+      })
+    ).json();
+    await app.request(`${SESSIONS}/${s.id}/end`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ended_at: startTs + 1000 }),
+    });
+    expect(
+      prepare('SELECT * FROM session_day_index WHERE day = ? AND item_id = ?').get(day, item.id),
+    ).toBeDefined();
+
+    await app.request(`${SESSIONS}/${s.id}`, { method: 'DELETE' });
+
+    expect(
+      prepare('SELECT * FROM session_day_index WHERE day = ? AND item_id = ?').get(day, item.id),
+    ).toBeUndefined();
+  });
+
+  it('leaves the session_day_index row when a sibling session remains that day', async () => {
+    const cat = await (await createCategory({ name: 'Delete Index Sibling Cat' })).json();
+    const item = await (await createItem(cat.id, { name: 'Delete Index Sibling Shoe' })).json();
+    const startTs = Math.floor(Date.now() / 1000) - 7200;
+    const day = new Date(startTs * 1000).toISOString().slice(0, 10);
+
+    const s1 = await (
+      await app.request(`${SESSIONS}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: item.id, started_at: startTs }),
+      })
+    ).json();
+    await app.request(`${SESSIONS}/${s1.id}/end`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ended_at: startTs + 100 }),
+    });
+
+    const s2 = await (
+      await app.request(`${SESSIONS}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: item.id, started_at: startTs + 200 }),
+      })
+    ).json();
+    await app.request(`${SESSIONS}/${s2.id}/end`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ended_at: startTs + 300 }),
+    });
+
+    await app.request(`${SESSIONS}/${s1.id}`, { method: 'DELETE' });
+
+    expect(
+      prepare('SELECT * FROM session_day_index WHERE day = ? AND item_id = ?').get(day, item.id),
+    ).toBeDefined();
+  });
+
+  it('returns 404 for unknown session', async () => {
+    const res = await app.request(`${SESSIONS}/999999`, { method: 'DELETE' });
+    expect(res.status).toBe(404);
+  });
+});

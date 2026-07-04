@@ -240,6 +240,34 @@ class SessionStore {
       return this.find(session.id)!;
     })();
   }
+
+  /**
+   * Delete a completed session, recompute its item/category stats, and drop its
+   * session_day_index row if no sibling session remains on that (day, category, item).
+   */
+  remove(session: Session, category: Category): void {
+    const day = new Date(session.started_at * 1000).toISOString().slice(0, 10);
+
+    db.transaction(() => {
+      db.prepare('DELETE FROM sessions WHERE id = ?').run(session.id);
+
+      const remaining = db
+        .prepare(`SELECT COUNT(*) AS n FROM sessions WHERE item_id = ? AND date(started_at, 'unixepoch') = ?`)
+        .get(session.item_id, day) as { n: number };
+      if (remaining.n === 0) {
+        db.prepare('DELETE FROM session_day_index WHERE day = ? AND category_id = ? AND item_id = ?').run(
+          day,
+          category.id,
+          session.item_id,
+        );
+      }
+
+      if (!session.ended_in_injury && session.ended_at !== null) {
+        statsStore.recomputeItem(session.item_id);
+        statsStore.recomputeCategory(category.id, category.break_grace_time);
+      }
+    })();
+  }
 }
 
 export const sessionStore = new SessionStore();

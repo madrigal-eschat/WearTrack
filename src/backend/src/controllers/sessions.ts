@@ -184,3 +184,17 @@ router.patch('/:id', async (c) => {
   const updated = sessionStore.updateEnd(session, category, newEndedAt);
   return c.json(updated);
 });
+
+// DELETE /api/sessions/:id
+router.delete('/:id', (c) => {
+  const id = Number(c.req.param('id'));
+  const session = sessionStore.find(id);
+  if (!session) throw new NotFoundError(`Session ${id} not found`);
+
+  const item = itemStore.find(session.item_id);
+  if (!item) throw new NotFoundError(`Item ${session.item_id} not found`);
+  const category = categoryStore.findRaw(item.category_id)!;
+
+  sessionStore.remove(session, category);
+  return c.body(null, 204);
+});
