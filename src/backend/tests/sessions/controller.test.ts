@@ -800,3 +800,144 @@ describe('stats recompute-from-scratch', () => {
     expect(stats.session_count).toBe(0);
   });
 });
+
+describe('PATCH /api/sessions/:id', () => {
+  async function patchSession(id: number, body: Record<string, unknown>) {
+    return app.request(`${SESSIONS}/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
+
+  it('updates ended_at directly', async () => {
+    const startTs = Math.floor(Date.now() / 1000) - 3600;
+    const s = await (await startSession({ started_at: startTs })).json();
+    await endSession(s.id, { ended_at: startTs + 1000 });
+
+    const newEnd = startTs + 500;
+    const res = await patchSession(s.id, { ended_at: newEnd });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ended_at).toBe(newEnd);
+  });
+
+  it('accepts duration_seconds and derives ended_at from started_at', async () => {
+    const startTs = Math.floor(Date.now() / 1000) - 3600;
+    const s = await (await startSession({ started_at: startTs })).json();
+    await endSession(s.id, { ended_at: startTs + 1000 });
+
+    const res = await patchSession(s.id, { duration_seconds: 200 });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ended_at).toBe(startTs + 200);
+  });
+
+  it('recomputes rest_seconds for the new duration', async () => {
+    // Use a category with minimum_rest low enough that it doesn't clamp away the
+    // difference between the two durations exercised below (the default fixture's
+    // minimum_rest of 86400 would swallow both).
+    const cat = await (await createCategory({ name: 'Patch Rest Cat', minimum_rest: 0 })).json();
+    const item = await (await createItem(cat.id, { name: 'Patch Rest Shoe' })).json();
+    const startTs = Math.floor(Date.now() / 1000) - 3600;
+    const s = await (
+      await app.request(`${SESSIONS}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: item.id, started_at: startTs }),
+      })
+    ).json();
+    await app.request(`${SESSIONS}/${s.id}/end`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ended_at: startTs + 1000 }),
+    });
+    const before = await (await app.request(`${SESSIONS}/${s.id}`)).json();
+
+    const res = await patchSession(s.id, { duration_seconds: 50 });
+    const after = await res.json();
+    expect(after.rest_seconds).not.toBe(before.rest_seconds);
+  });
+
+  it('recomputes item and category stats', async () => {
+    const cat = await (await createCategory({ name: 'Patch Stats Cat' })).json();
+    const item = await (await createItem(cat.id, { name: 'Patch Stats Shoe' })).json();
+    const startTs = Math.floor(Date.now() / 1000) - 3600;
+    const s = await (
+      await app.request(`${SESSIONS}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: item.id, started_at: startTs }),
+      })
+    ).json();
+    await app.request(`${SESSIONS}/${s.id}/end`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ended_at: startTs + 1000 }),
+    });
+
+    const statsBefore = prepare('SELECT total_wear_seconds FROM stats WHERE item_id = ?').get(item.id) as {
+      total_wear_seconds: number;
+    };
+
+    await patchSession(s.id, { duration_seconds: 50 });
+
+    const statsAfter = prepare('SELECT total_wear_seconds FROM stats WHERE item_id = ?').get(item.id) as {
+      total_wear_seconds: number;
+    };
+    expect(statsAfter.total_wear_seconds).toBe(statsBefore.total_wear_seconds - 950);
+  });
+
+  it('does not touch stats for an injury-ended session', async () => {
+    const cat = await (await createCategory({ name: 'Patch Injury Cat' })).json();
+    const item = await (await createItem(cat.id, { name: 'Patch Injury Shoe' })).json();
+    const startTs = Math.floor(Date.now() / 1000) - 3600;
+    const s = await (
+      await app.request(`${SESSIONS}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: item.id, started_at: startTs }),
+      })
+    ).json();
+    await app.request(INJURIES, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: item.id }),
+    });
+
+    const statsBefore = prepare('SELECT session_count FROM stats WHERE item_id = ?').get(item.id);
+    const res = await patchSession(s.id, { duration_seconds: 100 });
+    expect(res.status).toBe(200);
+    const statsAfter = prepare('SELECT session_count FROM stats WHERE item_id = ?').get(item.id);
+    expect(statsAfter).toEqual(statsBefore);
+  });
+
+  it('rejects ended_at <= started_at', async () => {
+    const startTs = Math.floor(Date.now() / 1000) - 3600;
+    const s = await (await startSession({ started_at: startTs })).json();
+    await endSession(s.id, { ended_at: startTs + 1000 });
+
+    const res = await patchSession(s.id, { ended_at: startTs });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects editing a session that has not ended', async () => {
+    const s = await (await startSession()).json();
+    const res = await patchSession(s.id, { duration_seconds: 100 });
+    expect(res.status).toBe(400);
+    await endSession(s.id);
+  });
+
+  it('returns 404 for unknown session', async () => {
+    const res = await patchSession(999999, { duration_seconds: 100 });
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 400 when neither ended_at nor duration_seconds is provided', async () => {
+    const startTs = Math.floor(Date.now() / 1000) - 3600;
+    const s = await (await startSession({ started_at: startTs })).json();
+    await endSession(s.id, { ended_at: startTs + 1000 });
+    const res = await patchSession(s.id, {});
+    expect(res.status).toBe(400);
+  });
+});
