@@ -26,10 +26,11 @@ function startOfWeekUTC(date: Date): Date {
 
 /**
  * Buckets 'YYYY-MM-DD' day strings (days that have session data) into a jump
- * index: last 14 days daily, weeks 3-8 back weekly (Monday-labelled), months
- * 3-12 back monthly, older than 12 months yearly. Nearest granularity wins —
- * no day is covered by more than one tier. Empty buckets are omitted.
- * `today` is injectable for deterministic tests.
+ * index: last 14 days daily (offsets 0-13), weeks 3-8 back weekly
+ * (Monday-labelled, offsets 14-55, i.e. exactly 6 weeks / 42 days), 12 months
+ * back monthly (from offset 56 up to the 12-month mark), older than 12 months
+ * yearly. Nearest granularity wins — no day is covered by more than one tier.
+ * Empty buckets are omitted. `today` is injectable for deterministic tests.
  */
 export function buildDateIndex(days: string[], today: Date = new Date()): DateIndexEntry[] {
   const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
@@ -55,10 +56,11 @@ export function buildDateIndex(days: string[], today: Date = new Date()): DateIn
     }
   }
 
-  // Weekly tier: Mondays for days in [weeklyStart, dailyStart)
+  // Weekly tier: Mondays for days in (weeklyStart, dailyStart) — weeklyStart itself
+  // is the weekly/monthly seam and belongs to the monthly tier.
   const seenWeeks = new Set<string>();
   for (const d of dayDates) {
-    if (d < weeklyStart || d >= dailyStart) continue;
+    if (d <= weeklyStart || d >= dailyStart) continue;
     seenWeeks.add(toDayString(startOfWeekUTC(d)));
   }
   for (const key of [...seenWeeks].sort().reverse()) {
@@ -68,10 +70,10 @@ export function buildDateIndex(days: string[], today: Date = new Date()): DateIn
     entries.push({ granularity: 'week', label: key, cursor: cursor.getTime() / 1000 });
   }
 
-  // Monthly tier: months for days in [monthlyStart, weeklyStart)
+  // Monthly tier: months for days in [monthlyStart, weeklyStart]
   const seenMonths = new Set<string>();
   for (const d of dayDates) {
-    if (d < monthlyStart || d >= weeklyStart) continue;
+    if (d < monthlyStart || d > weeklyStart) continue;
     seenMonths.add(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`);
   }
   for (const key of [...seenMonths].sort().reverse()) {

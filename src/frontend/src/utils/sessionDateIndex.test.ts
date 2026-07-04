@@ -60,6 +60,47 @@ describe('buildDateIndex', () => {
     expect(entries.map((e) => e.granularity)).toEqual(['day', 'week', 'month', 'year']);
   });
 
+  it('a day exactly 13 days back is the last DAILY day', () => {
+    // 2026-07-02 = today - 13 days
+    const entries = buildDateIndex(['2026-07-02'], TODAY);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].granularity).toBe('day');
+  });
+
+  it('a day exactly 14 days back is the first WEEKLY day (daily/weekly seam)', () => {
+    // 2026-07-01 = today - 14 days
+    const entries = buildDateIndex(['2026-07-01'], TODAY);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].granularity).toBe('week');
+  });
+
+  it('a day exactly 55 days back is the last WEEKLY day', () => {
+    // 2026-05-21 = today - 55 days
+    const entries = buildDateIndex(['2026-05-21'], TODAY);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].granularity).toBe('week');
+  });
+
+  it('a day exactly 56 days back is the first MONTHLY day (weekly/monthly seam)', () => {
+    // 2026-05-20 = today - 56 days
+    const entries = buildDateIndex(['2026-05-20'], TODAY);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].granularity).toBe('month');
+  });
+
+  it('the day the monthly cutoff lands on (12 months back) is MONTHLY', () => {
+    // monthlyStart = today with month -12 = 2025-07-15
+    const entries = buildDateIndex(['2025-07-15'], TODAY);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].granularity).toBe('month');
+  });
+
+  it('one day before the monthly cutoff (12 months + 1 day back) is YEARLY', () => {
+    const entries = buildDateIndex(['2025-07-14'], TODAY);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].granularity).toBe('year');
+  });
+
   it('monthly cursor is the start of the following month', () => {
     const entries = buildDateIndex(['2026-03-10'], TODAY);
     expect(entries[0].cursor).toBe(Date.UTC(2026, 3, 1) / 1000);
