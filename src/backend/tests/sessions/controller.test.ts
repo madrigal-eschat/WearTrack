@@ -596,3 +596,121 @@ describe('session_day_index population', () => {
     if (active) await app.request(`${INJURIES}/${active.id}/heal`, { method: 'POST' });
   });
 });
+
+describe('GET /api/sessions — pagination, category filter, enrichment', () => {
+  it('only returns completed sessions', async () => {
+    const s = await (await startSession()).json(); // left open
+    const res = await app.request(SESSIONS);
+    const body = await res.json();
+    expect(body.find((x: { id: number }) => x.id === s.id)).toBeUndefined();
+    await endSession(s.id);
+  });
+
+  it('enriches rows with item/category name/icon/color', async () => {
+    const s = await (await startSession()).json();
+    await endSession(s.id);
+    const res = await app.request(`${SESSIONS}?item_id=${itemId}`);
+    const body = await res.json();
+    const row = body.find((x: { id: number }) => x.id === s.id);
+    expect(row.item_name).toBe('Test Shoe');
+    expect(row.category_id).toBe(categoryId);
+    expect(row.category_name).toBeTypeOf('string');
+    expect(row.category_icon).toBeTypeOf('string');
+    expect(row.item_color).toBeTypeOf('string');
+  });
+
+  it('filters by category_id', async () => {
+    const otherCat = await (await createCategory({ name: 'Other Cat' })).json();
+    const otherItem = await (await createItem(otherCat.id, { name: 'Other Item' })).json();
+    const s1 = await (
+      await app.request(`${SESSIONS}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: otherItem.id }),
+      })
+    ).json();
+    await app.request(`${SESSIONS}/${s1.id}/end`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+
+    const res = await app.request(`${SESSIONS}?category_id=${otherCat.id}`);
+    const body = await res.json();
+    expect(body.length).toBeGreaterThan(0);
+    body.forEach((row: { category_id: number }) => expect(row.category_id).toBe(otherCat.id));
+  });
+
+  it('combines category_id and item_id filters', async () => {
+    const res = await app.request(`${SESSIONS}?category_id=${categoryId}&item_id=${itemId}`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    body.forEach((row: { category_id: number; item_id: number }) => {
+      expect(row.category_id).toBe(categoryId);
+      expect(row.item_id).toBe(itemId);
+    });
+  });
+
+  it('paginates with before/limit, newest first', async () => {
+    // Use a dedicated item so earlier tests' completed sessions (which share this file's
+    // real-clock second with `now` since the whole suite runs in milliseconds) can't
+    // outrank these offset-based rows and make the ordering assertions flaky.
+    const pagCat = await (await createCategory({ name: 'Pagination Cat' })).json();
+    const pagItem = await (await createItem(pagCat.id, { name: 'Pagination Item' })).json();
+
+    // Create 3 fresh completed sessions with distinct started_at values, oldest to newest
+    const now = Math.floor(Date.now() / 1000);
+    const ids: number[] = [];
+    for (const offset of [300, 200, 100]) {
+      const s = await (
+        await app.request(`${SESSIONS}/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ item_id: pagItem.id, started_at: now - offset }),
+        })
+      ).json();
+      await app.request(`${SESSIONS}/${s.id}/end`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ended_at: now - offset + 10 }),
+      });
+      ids.push(s.id);
+    }
+
+    const page1 = await (await app.request(`${SESSIONS}?item_id=${pagItem.id}&limit=2`)).json();
+    expect(page1.length).toBe(2);
+    expect(page1[0].id).toBe(ids[2]); // newest (offset 100) first
+    expect(page1[1].id).toBe(ids[1]);
+
+    const page2 = await (
+      await app.request(`${SESSIONS}?item_id=${pagItem.id}&limit=2&before=${page1[1].started_at}`)
+    ).json();
+    expect(page2[0].id).toBe(ids[0]);
+  });
+
+  it('defaults limit to 100', async () => {
+    const res = await app.request(`${SESSIONS}?item_id=${itemId}`);
+    const body = await res.json();
+    expect(body.length).toBeLessThanOrEqual(100);
+  });
+});
+
+describe('GET /api/sessions/dates', () => {
+  it('returns distinct days with completed sessions for an item', async () => {
+    const res = await app.request(`${SESSIONS}/dates?item_id=${itemId}`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body)).toBe(true);
+    body.forEach((d: string) => expect(d).toMatch(/^\d{4}-\d{2}-\d{2}$/));
+  });
+
+  it('filters by category_id', async () => {
+    const res = await app.request(`${SESSIONS}/dates?category_id=${categoryId}`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body)).toBe(true);
+  });
+
+  it('returns all days with no filters', async () => {
+    const res = await app.request(`${SESSIONS}/dates`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.length).toBeGreaterThan(0);
+  });
+});
