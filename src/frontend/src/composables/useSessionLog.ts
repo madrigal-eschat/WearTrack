@@ -51,7 +51,7 @@ async function loadMore(): Promise<void> {
   if (!hasMore.value || loading.value || sessions.value.length === 0) return;
   loading.value = true;
   try {
-    const last = sessions.value[sessions.value.length - 1];
+    const last = sessions.value.at(-1)!;
     const page = await fetchPage(last.started_at);
     sessions.value = [...sessions.value, ...page];
     hasMore.value = page.length === LIMIT;
