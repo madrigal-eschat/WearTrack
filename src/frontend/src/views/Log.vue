@@ -2,11 +2,11 @@
 <template>
   <k-page class="flex flex-col" style="padding-bottom: 56px">
     <k-block class="flex gap-2 pb-2">
-      <select v-model.number="categorySelection" class="text-sm border rounded px-2 py-1 flex-1">
+      <select v-model.number="categoryFilter" class="text-sm border rounded px-2 py-1 flex-1">
         <option :value="null">All categories</option>
         <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
       </select>
-      <select v-model.number="itemSelection" class="text-sm border rounded px-2 py-1 flex-1">
+      <select v-model.number="itemFilter" class="text-sm border rounded px-2 py-1 flex-1">
         <option :value="null">All items</option>
         <option v-for="item in filterableItems" :key="item.id" :value="item.id">{{ item.name }}</option>
       </select>
@@ -132,38 +132,36 @@ import { apiFetch } from '../utils/apiFetch.js';
 
 const {
   sessions, loading, loadInitial, loadMore,
-  setCategoryFilter, setItemFilter, jumpTo,
+  categoryFilter, itemFilter, setCategoryFilter, setItemFilter, jumpTo,
   editableRangeFor, editSession, deleteSession,
 } = useSessionLog();
 
 const { categories, loadCategories } = useCategories();
 const { items, loadItems, itemsForCategory } = useItems();
 
-const categorySelection = ref<number | null>(null);
-const itemSelection = ref<number | null>(null);
 const dateIndex = ref<DateIndexEntry[]>([]);
 
 const filterableItems = computed(() =>
-  categorySelection.value !== null ? itemsForCategory(categorySelection.value) : items.value,
+  categoryFilter.value !== null ? itemsForCategory(categoryFilter.value) : items.value,
 );
 
-watch(categorySelection, async (id) => {
-  if (itemSelection.value !== null && !filterableItems.value.some((i) => i.id === itemSelection.value)) {
-    itemSelection.value = null;
+watch(categoryFilter, async (id) => {
+  if (itemFilter.value !== null && !filterableItems.value.some((i) => i.id === itemFilter.value)) {
+    itemFilter.value = null;
   }
   await setCategoryFilter(id);
   await refreshDateIndex();
 });
 
-watch(itemSelection, async (id) => {
+watch(itemFilter, async (id) => {
   await setItemFilter(id);
   await refreshDateIndex();
 });
 
 async function refreshDateIndex(): Promise<void> {
   const params = new URLSearchParams();
-  if (categorySelection.value !== null) params.set('category_id', String(categorySelection.value));
-  if (itemSelection.value !== null) params.set('item_id', String(itemSelection.value));
+  if (categoryFilter.value !== null) params.set('category_id', String(categoryFilter.value));
+  if (itemFilter.value !== null) params.set('item_id', String(itemFilter.value));
   const res = await apiFetch(`/api/sessions/dates?${params.toString()}`);
   const days: string[] = res.ok ? await res.json() : [];
   dateIndex.value = buildDateIndex(days);
