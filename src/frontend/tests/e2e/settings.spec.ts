@@ -3,18 +3,13 @@ import { test, expect } from '@playwright/test';
 /**
  * Settings page tests.
  *
- * The Settings tab lives in the App.vue tabbar (label "Settings", cog icon).
- * Clicking it navigates to /settings, a full page view like the other tabs.
+ * Settings is accessed via a cog-icon button on the Home screen (ActionPane),
+ * not a tabbar entry. Clicking it navigates to /settings, a full page view.
  */
 
-/** Helper: click the Settings tab in the bottom tab bar. */
+/** Helper: click the Settings button on the home screen. */
 async function openSettings(page: import('@playwright/test').Page) {
-  const link = page.getByRole('link', { name: /^settings$/i });
-  if (await link.isVisible({ timeout: 1000 }).catch(() => false)) {
-    await link.click();
-  } else {
-    await page.locator('[class*="tabbar"] a').filter({ hasText: /^settings$/i }).click();
-  }
+  await page.getByRole('button', { name: /^settings$/i }).click();
 }
 
 test.describe('Settings', () => {
@@ -22,15 +17,11 @@ test.describe('Settings', () => {
     await page.goto('/');
   });
 
-  test('Settings tab is visible in the tab bar', async ({ page }) => {
-    const settingsTab =
-      page.getByRole('link', { name: /^settings$/i }).or(
-        page.locator('[class*="tabbar"] a').filter({ hasText: /^settings$/i }),
-      );
-    await expect(settingsTab.first()).toBeVisible();
+  test('Settings button is visible on the home screen', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /^settings$/i })).toBeVisible();
   });
 
-  test('clicking the Settings tab navigates to /settings', async ({ page }) => {
+  test('clicking the Settings button navigates to /settings', async ({ page }) => {
     await openSettings(page);
     await expect(page).toHaveURL(/\/settings/);
   });
