@@ -79,6 +79,25 @@ class StatsStore {
     `).run(duration, duration, session.item_id);
   }
 
+  /** Reset then replay every completed, non-injury session for this item through recordItemSession, in order. */
+  recomputeItem(itemId: number): void {
+    db.prepare(
+      `UPDATE stats SET total_wear_seconds = 0, session_count = 0, max_single_session_wear_seconds = 0
+       WHERE item_id = ?`,
+    ).run(itemId);
+
+    const sessions = db
+      .prepare(
+        `SELECT * FROM sessions WHERE item_id = ? AND ended_at IS NOT NULL AND ended_in_injury = 0
+         ORDER BY ended_at ASC`,
+      )
+      .all(itemId) as SessionSnapshot[];
+
+    for (const session of sessions) {
+      this.recordItemSession(session);
+    }
+  }
+
   /** Time-series wear data for one item, grouped by month or week. */
   history(itemId: number, unit: 'month' | 'week'): unknown[] {
     const format = unit === 'month' ? '%Y-%m' : '%Y-%W';
@@ -148,6 +167,29 @@ class StatsStore {
         best_streak_wear_seconds        = ?, best_streak_count = ?
       WHERE category_id = ?
     `).run(duration, duration, streakWear, streakCount, newBestStreakWear, newBestStreakCount, categoryId);
+  }
+
+  /** Reset then replay every completed, non-injury session for this category through recordCategorySession, in order. */
+  recomputeCategory(categoryId: number, breakGraceTime: number): void {
+    db.prepare(
+      `UPDATE category_stats SET
+         total_wear_seconds = 0, session_count = 0, max_single_session_wear_seconds = 0,
+         streak_wear_seconds = 0, streak_count = 0,
+         best_streak_wear_seconds = 0, best_streak_count = 0
+       WHERE category_id = ?`,
+    ).run(categoryId);
+
+    const sessions = db
+      .prepare(
+        `SELECT s.* FROM sessions s JOIN items i ON i.id = s.item_id
+         WHERE i.category_id = ? AND s.ended_at IS NOT NULL AND s.ended_in_injury = 0
+         ORDER BY s.ended_at ASC`,
+      )
+      .all(categoryId) as SessionSnapshot[];
+
+    for (const session of sessions) {
+      this.recordCategorySession(categoryId, breakGraceTime, session);
+    }
   }
 
   // ── Leaderboards ─────────────────────────────────────────────────────────────

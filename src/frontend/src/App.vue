@@ -32,6 +32,15 @@
             <chart-bar-icon class="w-6 h-6" />
           </template>
         </k-tabbar-link>
+        <k-tabbar-link
+          :active="route.path === '/log'"
+          label="Log"
+          @click="navigate('/log')"
+        >
+          <template #icon>
+            <clock-icon class="w-6 h-6" />
+          </template>
+        </k-tabbar-link>
     </k-tabbar>
   </k-app>
 </template>
@@ -39,7 +48,7 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router';
 import { kApp, kTabbar, kTabbarLink } from 'konsta/vue';
-import { HomeIcon, Squares2X2Icon as ItemsIcon, ChartBarIcon } from '@heroicons/vue/24/solid';
+import { HomeIcon, Squares2X2Icon as ItemsIcon, ChartBarIcon, ClockIcon } from '@heroicons/vue/24/solid';
 import Toast from './components/Toast.vue';
 import { useVersionCheck } from './composables/useVersionCheck.js';
 

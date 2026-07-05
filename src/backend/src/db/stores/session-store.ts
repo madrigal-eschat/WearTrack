@@ -27,6 +27,14 @@ export interface OpenSessionWithItem extends Session {
   item_difficulty_multiplier: number;
 }
 
+export interface SessionWithDetails extends Session {
+  category_id: number;
+  item_name: string;
+  item_color: string;
+  category_name: string;
+  category_icon: string;
+}
+
 export interface ItemWithLastSession {
   item_id: number;
   category_id: number;
@@ -58,11 +66,54 @@ class SessionStore {
       .all() as ItemWithLastSession[];
   }
 
-  findAll(itemId?: number): Session[] {
+  findAll(opts: { itemId?: number; categoryId?: number; before?: number; limit?: number } = {}): SessionWithDetails[] {
+    const { itemId, categoryId, before, limit = 100 } = opts;
+    const clauses: string[] = ['s.ended_at IS NOT NULL'];
+    const params: number[] = [];
     if (itemId !== undefined) {
-      return db.prepare('SELECT * FROM sessions WHERE item_id = ? ORDER BY started_at DESC').all(itemId) as Session[];
+      clauses.push('s.item_id = ?');
+      params.push(itemId);
     }
-    return db.prepare('SELECT * FROM sessions ORDER BY started_at DESC').all() as Session[];
+    if (categoryId !== undefined) {
+      clauses.push('i.category_id = ?');
+      params.push(categoryId);
+    }
+    if (before !== undefined) {
+      clauses.push('s.started_at < ?');
+      params.push(before);
+    }
+    params.push(limit);
+
+    return db
+      .prepare(
+        `SELECT s.*, i.category_id, i.name AS item_name, i.color AS item_color,
+                c.name AS category_name, c.icon AS category_icon
+         FROM sessions s
+         JOIN items i ON i.id = s.item_id
+         JOIN categories c ON c.id = i.category_id
+         WHERE ${clauses.join(' AND ')}
+         ORDER BY s.started_at DESC
+         LIMIT ?`,
+      )
+      .all(...params) as SessionWithDetails[];
+  }
+
+  dates(categoryId?: number, itemId?: number): string[] {
+    const clauses: string[] = [];
+    const params: number[] = [];
+    if (categoryId !== undefined) {
+      clauses.push('category_id = ?');
+      params.push(categoryId);
+    }
+    if (itemId !== undefined) {
+      clauses.push('item_id = ?');
+      params.push(itemId);
+    }
+    const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+    const rows = db
+      .prepare(`SELECT DISTINCT day FROM session_day_index ${where} ORDER BY day`)
+      .all(...params) as { day: string }[];
+    return rows.map((r) => r.day);
   }
 
   find(id: number): Session | undefined {
@@ -123,6 +174,16 @@ class SessionStore {
     return this.find(result.lastInsertRowid as number)!;
   }
 
+  /** Write-through derived index: one row per (day, category, item) the first time a session on it completes. */
+  recordDayIndex(sessionId: number): void {
+    db.prepare(
+      `INSERT OR IGNORE INTO session_day_index (day, category_id, item_id)
+       SELECT date(s.started_at, 'unixepoch'), i.category_id, s.item_id
+       FROM sessions s JOIN items i ON i.id = s.item_id
+       WHERE s.id = ?`,
+    ).run(sessionId);
+  }
+
   /** End a session: derive elapsed, compute rest, persist; target/max stay as set at start. */
   end(session: Session, category: Category, endedAt: number): Session {
     return db.transaction(() => {
@@ -137,6 +198,7 @@ class SessionStore {
       const snapshot = { ...updated, ended_at: endedAt };
       statsStore.recordItemSession(snapshot);
       statsStore.recordCategorySession(category.id, category.break_grace_time, snapshot);
+      this.recordDayIndex(session.id);
       return updated;
     })();
   }
@@ -146,6 +208,65 @@ class SessionStore {
    */
   endWithInjury(sessionId: number, endedAt: number): void {
     db.prepare('UPDATE sessions SET ended_at = ?, ended_in_injury = 1 WHERE id = ?').run(endedAt, sessionId);
+    this.recordDayIndex(sessionId);
+  }
+
+  /**
+   * Correct a completed session's end time (duration is derived by the caller).
+   * `started_at` never changes. Injury-ended sessions never had rest_seconds/stats
+   * contributions, so they're skipped for both here, matching endWithInjury().
+   */
+  updateEnd(session: Session, category: Category, newEndedAt: number): Session {
+    return db.transaction(() => {
+      if (session.ended_in_injury) {
+        db.prepare('UPDATE sessions SET ended_at = ? WHERE id = ?').run(newEndedAt, session.id);
+        return this.find(session.id)!;
+      }
+
+      const elapsed = newEndedAt - session.started_at;
+      const injuryActive = injuryStore.hasActiveInCategory(category.id);
+      const riskLevel = riskLevelFor(elapsed, category);
+      const rest = computeRest(elapsed, session.max_wear_seconds, category, riskLevel, injuryActive);
+
+      db.prepare('UPDATE sessions SET ended_at = ?, rest_seconds = ? WHERE id = ?').run(
+        newEndedAt,
+        rest,
+        session.id,
+      );
+
+      statsStore.recomputeItem(session.item_id);
+      statsStore.recomputeCategory(category.id, category.break_grace_time);
+
+      return this.find(session.id)!;
+    })();
+  }
+
+  /**
+   * Delete a completed session, recompute its item/category stats, and drop its
+   * session_day_index row if no sibling session remains on that (day, category, item).
+   */
+  remove(session: Session, category: Category): void {
+    const day = new Date(session.started_at * 1000).toISOString().slice(0, 10);
+
+    db.transaction(() => {
+      db.prepare('DELETE FROM sessions WHERE id = ?').run(session.id);
+
+      const remaining = db
+        .prepare(`SELECT COUNT(*) AS n FROM sessions WHERE item_id = ? AND date(started_at, 'unixepoch') = ?`)
+        .get(session.item_id, day) as { n: number };
+      if (remaining.n === 0) {
+        db.prepare('DELETE FROM session_day_index WHERE day = ? AND category_id = ? AND item_id = ?').run(
+          day,
+          category.id,
+          session.item_id,
+        );
+      }
+
+      if (!session.ended_in_injury && session.ended_at !== null) {
+        statsStore.recomputeItem(session.item_id);
+        statsStore.recomputeCategory(category.id, category.break_grace_time);
+      }
+    })();
   }
 }
 

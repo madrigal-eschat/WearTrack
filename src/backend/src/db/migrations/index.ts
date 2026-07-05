@@ -6,6 +6,7 @@ import runMigration004 from './004_drop_legacy_columns.js';
 import runMigration005 from './005_push_notifications.js';
 import runMigration006 from './006_fix_best_streak_count.js';
 import runMigration007 from './007_nullable_max_wear.js';
+import runMigration008 from './008_session_day_index.js';
 
 const migrations: Array<{ version: number; name: string; run: () => void }> = [
   { version: 1, name: '001_initial', run: runMigration001 },
@@ -15,6 +16,7 @@ const migrations: Array<{ version: number; name: string; run: () => void }> = [
   { version: 5, name: '005_push_notifications', run: runMigration005 },
   { version: 6, name: '006_fix_best_streak_count', run: runMigration006 },
   { version: 7, name: '007_nullable_max_wear', run: runMigration007 },
+  { version: 8, name: '008_session_day_index', run: runMigration008 },
 ];
 
 export function runMigrations() {
