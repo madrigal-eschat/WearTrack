@@ -9,25 +9,19 @@
     </div>
 
     <div class="flex gap-4 flex-wrap items-end">
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Target wear</label>
-        <button type="button" class="flex items-center gap-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-          @click="openDurationPicker('target')">
-          <span>{{ shortDuration(catForm.initialWearTargetSeconds) }}</span><span class="text-gray-400">▾</span>
-        </button>
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Maximum wear</label>
-        <div class="flex items-center gap-1">
-          <button type="button" class="flex items-center gap-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-            @click="openDurationPicker('max')">
-            <span>{{ catForm.initialWearMaxSeconds === null ? 'None' : shortDuration(catForm.initialWearMaxSeconds) }}</span>
-            <span class="text-gray-400">▾</span>
-          </button>
-          <button v-if="catForm.initialWearMaxSeconds !== null" type="button" data-testid="clear-max"
-            class="text-xs text-gray-400 underline" @click="catForm.initialWearMaxSeconds = null">clear</button>
-        </div>
-      </div>
+      <DurationTrigger
+        label="Target wear"
+        :displayValue="shortDuration(catForm.initialWearTargetSeconds)"
+        @click="openDurationPicker('target')"
+      />
+      <DurationTrigger
+        label="Maximum wear"
+        :displayValue="catForm.initialWearMaxSeconds === null ? 'None' : shortDuration(catForm.initialWearMaxSeconds)"
+        :clearable="catForm.initialWearMaxSeconds !== null"
+        clearTestid="clear-max"
+        @click="openDurationPicker('max')"
+        @clear="catForm.initialWearMaxSeconds = null"
+      />
       <NumberField
         id="cat-rest-mult"
         label="Rest multiplier"
@@ -39,21 +33,18 @@
     </div>
 
     <div class="flex gap-4 flex-wrap items-end">
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Minimum rest period</label>
-        <button type="button" :disabled="catForm.initialWearMaxSeconds === null" data-testid="min-rest"
-          class="flex items-center gap-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white disabled:opacity-40"
-          @click="openDurationPicker('minRest')">
-          <span>{{ shortDuration(catForm.minimumRestSeconds) }}</span><span class="text-gray-400">▾</span>
-        </button>
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Break grace time</label>
-        <button type="button" class="flex items-center gap-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-          @click="openDurationPicker('grace')">
-          <span>{{ shortDuration(catForm.breakGraceSeconds) }}</span><span class="text-gray-400">▾</span>
-        </button>
-      </div>
+      <DurationTrigger
+        label="Minimum rest period"
+        :displayValue="shortDuration(catForm.minimumRestSeconds)"
+        :disabled="catForm.initialWearMaxSeconds === null"
+        testid="min-rest"
+        @click="openDurationPicker('minRest')"
+      />
+      <DurationTrigger
+        label="Break grace time"
+        :displayValue="shortDuration(catForm.breakGraceSeconds)"
+        @click="openDurationPicker('grace')"
+      />
       <NumberField
         id="cat-decay"
         label="Break decay / day"
@@ -156,6 +147,7 @@ import IconPickerTrigger from './IconPickerTrigger.vue';
 import IconPickerSheet from './IconPickerSheet.vue';
 import DurationPickerSheet from './DurationPickerSheet.vue';
 import NumberField from './NumberField.vue';
+import DurationTrigger from './DurationTrigger.vue';
 
 export interface CategoryFormState {
   name: string;
