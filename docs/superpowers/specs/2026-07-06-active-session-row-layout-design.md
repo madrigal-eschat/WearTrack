@@ -78,16 +78,43 @@ Row2 always reserves its height even when showing the plain "Start before" /
 "Start your first session" label, so row height stays consistent across all
 idle/active/resting/decaying states.
 
+## Component extraction
+
+The bar and everything that renders on/around it — fill, target marker, lap
+badge, glow/sparkle effects (from the lap-counter spec), and the rest/decay
+bar variants (this spec) — move into their own component,
+`WearProgressBar.vue`, rather than living inline in `ActionPane.vue`. This
+keeps `ActionPane.vue` focused on row layout/data-wiring and makes the bar's
+visual states independently testable.
+
+Rough props shape (finalized during implementation planning):
+
+```
+mode: 'wear' | 'rest' | 'decay'
+fillFraction: number        // 0–1
+color: string                // item color (wear) or fixed grey/black (rest/decay)
+targetMarkerFraction?: number  // wear mode only
+lapTier?: number             // 0–4, wear mode only, drives glow/sparkle
+```
+
+`ActionPane.vue` computes the mode/fraction/color for each row (active
+wearing, resting, decaying) and passes them down; `WearProgressBar.vue` owns
+all rendering and animation for the bar itself.
+
 ## Interaction with the lap-counter spec
 
-Independent of [2026-07-06-lap-counter-design.md](2026-07-06-lap-counter-design.md).
-The lap badge and glow/sparkle effects render on the active-session bar row;
-this spec only repositions surrounding text, buttons, and idle-row state
-indicators. No conflicts.
+Builds on [2026-07-06-lap-counter-design.md](2026-07-06-lap-counter-design.md).
+The lap badge and glow/sparkle effects render inside `WearProgressBar.vue`
+(wear mode); this spec positions the component within the row and adds the
+rest/decay modes. No conflicts — the lap spec's `lapTier`/badge logic slots
+straight into the props shape above.
 
 ## Testing
 
-- **Component tests:** update `ActionPane.spec.ts` assertions that target the
+- **Component tests:** new `WearProgressBar.spec.ts` covering each mode
+  (wear/rest/decay) in isolation — fill fraction rendering, target marker,
+  lap tier glow/sparkle classes, rest/decay colors and fill direction, decay
+  drop-shadow. Update `ActionPane.spec.ts` assertions that target the
   old `#after`-slot DOM structure (Worn/Remaining/Target/Max placement, Stop
   button position) to the new structure. Add cases for: stats line wrapping
   behavior at narrow width; overdue state showing "Overdue" + "Stop wearing";
