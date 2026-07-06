@@ -63,10 +63,12 @@ Mirrors the active-session shape:
    the user waits out the rest.
 2. **Decaying** (not resting): `[decay icon] Decay` label + black bar,
    starting full and un-filling from the left as the decay window elapses.
-   Below the bar, a bold black-labelled line **"Total decay in `<time
-   left>`"**, styled like a normal duration line but bold. Stats line stays
-   `Target | Max` (reflecting decayed values). Once fully decayed (bar
-   empty), the line switches to **"Target and max have fully decayed"**.
+   The decay bar carries a drop-shadow, giving it a slightly unsettling look
+   distinct from every other bar state. Below the bar, a bold black-labelled
+   line **"Total decay in `<time left>`"**, styled like a normal duration
+   line but bold. Stats line stays `Target | Max` (reflecting decayed
+   values). Once fully decayed (bar empty), the line switches to **"Target
+   and max have fully decayed"**.
 3. **Default** (not resting, not decaying): row2 shows **"Start before
    `<date>`"** (today's decay-start label, relocated here). If there is no
    previous session at all for this category (first-ever use), it instead
