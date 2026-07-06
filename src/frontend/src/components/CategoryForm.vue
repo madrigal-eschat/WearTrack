@@ -28,13 +28,14 @@
             class="text-xs text-gray-400 underline" @click="catForm.initialWearMaxSeconds = null">clear</button>
         </div>
       </div>
-      <div>
-        <label for="cat-rest-mult" class="block text-sm font-medium text-gray-700 mb-1">Rest multiplier</label>
-        <input id="cat-rest-mult" :value="catForm.restMultiplier"
-          @input="catForm.restMultiplier = Number(($event.target as HTMLInputElement).value)" @blur="onRestMultiplierBlur"
-          type="number" min="0" step="0.1"
-          class="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-      </div>
+      <NumberField
+        id="cat-rest-mult"
+        label="Rest multiplier"
+        v-model="catForm.restMultiplier"
+        :min="0"
+        :default="2"
+        :step="0.1"
+      />
     </div>
 
     <div class="flex gap-4 flex-wrap items-end">
@@ -53,13 +54,15 @@
           <span>{{ shortDuration(catForm.breakGraceSeconds) }}</span><span class="text-gray-400">▾</span>
         </button>
       </div>
-      <div>
-        <label for="cat-decay" class="block text-sm font-medium text-gray-700 mb-1">Break decay / day</label>
-        <input id="cat-decay" :value="catForm.breakDecayMultiplier"
-          @input="catForm.breakDecayMultiplier = Number(($event.target as HTMLInputElement).value)" @blur="onDecayBlur"
-          type="number" min="0" max="0.99" step="0.01"
-          class="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-      </div>
+      <NumberField
+        id="cat-decay"
+        label="Break decay / day"
+        v-model="catForm.breakDecayMultiplier"
+        :min="0"
+        :max="0.99"
+        :default="0.91"
+        :step="0.01"
+      />
     </div>
     <p class="text-xs text-gray-400 -mt-1">
       <strong>Target</strong> is the goal duration; <strong>Maximum</strong> (optional) is the hard ceiling.
@@ -152,6 +155,7 @@ import TextField from './TextField.vue';
 import IconPickerTrigger from './IconPickerTrigger.vue';
 import IconPickerSheet from './IconPickerSheet.vue';
 import DurationPickerSheet from './DurationPickerSheet.vue';
+import NumberField from './NumberField.vue';
 
 export interface CategoryFormState {
   name: string;
@@ -225,24 +229,6 @@ function onDurationPicked(seconds: number) {
   const prev = idx > 0 ? catForm.crossoverPoints[idx - 1] : 0;
   const next = idx < catForm.crossoverPoints.length - 1 ? catForm.crossoverPoints[idx + 1] : Infinity;
   catForm.crossoverPoints[idx] = Math.max(prev + 60, Math.min(next - 60, seconds));
-}
-
-function onRestMultiplierBlur(e: Event) {
-  const val = Number((e.target as HTMLInputElement).value);
-  if (isNaN(val) || (e.target as HTMLInputElement).value === '') {
-    catForm.restMultiplier = 2;
-  } else {
-    catForm.restMultiplier = Math.max(0, val);
-  }
-}
-
-function onDecayBlur(e: Event) {
-  const val = Number((e.target as HTMLInputElement).value);
-  if (!Number.isFinite(val) || (e.target as HTMLInputElement).value === '') {
-    catForm.breakDecayMultiplier = 0.91;
-  } else {
-    catForm.breakDecayMultiplier = Math.max(0, Math.min(0.99, val));
-  }
 }
 
 function addBand() {

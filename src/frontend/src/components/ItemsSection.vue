@@ -28,15 +28,14 @@
         </div>
       </div>
       <div class="flex gap-4 items-end">
-        <div>
-          <label for="item-difficulty" class="block text-sm font-medium text-gray-700 mb-1">Difficulty</label>
-          <input
-            id="item-difficulty"
-            v-model.number="itemForm.difficulty_multiplier"
-            type="number" min="0.1" step="0.1"
-            class="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+        <NumberField
+          id="item-difficulty"
+          label="Difficulty"
+          v-model="itemForm.difficulty_multiplier"
+          :min="0.1"
+          :default="1.0"
+          :step="0.1"
+        />
         <div class="ml-auto">
           <k-button
             type="button"
@@ -94,15 +93,14 @@
                 </div>
               </div>
               <div class="flex gap-4 items-end">
-                <div>
-                  <label for="edit-item-difficulty" class="block text-sm font-medium text-gray-700 mb-1">Difficulty</label>
-                  <input
-                    id="edit-item-difficulty"
-                    v-model.number="editForm.difficulty_multiplier"
-                    type="number" min="0.1" step="0.1"
-                    class="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+                <NumberField
+                  id="edit-item-difficulty"
+                  label="Difficulty"
+                  v-model="editForm.difficulty_multiplier"
+                  :min="0.1"
+                  :default="1.0"
+                  :step="0.1"
+                />
                 <div class="flex gap-2 ml-auto">
                   <k-button small outline type="button" @click="editingItemId = null">Cancel</k-button>
                   <k-button small type="button" @click="onSaveItem(item.id)" :disabled="!editForm.name">Save</k-button>
@@ -136,6 +134,7 @@ import ColorPicker from './ColorPicker.vue';
 import ColorCircle from './ColorCircle.vue';
 import FormSectionHeader from './FormSectionHeader.vue';
 import SectionTitle from './SectionTitle.vue';
+import NumberField from './NumberField.vue';
 
 const { loadItems, createItem, updateItem, deleteItem, itemsForCategory } = useItems();
 const { categories } = useCategories();
