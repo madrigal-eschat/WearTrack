@@ -73,7 +73,7 @@ test.describe('Item management', () => {
     // This avoids fragile bounding-box comparisons that break when other
     // categories are present on the page.
     const categorySection = page.locator('div').filter({
-      has: page.locator('div.uppercase', { hasText: categoryName }),
+      has: page.locator('span.uppercase', { hasText: categoryName }),
     }).first();
     await expect(categorySection.getByText(name)).toBeVisible();
   });
