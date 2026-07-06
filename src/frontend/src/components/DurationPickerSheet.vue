@@ -13,7 +13,7 @@
           data-testid="duration-picker-cancel"
           @click="$emit('update:open', false)"
         >Cancel</button>
-        <span class="font-semibold text-sm">Duration</span>
+        <SectionTitle variant="sheet">Duration</SectionTitle>
         <button
           type="button"
           class="absolute right-4 text-sm font-semibold text-blue-500"
@@ -93,6 +93,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted, nextTick } from 'vue';
 import { kSheet, kToolbar } from 'konsta/vue';
+import SectionTitle from './SectionTitle.vue';
 
 const ITEM_H = 44;
 const DAY_COUNT = 31;   // 0–30 d

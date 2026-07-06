@@ -13,7 +13,7 @@
           class="absolute left-0 flex items-center justify-center w-8 h-full text-primary text-xl"
           @click="close"
         >✕</button>
-        <span class="font-semibold whitespace-nowrap text-sm">Choose Icon</span>
+        <SectionTitle variant="sheet">Choose Icon</SectionTitle>
       </div>
     </k-toolbar>
 
@@ -79,9 +79,9 @@
           <h3
             :ref="(el) => setHeadingRef(cat, el)"
             :data-category="cat"
-            class="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-4 mb-2"
+            class="mt-4 mb-2"
           >
-            {{ cat }}
+            <SectionTitle variant="group">{{ cat }}</SectionTitle>
           </h3>
           <div class="grid gap-1" style="grid-template-columns: repeat(8, minmax(0, 1fr))">
             <button
@@ -107,6 +107,7 @@
 import { ref, computed, watch, nextTick, onUnmounted } from 'vue';
 import { Icon } from '@iconify/vue';
 import { kSheet, kToolbar } from 'konsta/vue';
+import SectionTitle from './SectionTitle.vue';
 import type { PhCategories } from '../utils/phCategories.js';
 import { filterIcons } from '../utils/phCategories.js';
 import categoriesData from '../generated/ph-categories.json';

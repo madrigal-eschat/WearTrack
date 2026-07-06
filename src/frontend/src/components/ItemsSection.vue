@@ -51,8 +51,8 @@
 
     <template v-if="!loading">
       <div v-for="cat in categories" :key="cat.id">
-        <div class="px-4 mt-4 mb-1 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-          {{ cat.name }}
+        <div class="px-4 mt-4 mb-1">
+          <SectionTitle variant="group">{{ cat.name }}</SectionTitle>
         </div>
         <k-list inset class="!my-2">
           <template v-for="item in itemsForCategory(cat.id)" :key="item.id">
@@ -135,6 +135,7 @@ import SelectField from './SelectField.vue';
 import ColorPicker from './ColorPicker.vue';
 import ColorCircle from './ColorCircle.vue';
 import FormSectionHeader from './FormSectionHeader.vue';
+import SectionTitle from './SectionTitle.vue';
 
 const { loadItems, createItem, updateItem, deleteItem, itemsForCategory } = useItems();
 const { categories } = useCategories();
