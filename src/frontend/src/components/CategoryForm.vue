@@ -1,5 +1,5 @@
 <template>
-  <div class="mx-4 mb-3 p-3 bg-white border border-gray-200 rounded-2xl space-y-2">
+  <FormCard>
     <!-- Icon (left) + Name (right) on same row -->
     <div class="flex gap-2 items-end">
       <IconPickerTrigger label="Icon" :modelValue="catForm.icon" @click="showIconPicker = true" />
@@ -135,13 +135,14 @@
       @update:modelValue="onDurationPicked"
       @update:open="showDurationPicker = $event"
     />
-  </div>
+  </FormCard>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue';
 import { bandNamesForCount, bandColorsForCount } from '../utils/riskLevels.js';
 import { shortDuration } from '../utils/formatDuration.js';
+import FormCard from './FormCard.vue';
 import TextField from './TextField.vue';
 import IconPickerTrigger from './IconPickerTrigger.vue';
 import IconPickerSheet from './IconPickerSheet.vue';
