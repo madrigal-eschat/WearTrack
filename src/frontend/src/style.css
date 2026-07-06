@@ -1,3 +1,10 @@
 @import "tailwindcss";
 @import "konsta/theme.css";
 @source "../node_modules/konsta";
+
+@theme {
+  --font-size-title-page: 1.125rem;
+  --font-size-title-section: 1.0625rem;
+  --font-size-title-sheet: 0.875rem;
+  --font-size-title-group: 0.75rem;
+}
