@@ -4,7 +4,7 @@
       <button type="button" aria-label="Back" class="text-gray-500 p-2" @click="router.push('/')">
         <ChevronLeftIcon class="w-6 h-6" />
       </button>
-      <span class="text-lg font-semibold">Settings</span>
+      <SectionTitle variant="page">Settings</SectionTitle>
     </div>
     <div class="px-4 py-4">
       <p class="text-sm text-gray-500 text-center">
@@ -38,6 +38,7 @@ import { useRouter } from 'vue-router';
 import { ChevronLeftIcon } from '@heroicons/vue/24/solid';
 import { kPage, kList, kListItem, kToggle } from 'konsta/vue';
 import { useNotifications } from '../composables/useNotifications.js';
+import SectionTitle from '../components/SectionTitle.vue';
 
 const router = useRouter();
 const { isSupported, isConfigured, isSubscribed, enable, disable } = useNotifications();
