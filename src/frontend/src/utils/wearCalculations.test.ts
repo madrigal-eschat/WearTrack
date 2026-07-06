@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { targetWearSeconds, maxWearSeconds, remainingWearSeconds } from './wearCalculations.js';
+import { targetWearSeconds, maxWearSeconds, remainingWearSeconds, lapCount, lapFillFraction, lapTier } from './wearCalculations.js';
 
 describe('targetWearSeconds', () => {
   it('reads the stored session target', () => {
@@ -40,5 +40,37 @@ describe('remainingWearSeconds', () => {
   it('returns null past target with no max even well beyond it', () => {
     const session = { started_at: 1000, ended_at: null, target_wear_seconds: 900, max_wear_seconds: null };
     expect(remainingWearSeconds(session, 1000 + 5000)).toBeNull();
+  });
+});
+
+describe('lapCount', () => {
+  it('is 0 before the first lap completes', () => {
+    expect(lapCount(50, 100)).toBe(0);
+  });
+
+  it('counts completed laps', () => {
+    expect(lapCount(350, 100)).toBe(3);
+  });
+});
+
+describe('lapFillFraction', () => {
+  it('matches plain elapsed/target before the first wrap', () => {
+    expect(lapFillFraction(40, 100)).toBeCloseTo(0.4);
+  });
+
+  it('wraps back to 0 exactly at a multiple of target', () => {
+    expect(lapFillFraction(300, 100)).toBe(0);
+  });
+
+  it('wraps partway through a later lap', () => {
+    expect(lapFillFraction(350, 100)).toBeCloseTo(0.5);
+  });
+});
+
+describe('lapTier', () => {
+  it.each([
+    [0, 0], [1, 0], [2, 1], [3, 2], [4, 2], [5, 3], [7, 3], [8, 4], [20, 4],
+  ])('lapTier(%i) === %i', (count, tier) => {
+    expect(lapTier(count)).toBe(tier);
   });
 });

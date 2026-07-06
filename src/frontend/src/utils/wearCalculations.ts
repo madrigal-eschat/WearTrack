@@ -30,3 +30,24 @@ export function remainingWearSeconds(
   }
   return null;
 }
+
+/** Completed laps for the current elapsed time (null-max categories only). */
+export function lapCount(elapsed: number, target: number): number {
+  if (target <= 0) return 0;
+  return Math.floor(elapsed / target);
+}
+
+/** Bar fill fraction (0-1) that wraps every `target` seconds instead of capping at 1. */
+export function lapFillFraction(elapsed: number, target: number): number {
+  if (target <= 0) return 0;
+  return (elapsed % target) / target;
+}
+
+/** Visual effect tier (0-4) for a given lap count. Caps at tier 4 from lap 8 onward. */
+export function lapTier(lapCount: number): number {
+  if (lapCount >= 8) return 4;
+  if (lapCount >= 5) return 3;
+  if (lapCount >= 3) return 2;
+  if (lapCount >= 2) return 1;
+  return 0;
+}
