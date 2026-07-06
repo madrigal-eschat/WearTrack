@@ -7,7 +7,7 @@
       @toggle="showItemForm = !showItemForm; if (showItemForm) editingItemId = null"
     />
 
-    <div v-if="showItemForm && categories.length > 0" class="mx-4 mb-3 p-3 bg-white border border-gray-200 rounded-2xl space-y-2">
+    <FormCard v-if="showItemForm && categories.length > 0">
       <TextField id="item-name" label="Name" v-model="itemForm.name" />
       <div class="flex gap-2 items-end">
         <ColorPicker v-model="itemForm.color" />
@@ -28,15 +28,14 @@
         </div>
       </div>
       <div class="flex gap-4 items-end">
-        <div>
-          <label for="item-difficulty" class="block text-sm font-medium text-gray-700 mb-1">Difficulty</label>
-          <input
-            id="item-difficulty"
-            v-model.number="itemForm.difficulty_multiplier"
-            type="number" min="0.1" step="0.1"
-            class="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+        <NumberField
+          id="item-difficulty"
+          label="Difficulty"
+          v-model="itemForm.difficulty_multiplier"
+          :min="0.1"
+          :default="1.0"
+          :step="0.1"
+        />
         <div class="ml-auto">
           <k-button
             type="button"
@@ -47,12 +46,12 @@
           </k-button>
         </div>
       </div>
-    </div>
+    </FormCard>
 
     <template v-if="!loading">
       <div v-for="cat in categories" :key="cat.id">
-        <div class="px-4 mt-4 mb-1 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-          {{ cat.name }}
+        <div class="px-4 mt-4 mb-1">
+          <SectionTitle variant="group">{{ cat.name }}</SectionTitle>
         </div>
         <k-list inset class="!my-2">
           <template v-for="item in itemsForCategory(cat.id)" :key="item.id">
@@ -74,7 +73,7 @@
                 </div>
               </template>
             </k-list-item>
-            <div v-if="editingItemId === item.id" class="mx-2 mb-2 p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-2">
+            <FormCard v-if="editingItemId === item.id">
               <TextField id="edit-item-name" label="Name" v-model="editForm.name" />
               <div class="flex gap-2 items-end">
                 <ColorPicker v-model="editForm.color" />
@@ -94,21 +93,20 @@
                 </div>
               </div>
               <div class="flex gap-4 items-end">
-                <div>
-                  <label for="edit-item-difficulty" class="block text-sm font-medium text-gray-700 mb-1">Difficulty</label>
-                  <input
-                    id="edit-item-difficulty"
-                    v-model.number="editForm.difficulty_multiplier"
-                    type="number" min="0.1" step="0.1"
-                    class="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+                <NumberField
+                  id="edit-item-difficulty"
+                  label="Difficulty"
+                  v-model="editForm.difficulty_multiplier"
+                  :min="0.1"
+                  :default="1.0"
+                  :step="0.1"
+                />
                 <div class="flex gap-2 ml-auto">
                   <k-button small outline type="button" @click="editingItemId = null">Cancel</k-button>
                   <k-button small type="button" @click="onSaveItem(item.id)" :disabled="!editForm.name">Save</k-button>
                 </div>
               </div>
-            </div>
+            </FormCard>
           </template>
           <k-list-item
             v-if="itemsForCategory(cat.id).length === 0"
@@ -134,7 +132,10 @@ import TextField from './TextField.vue';
 import SelectField from './SelectField.vue';
 import ColorPicker from './ColorPicker.vue';
 import ColorCircle from './ColorCircle.vue';
+import FormCard from './FormCard.vue';
 import FormSectionHeader from './FormSectionHeader.vue';
+import SectionTitle from './SectionTitle.vue';
+import NumberField from './NumberField.vue';
 
 const { loadItems, createItem, updateItem, deleteItem, itemsForCategory } = useItems();
 const { categories } = useCategories();

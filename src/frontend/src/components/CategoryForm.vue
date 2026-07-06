@@ -1,5 +1,5 @@
 <template>
-  <div class="mx-4 mb-3 p-3 bg-white border border-gray-200 rounded-2xl space-y-2">
+  <FormCard>
     <!-- Icon (left) + Name (right) on same row -->
     <div class="flex gap-2 items-end">
       <IconPickerTrigger label="Icon" :modelValue="catForm.icon" @click="showIconPicker = true" />
@@ -9,57 +9,51 @@
     </div>
 
     <div class="flex gap-4 flex-wrap items-end">
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Target wear</label>
-        <button type="button" class="flex items-center gap-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-          @click="openDurationPicker('target')">
-          <span>{{ shortDuration(catForm.initialWearTargetSeconds) }}</span><span class="text-gray-400">▾</span>
-        </button>
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Maximum wear</label>
-        <div class="flex items-center gap-1">
-          <button type="button" class="flex items-center gap-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-            @click="openDurationPicker('max')">
-            <span>{{ catForm.initialWearMaxSeconds === null ? 'None' : shortDuration(catForm.initialWearMaxSeconds) }}</span>
-            <span class="text-gray-400">▾</span>
-          </button>
-          <button v-if="catForm.initialWearMaxSeconds !== null" type="button" data-testid="clear-max"
-            class="text-xs text-gray-400 underline" @click="catForm.initialWearMaxSeconds = null">clear</button>
-        </div>
-      </div>
-      <div>
-        <label for="cat-rest-mult" class="block text-sm font-medium text-gray-700 mb-1">Rest multiplier</label>
-        <input id="cat-rest-mult" :value="catForm.restMultiplier"
-          @input="catForm.restMultiplier = Number(($event.target as HTMLInputElement).value)" @blur="onRestMultiplierBlur"
-          type="number" min="0" step="0.1"
-          class="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-      </div>
+      <DurationTrigger
+        label="Target wear"
+        :displayValue="shortDuration(catForm.initialWearTargetSeconds)"
+        @click="openDurationPicker('target')"
+      />
+      <DurationTrigger
+        label="Maximum wear"
+        :displayValue="catForm.initialWearMaxSeconds === null ? 'None' : shortDuration(catForm.initialWearMaxSeconds)"
+        :clearable="catForm.initialWearMaxSeconds !== null"
+        clearTestid="clear-max"
+        @click="openDurationPicker('max')"
+        @clear="catForm.initialWearMaxSeconds = null"
+      />
+      <NumberField
+        id="cat-rest-mult"
+        label="Rest multiplier"
+        v-model="catForm.restMultiplier"
+        :min="0"
+        :default="2"
+        :step="0.1"
+      />
     </div>
 
     <div class="flex gap-4 flex-wrap items-end">
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Minimum rest period</label>
-        <button type="button" :disabled="catForm.initialWearMaxSeconds === null" data-testid="min-rest"
-          class="flex items-center gap-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white disabled:opacity-40"
-          @click="openDurationPicker('minRest')">
-          <span>{{ shortDuration(catForm.minimumRestSeconds) }}</span><span class="text-gray-400">▾</span>
-        </button>
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Break grace time</label>
-        <button type="button" class="flex items-center gap-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-          @click="openDurationPicker('grace')">
-          <span>{{ shortDuration(catForm.breakGraceSeconds) }}</span><span class="text-gray-400">▾</span>
-        </button>
-      </div>
-      <div>
-        <label for="cat-decay" class="block text-sm font-medium text-gray-700 mb-1">Break decay / day</label>
-        <input id="cat-decay" :value="catForm.breakDecayMultiplier"
-          @input="catForm.breakDecayMultiplier = Number(($event.target as HTMLInputElement).value)" @blur="onDecayBlur"
-          type="number" min="0" max="0.99" step="0.01"
-          class="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-      </div>
+      <DurationTrigger
+        label="Minimum rest period"
+        :displayValue="shortDuration(catForm.minimumRestSeconds)"
+        :disabled="catForm.initialWearMaxSeconds === null"
+        testid="min-rest"
+        @click="openDurationPicker('minRest')"
+      />
+      <DurationTrigger
+        label="Break grace time"
+        :displayValue="shortDuration(catForm.breakGraceSeconds)"
+        @click="openDurationPicker('grace')"
+      />
+      <NumberField
+        id="cat-decay"
+        label="Break decay / day"
+        v-model="catForm.breakDecayMultiplier"
+        :min="0"
+        :max="0.99"
+        :default="0.91"
+        :step="0.01"
+      />
     </div>
     <p class="text-xs text-gray-400 -mt-1">
       <strong>Target</strong> is the goal duration; <strong>Maximum</strong> (optional) is the hard ceiling.
@@ -141,17 +135,20 @@
       @update:modelValue="onDurationPicked"
       @update:open="showDurationPicker = $event"
     />
-  </div>
+  </FormCard>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue';
 import { bandNamesForCount, bandColorsForCount } from '../utils/riskLevels.js';
 import { shortDuration } from '../utils/formatDuration.js';
+import FormCard from './FormCard.vue';
 import TextField from './TextField.vue';
 import IconPickerTrigger from './IconPickerTrigger.vue';
 import IconPickerSheet from './IconPickerSheet.vue';
 import DurationPickerSheet from './DurationPickerSheet.vue';
+import NumberField from './NumberField.vue';
+import DurationTrigger from './DurationTrigger.vue';
 
 export interface CategoryFormState {
   name: string;
@@ -225,24 +222,6 @@ function onDurationPicked(seconds: number) {
   const prev = idx > 0 ? catForm.crossoverPoints[idx - 1] : 0;
   const next = idx < catForm.crossoverPoints.length - 1 ? catForm.crossoverPoints[idx + 1] : Infinity;
   catForm.crossoverPoints[idx] = Math.max(prev + 60, Math.min(next - 60, seconds));
-}
-
-function onRestMultiplierBlur(e: Event) {
-  const val = Number((e.target as HTMLInputElement).value);
-  if (isNaN(val) || (e.target as HTMLInputElement).value === '') {
-    catForm.restMultiplier = 2;
-  } else {
-    catForm.restMultiplier = Math.max(0, val);
-  }
-}
-
-function onDecayBlur(e: Event) {
-  const val = Number((e.target as HTMLInputElement).value);
-  if (!Number.isFinite(val) || (e.target as HTMLInputElement).value === '') {
-    catForm.breakDecayMultiplier = 0.91;
-  } else {
-    catForm.breakDecayMultiplier = Math.max(0, Math.min(0.99, val));
-  }
 }
 
 function addBand() {
