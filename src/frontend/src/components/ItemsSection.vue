@@ -7,7 +7,7 @@
       @toggle="showItemForm = !showItemForm; if (showItemForm) editingItemId = null"
     />
 
-    <div v-if="showItemForm && categories.length > 0" class="mx-4 mb-3 p-3 bg-white border border-gray-200 rounded-2xl space-y-2">
+    <FormCard v-if="showItemForm && categories.length > 0">
       <TextField id="item-name" label="Name" v-model="itemForm.name" />
       <div class="flex gap-2 items-end">
         <ColorPicker v-model="itemForm.color" />
@@ -46,7 +46,7 @@
           </k-button>
         </div>
       </div>
-    </div>
+    </FormCard>
 
     <template v-if="!loading">
       <div v-for="cat in categories" :key="cat.id">
@@ -73,7 +73,7 @@
                 </div>
               </template>
             </k-list-item>
-            <div v-if="editingItemId === item.id" class="mx-2 mb-2 p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-2">
+            <FormCard v-if="editingItemId === item.id">
               <TextField id="edit-item-name" label="Name" v-model="editForm.name" />
               <div class="flex gap-2 items-end">
                 <ColorPicker v-model="editForm.color" />
@@ -106,7 +106,7 @@
                   <k-button small type="button" @click="onSaveItem(item.id)" :disabled="!editForm.name">Save</k-button>
                 </div>
               </div>
-            </div>
+            </FormCard>
           </template>
           <k-list-item
             v-if="itemsForCategory(cat.id).length === 0"
@@ -132,6 +132,7 @@ import TextField from './TextField.vue';
 import SelectField from './SelectField.vue';
 import ColorPicker from './ColorPicker.vue';
 import ColorCircle from './ColorCircle.vue';
+import FormCard from './FormCard.vue';
 import FormSectionHeader from './FormSectionHeader.vue';
 import SectionTitle from './SectionTitle.vue';
 import NumberField from './NumberField.vue';
