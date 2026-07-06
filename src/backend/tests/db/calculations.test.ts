@@ -58,7 +58,7 @@ describe('computeSessionStart', () => {
   });
 
   it('after rest, grows by difficulty * (prev + initial)', () => {
-    const prev = { target_wear_seconds: 900, max_wear_seconds: 1800, ended_at: 0, rest_seconds: 100 };
+    const prev = { target_wear_seconds: 900, max_wear_seconds: 1800, ended_at: 0, started_at: -100, rest_seconds: 100 };
     // earliest_start = 100; start at 200 (>= earliest, <= latest 100+86400)
     const r = computeSessionStart(cat, item, prev, 200, false);
     expect(r).toEqual({ target: 1800, max: 3600 });
@@ -66,13 +66,13 @@ describe('computeSessionStart', () => {
 
   it('inside rest period halves prev target/max', () => {
     // prev values high enough that halved result (1000, 2000) stays above initial (900, 1800)
-    const prev = { target_wear_seconds: 2000, max_wear_seconds: 4000, ended_at: 0, rest_seconds: 500 };
+    const prev = { target_wear_seconds: 2000, max_wear_seconds: 4000, ended_at: 0, started_at: -100, rest_seconds: 500 };
     const r = computeSessionStart(cat, item, prev, 100, false); // start < earliest_start(500)
     expect(r).toEqual({ target: 1000, max: 2000 });
   });
 
   it('past grace applies daily decay', () => {
-    const prev = { target_wear_seconds: 900, max_wear_seconds: 1800, ended_at: 0, rest_seconds: 0 };
+    const prev = { target_wear_seconds: 900, max_wear_seconds: 1800, ended_at: 0, started_at: -100, rest_seconds: 0 };
     // latest_start = 0 + 0 + 86400. Start 2 days past latest_start => days_since_grace = 2
     const start = 86400 + 2 * 86400;
     const r = computeSessionStart(cat, item, prev, start, false);
@@ -92,7 +92,7 @@ describe('computeSessionStart', () => {
 
   it('floors target and max at initial values when halving inside rest period would go below', () => {
     // prev target/max well below initial (e.g. after heavy decay or repeated halving)
-    const prev = { target_wear_seconds: 100, max_wear_seconds: 200, ended_at: 0, rest_seconds: 500 };
+    const prev = { target_wear_seconds: 100, max_wear_seconds: 200, ended_at: 0, started_at: -100, rest_seconds: 500 };
     // start inside rest period → halved: target=50, max=100 — both below initial (900/1800)
     const r = computeSessionStart(cat, item, prev, 100, false);
     expect(r.target).toBe(900);

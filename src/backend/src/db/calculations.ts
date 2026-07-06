@@ -23,6 +23,7 @@ export interface PreviousSession {
   target_wear_seconds: number;
   max_wear_seconds: number | null;
   ended_at: number;
+  started_at: number;
   rest_seconds: number;
 }
 
