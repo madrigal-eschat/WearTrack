@@ -52,6 +52,12 @@ export function riskLevelFor(elapsed: number, category: Category): RiskLevel | n
   return null;
 }
 
+/** Completed laps in a previous session: floor(elapsed / target). Only meaningful for null-max categories. */
+export function lapCount(previous: PreviousSession): number {
+  const elapsed = previous.ended_at - previous.started_at;
+  return Math.floor(elapsed / previous.target_wear_seconds);
+}
+
 /** Previous durations grown by one category increment, scaled by difficulty modifier. */
 function growDurations(
   previous: PreviousSession,
@@ -59,8 +65,9 @@ function growDurations(
   dm: number,
 ): { target: number; max: number | null } {
   const maxIsSet = category.initial_max_wear_duration_seconds !== null;
+  const lapBonus = maxIsSet ? 0 : Math.floor(lapCount(previous) / 2) * previous.target_wear_seconds;
   return {
-    target: dm * (previous.target_wear_seconds + category.initial_target_wear_duration_seconds),
+    target: dm * (previous.target_wear_seconds + category.initial_target_wear_duration_seconds + lapBonus),
     max: maxIsSet
       ? dm * ((previous.max_wear_seconds ?? 0) + category.initial_max_wear_duration_seconds!)
       : null,
@@ -97,9 +104,16 @@ function rawDurations(
   const earliestStart = previous.ended_at + previous.rest_seconds;
   const latestStart = earliestStart + category.break_grace_time;
 
-  let { target, max } = startTime < earliestStart
-    ? { target: previous.target_wear_seconds / 2, max: maxIsSet ? (previous.max_wear_seconds ?? 0) / 2 : null }
-    : growDurations(previous, category, dm);
+  let target: number;
+  let max: number | null;
+
+  if (startTime < earliestStart) {
+    const lapBonus = maxIsSet ? 0 : Math.floor(lapCount(previous) / 2) * previous.target_wear_seconds;
+    target = (dm / 2) * (previous.target_wear_seconds + lapBonus);
+    max = maxIsSet ? (previous.max_wear_seconds ?? 0) / 2 : null;
+  } else {
+    ({ target, max } = growDurations(previous, category, dm));
+  }
 
   if (startTime > latestStart) {
     const daysSinceGrace = Math.floor((startTime - latestStart) / 86400);

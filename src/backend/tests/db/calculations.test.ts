@@ -4,6 +4,7 @@ import {
   riskLevelFor,
   computeSessionStart,
   computeRest,
+  lapCount,
   type Category,
 } from '../../src/db/calculations.js';
 
@@ -97,6 +98,60 @@ describe('computeSessionStart', () => {
     const r = computeSessionStart(cat, item, prev, 100, false);
     expect(r.target).toBe(900);
     expect(r.max).toBe(1800);
+  });
+});
+
+describe('lapCount', () => {
+  it('floors elapsed/target', () => {
+    const prev = { target_wear_seconds: 100, max_wear_seconds: null, ended_at: 350, started_at: 0, rest_seconds: 0 };
+    expect(lapCount(prev)).toBe(3);
+  });
+
+  it('is 0 when elapsed is less than one target', () => {
+    const prev = { target_wear_seconds: 100, max_wear_seconds: null, ended_at: 50, started_at: 0, rest_seconds: 0 };
+    expect(lapCount(prev)).toBe(0);
+  });
+});
+
+describe('computeSessionStart — lap carry-over (null-max categories only)', () => {
+  const noMaxCat: Category = { ...cat, initial_max_wear_duration_seconds: null, initial_target_wear_duration_seconds: 50 };
+
+  it('adds floor(lapCount/2) * previous.target on the normal-growth branch', () => {
+    // previous session: target 100, elapsed 350 (1000 - 650) => lapCount = 3, floor(3/2) = 1
+    const prev = { target_wear_seconds: 100, max_wear_seconds: null, ended_at: 1000, started_at: 650, rest_seconds: 0 };
+    // earliest_start = 1000; start at 1000 (>= earliest, <= latest 1000+86400) => normal-growth branch
+    const r = computeSessionStart(noMaxCat, item, prev, 1000, false);
+    // target = 1 * (100 + 50 + 1*100) = 250
+    expect(r).toEqual({ target: 250, max: null });
+  });
+
+  it('adds the same carry-over on the early-restart branch, scaled by difficulty/2', () => {
+    // previous session: target 100, elapsed 450 (1000 - 550) => lapCount = 4, floor(4/2) = 2
+    const prev = { target_wear_seconds: 100, max_wear_seconds: null, ended_at: 1000, started_at: 550, rest_seconds: 500 };
+    // earliest_start = 1500; start at 1000 (< earliest_start) => early-restart branch
+    const r = computeSessionStart(noMaxCat, item, prev, 1000, false);
+    // target = (1/2) * (100 + 2*100) = 150
+    expect(r).toEqual({ target: 150, max: null });
+  });
+
+  it('never applies a lap carry-over to max-set categories', () => {
+    // same shape as the normal-growth test above, but on `cat` (max is set)
+    const prev = { target_wear_seconds: 100, max_wear_seconds: 1800, ended_at: 1000, started_at: 650, rest_seconds: 0 };
+    const r = computeSessionStart(cat, item, prev, 1000, false);
+    // unaffected by lapCount(=3) despite elapsed(350) > target(100) — `cat` has a max set
+    expect(r).toEqual({ target: 1000, max: 3600 });
+  });
+});
+
+describe('computeSessionStart — difficulty modifier now applied on the early-restart branch', () => {
+  it('scales the halved target by the item difficulty modifier (bug fix)', () => {
+    const prev = { target_wear_seconds: 2000, max_wear_seconds: 4000, ended_at: 0, started_at: -100, rest_seconds: 500 };
+    const hardItem = { difficulty_multiplier: 2 }; // dm = 1/2 = 0.5
+    const r = computeSessionStart(cat, hardItem, prev, 100, false); // start(100) < earliest_start(500)
+    // target = (dm/2) * (2000 + 0) = 500
+    expect(r.target).toBe(500);
+    // max is untouched by this fix: previous.max/2 = 2000 (no difficulty modifier applied to max)
+    expect(r.max).toBe(2000);
   });
 });
 
