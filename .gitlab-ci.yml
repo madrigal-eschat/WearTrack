@@ -34,9 +34,6 @@ include:
   - project: $CI_PROJECT_ROOT_NAMESPACE/ci-templates
     file: node-renovate-audit.yml
 
-variables:
-  KUBE_CONTEXT: $CI_PROJECT_ROOT_NAMESPACE/cluster-management:home
-
 # Compile better-sqlite3 for arm64 and publish to the GitLab Package Registry.
 # Almost always a no-op (exits immediately if the prebuilt already exists for
 # this better-sqlite3 version). Must complete before node-build so the prebuilt
