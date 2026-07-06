@@ -37,12 +37,13 @@
           <span v-else class="text-2xl">{{ entry.category.icon }}</span>
         </template>
         <template v-if="entry.session && entry.item" #inner>
-          <div class="relative h-1.5 rounded-full bg-gray-200 overflow-hidden mt-1">
-            <div class="h-full rounded-full transition-all duration-1000"
-              :style="{ width: wearProgress(entry) + '%', background: entry.item.color }"></div>
-            <div class="absolute top-0 bottom-0 w-0.5 bg-gray-600"
-              :style="{ left: targetMarkerPercent(entry) + '%' }" data-testid="target-marker"></div>
-          </div>
+          <WearProgressBar
+            class="mt-1"
+            :fill-fraction="barFillFraction(entry)"
+            :color="entry.item.color"
+            :target-marker-fraction="targetMarkerFraction(entry)"
+            :lap-count="lapCountFor(entry)"
+          />
         </template>
         <template #after>
           <div class="flex gap-2 items-center">
@@ -150,12 +151,13 @@ import { useRouter } from 'vue-router';
 import { Icon } from '@iconify/vue';
 import { Cog6ToothIcon } from '@heroicons/vue/24/solid';
 import { kBlockTitle, kList, kListItem, kButton, kDialog, kDialogButton } from 'konsta/vue';
+import WearProgressBar from './WearProgressBar.vue';
 import { useWear, type CurrentEntry, type Session, type ItemWithLastSession } from '../composables/useWear.js';
 import { useItems } from '../composables/useItems.js';
 import { useNow } from '../composables/useNow.js';
 import { useToast } from '../composables/useToast.js';
 import { formatDuration, shortDuration } from '../utils/formatDuration.js';
-import { targetWearSeconds, maxWearSeconds, currentWear, remainingWearSeconds } from '../utils/wearCalculations.js';
+import { targetWearSeconds, maxWearSeconds, currentWear, remainingWearSeconds, lapCount, lapFillFraction } from '../utils/wearCalculations.js';
 
 const router = useRouter();
 const { currentSessions, loaded, startSession, endSession } = useWear();
@@ -236,17 +238,30 @@ function isOverdue(entry: CurrentEntry): boolean {
   return remainingSecondsFor(entry.session) === null;
 }
 
-function wearProgress(entry: CurrentEntry): number {
-  const ceiling = barCeiling(entry);
-  if (!entry.session || ceiling <= 0) return 0;
-  return Math.min((sessionSeconds(entry.session) / ceiling) * 100, 100);
+/** Bar fill fraction (0-1): fraction of max if set, else wraps every `target` seconds (lap mechanic). */
+function barFillFraction(entry: CurrentEntry): number {
+  if (!entry.session) return 0;
+  const max = maxWearSeconds(entry.session);
+  const target = targetWearSeconds(entry.session);
+  const elapsed = sessionSeconds(entry.session);
+  if (max === null) return lapFillFraction(elapsed, target);
+  if (max <= 0) return 0;
+  return Math.min(elapsed / max, 1);
 }
 
-/** Target marker position as a percentage of the bar ceiling. */
-function targetMarkerPercent(entry: CurrentEntry): number {
-  const ceiling = barCeiling(entry);
-  if (!entry.session || ceiling <= 0) return 100;
-  return Math.min((targetWearSeconds(entry.session) / ceiling) * 100, 100);
+/** Target marker position as a fraction of the bar. Null when max is unset (wrap mode has no fixed marker). */
+function targetMarkerFraction(entry: CurrentEntry): number | null {
+  if (!entry.session) return null;
+  const max = maxWearSeconds(entry.session);
+  if (max === null || max <= 0) return null;
+  return Math.min(targetWearSeconds(entry.session) / max, 1);
+}
+
+/** Completed laps this session (null-max categories only; 0 otherwise). */
+function lapCountFor(entry: CurrentEntry): number {
+  if (!entry.session) return 0;
+  if (maxWearSeconds(entry.session) !== null) return 0;
+  return lapCount(sessionSeconds(entry.session), targetWearSeconds(entry.session));
 }
 
 function rowBg(entry: CurrentEntry): string {
