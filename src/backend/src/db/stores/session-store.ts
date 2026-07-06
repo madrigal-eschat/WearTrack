@@ -124,7 +124,7 @@ class SessionStore {
   findLastEndedInCategory(categoryId: number): PreviousSession | undefined {
     return db
       .prepare(
-        `SELECT s.target_wear_seconds, s.max_wear_seconds, s.ended_at, s.rest_seconds
+        `SELECT s.target_wear_seconds, s.max_wear_seconds, s.ended_at, s.started_at, s.rest_seconds
          FROM sessions s JOIN items i ON i.id = s.item_id
          WHERE i.category_id = ? AND s.ended_at IS NOT NULL AND s.ended_in_injury = 0
          ORDER BY s.ended_at DESC LIMIT 1`,
