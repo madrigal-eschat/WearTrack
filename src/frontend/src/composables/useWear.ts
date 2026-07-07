@@ -56,6 +56,7 @@ export interface CurrentEntry {
   items: ItemWithLastSession[];
   decay_start_time: number | null;
   decay_state: 'none' | 'decaying' | 'fully_decayed';
+  decay_full_time: number | null;
 }
 
 // Module-level state shared across all component instances
