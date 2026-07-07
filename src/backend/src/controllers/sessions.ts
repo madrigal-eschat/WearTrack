@@ -68,12 +68,12 @@ router.get('/current', (c) => {
     categories.map((cat) => {
       const previous = sessionStore.findLastEndedInCategory(cat.id) ?? null;
       const injuryActive = injuryStore.hasActiveInCategory(cat.id);
-      const { decay_start_time, decay_state } = computeDecay(previous, cat, now);
+      const { decay_start_time, decay_state, decay_full_time } = computeDecay(previous, cat, now);
 
       const items = enrichItemsWithExpected(itemsByCategory.get(cat.id) ?? [], cat, previous, now, injuryActive);
 
       const s = sessionByCategory.get(cat.id);
-      if (!s) return { category: cat, item: null, session: null, items, decay_start_time, decay_state };
+      if (!s) return { category: cat, item: null, session: null, items, decay_start_time, decay_state, decay_full_time };
 
       const item = {
         id: s.item_id, category_id: s.category_id, name: s.item_name,
@@ -84,7 +84,7 @@ router.get('/current', (c) => {
         target_wear_seconds: s.target_wear_seconds, max_wear_seconds: s.max_wear_seconds,
         rest_seconds: s.rest_seconds, ended_in_injury: s.ended_in_injury,
       };
-      return { category: cat, item, session, items, decay_start_time, decay_state };
+      return { category: cat, item, session, items, decay_start_time, decay_state, decay_full_time };
     }),
   );
 });

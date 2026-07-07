@@ -4,6 +4,7 @@ import {
   riskLevelFor,
   computeSessionStart,
   computeRest,
+  computeDecay,
   lapCount,
   type Category,
 } from '../../src/db/calculations.js';
@@ -152,6 +153,43 @@ describe('computeSessionStart — difficulty modifier now applied on the early-r
     expect(r.target).toBe(500);
     // max is untouched by this fix: previous.max/2 = 2000 (no difficulty modifier applied to max)
     expect(r.max).toBe(2000);
+  });
+});
+
+describe('computeDecay', () => {
+  const decayCat = { break_grace_time: 100, break_decay_multiplier: 0.91, initial_target_wear_duration_seconds: 900 };
+
+  it('returns none/null when there is no previous session', () => {
+    expect(computeDecay(null, decayCat, 10000)).toEqual({
+      decay_start_time: null,
+      decay_state: 'none',
+      decay_full_time: null,
+    });
+  });
+
+  it('computes decay_start_time and decay_full_time from the previous session', () => {
+    const previous = { ended_at: 0, rest_seconds: 50, target_wear_seconds: 900 };
+    const r = computeDecay(previous, decayCat, 0);
+    const decayStart = 0 + 50 + 100; // 150
+    expect(r.decay_start_time).toBe(decayStart);
+    // (900+900)*0.91^days <= 900  =>  days >= ln(0.5)/ln(0.91) ≈ 7.35  =>  8
+    expect(r.decay_full_time).toBe(decayStart + 8 * 86400);
+    expect(r.decay_state).toBe('none');
+  });
+
+  it('is "decaying" once past decay_start_time but before decay_full_time', () => {
+    const previous = { ended_at: 0, rest_seconds: 50, target_wear_seconds: 900 };
+    const decayStart = 150;
+    const r = computeDecay(previous, decayCat, decayStart + 86400); // 1 day into decay
+    expect(r.decay_state).toBe('decaying');
+  });
+
+  it('is "fully_decayed" at decay_full_time', () => {
+    const previous = { ended_at: 0, rest_seconds: 50, target_wear_seconds: 900 };
+    const decayStart = 150;
+    const r = computeDecay(previous, decayCat, decayStart + 8 * 86400);
+    expect(r.decay_state).toBe('fully_decayed');
+    expect(r.decay_full_time).toBe(decayStart + 8 * 86400);
   });
 });
 
