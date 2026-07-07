@@ -24,9 +24,11 @@
         v-for="entry in currentSessions"
         :key="entry.category.id"
         :title="entry.category.name"
-        :subtitle="subtitle(entry)"
         :class="rowBg(entry)"
       >
+        <template #title>
+          <span v-if="entry.session && entry.item" class="ml-1.5 text-sm font-normal text-gray-500">{{ entry.item.name }}</span>
+        </template>
         <template #media>
           <Icon
             v-if="entry.category.icon?.includes(':')"
@@ -37,6 +39,7 @@
           <span v-else class="text-2xl">{{ entry.category.icon }}</span>
         </template>
         <template v-if="entry.session && entry.item" #inner>
+          <div v-if="isOverdue(entry)" class="text-red-600 text-sm font-semibold mt-0.5">Stop wearing</div>
           <WearProgressBar
             class="mt-1"
             :fill-fraction="barFillFraction(entry)"
@@ -44,21 +47,17 @@
             :target-marker-fraction="targetMarkerFraction(entry)"
             :lap-count="lapCountFor(entry)"
           />
+          <div class="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-sm tabular-nums">
+            <span class="text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Worn</span>{{ elapsed(entry.session) }}</span>
+            <span :class="isOverdue(entry) ? 'text-red-600 font-semibold' : 'text-gray-600'"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Remaining</span>{{ remainingLabel(entry) }}</span>
+            <span class="text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Target</span>{{ targetLabel(entry) }}</span>
+            <span v-if="entry.session.max_wear_seconds !== null" class="text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Max</span>{{ maxWear(entry) }}</span>
+          </div>
         </template>
         <template #after>
           <div class="flex gap-2 items-center">
             <!-- Active session: show elapsed + Stop -->
             <template v-if="entry.session !== null">
-              <div class="text-right tabular-nums leading-snug whitespace-nowrap">
-                <div class="flex gap-3 justify-end">
-                  <span class="text-sm text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Worn</span>{{ elapsed(entry.session) }}</span>
-                  <span class="text-sm" :class="isOverdue(entry) ? 'text-red-600 font-semibold' : 'text-gray-600'"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Remaining</span>{{ remainingLabel(entry) }}</span>
-                </div>
-                <div class="flex gap-3 justify-end mt-0.5">
-                  <span class="text-sm text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Target</span>{{ targetLabel(entry) }}</span>
-                  <span v-if="entry.session.max_wear_seconds !== null" class="text-sm text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Max</span>{{ maxWear(entry) }}</span>
-                </div>
-              </div>
               <k-button
                 small
                 outline
@@ -190,13 +189,6 @@ onMounted(async () => {
   }
 });
 
-function subtitle(entry: CurrentEntry): string {
-  if (entry.session !== null && entry.item !== null) {
-    return entry.item.name;
-  }
-  return 'Idle';
-}
-
 function sessionSeconds(session: Session): number {
   return currentWear(session, Math.floor(now.value / 1000));
 }
@@ -230,12 +222,15 @@ function remainingSecondsFor(session: Session): number | null {
 function remainingLabel(entry: CurrentEntry): string {
   if (!entry.session) return '';
   const remaining = remainingSecondsFor(entry.session);
-  return remaining === null ? 'Stop wearing' : formatDuration(remaining);
+  if (remaining !== null) return formatDuration(remaining);
+  return maxWearSeconds(entry.session) === null ? 'Target reached' : 'Overdue';
 }
 
 function isOverdue(entry: CurrentEntry): boolean {
   if (!entry.session) return false;
-  return remainingSecondsFor(entry.session) === null;
+  const max = maxWearSeconds(entry.session);
+  if (max === null) return false;
+  return sessionSeconds(entry.session) >= max;
 }
 
 /** Bar fill fraction (0-1): fraction of max if set, else wraps every `target` seconds (lap mechanic). */
