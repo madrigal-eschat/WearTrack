@@ -4,7 +4,7 @@
     <div class="bar-wrap">
       <div
         class="bar-fill"
-        :class="{ 'decay-shadow': mode === 'decay' }"
+        :class="{ 'decay-shadow': mode === 'decay', 'decay-anchor-right': mode === 'decay' }"
         :style="{ width: fillFraction * 100 + '%', background: barColor }"
       ></div>
       <div
@@ -96,6 +96,10 @@ const sparkles = computed(() => generateSparkles(SPARKLE_COUNTS[tier.value]));
   inset: 0;
   border-radius: 999px;
   transition: width 1s;
+}
+.bar-fill.decay-anchor-right {
+  left: auto;
+  right: 0;
 }
 .target-marker {
   position: absolute;

@@ -524,4 +524,25 @@ test.describe('Category streak badge', () => {
     await expect(row.getByTestId('streak-badge')).toBeVisible();
     await expect(row.getByTestId('streak-badge')).toHaveText('2');
   });
+
+  test('streak badge and active-session progress bar both show on the same row', async ({ page, request }) => {
+    const s1 = await (
+      await request.post('/api/sessions/start', { data: { item_id: itemId, started_at: 0 } })
+    ).json();
+    await request.post(`/api/sessions/${s1.id}/end`, { data: { ended_at: 50 } });
+    const s2 = await (
+      await request.post('/api/sessions/start', { data: { item_id: itemId, started_at: 100 } })
+    ).json();
+    await request.post(`/api/sessions/${s2.id}/end`, { data: { ended_at: 150 } });
+
+    const now = Math.floor(Date.now() / 1000);
+    await request.post('/api/sessions/start', { data: { item_id: itemId, started_at: now - 5 } });
+
+    await page.goto('/');
+    const row = page.locator('li', { hasText: categoryName });
+    await expect(row.getByTestId('streak-badge')).toBeVisible();
+    await expect(row.getByTestId('wear-progress-bar')).toBeVisible();
+
+    await row.getByRole('button', { name: /stop/i }).click();
+  });
 });
