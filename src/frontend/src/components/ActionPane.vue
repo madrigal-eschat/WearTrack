@@ -38,21 +38,57 @@
           />
           <span v-else class="text-2xl">{{ entry.category.icon }}</span>
         </template>
-        <template v-if="entry.session && entry.item" #inner>
-          <div v-if="isOverdue(entry)" class="text-red-600 text-sm font-semibold mt-0.5">Stop wearing</div>
-          <WearProgressBar
-            class="mt-1"
-            :fill-fraction="barFillFraction(entry)"
-            :color="entry.item.color"
-            :target-marker-fraction="targetMarkerFraction(entry)"
-            :lap-count="lapCountFor(entry)"
-          />
-          <div class="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-sm tabular-nums">
-            <span class="text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Worn</span>{{ elapsed(entry.session) }}</span>
-            <span :class="isOverdue(entry) ? 'text-red-600 font-semibold' : 'text-gray-600'"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Remaining</span>{{ remainingLabel(entry) }}</span>
-            <span class="text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Target</span>{{ targetLabel(entry) }}</span>
-            <span v-if="entry.session.max_wear_seconds !== null" class="text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Max</span>{{ maxWear(entry) }}</span>
-          </div>
+        <template #inner>
+          <template v-if="entry.session && entry.item">
+            <div v-if="isOverdue(entry)" class="text-red-600 text-sm font-semibold mt-0.5">Stop wearing</div>
+            <WearProgressBar
+              class="mt-1"
+              :fill-fraction="barFillFraction(entry)"
+              :color="entry.item.color"
+              :target-marker-fraction="targetMarkerFraction(entry)"
+              :lap-count="lapCountFor(entry)"
+            />
+            <div class="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-sm tabular-nums">
+              <span class="text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Worn</span>{{ elapsed(entry.session) }}</span>
+              <span :class="isOverdue(entry) ? 'text-red-600 font-semibold' : 'text-gray-600'"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Remaining</span>{{ remainingLabel(entry) }}</span>
+              <span class="text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Target</span>{{ targetLabel(entry) }}</span>
+              <span v-if="entry.session.max_wear_seconds !== null" class="text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Max</span>{{ maxWear(entry) }}</span>
+            </div>
+          </template>
+          <template v-else>
+            <!-- Row2: resting > decaying > default -->
+            <template v-if="restRemainingSeconds(entry) > 0">
+              <div class="flex items-center gap-1.5 text-xs text-gray-500 mb-1">
+                <Icon icon="ph:bed" class="w-3.5 h-3.5" />Rest
+              </div>
+              <WearProgressBar mode="rest" :fill-fraction="restFillFraction(entry)" />
+            </template>
+            <template v-else-if="entry.decay_state !== 'none'">
+              <div class="flex items-center gap-1.5 text-xs text-gray-500 mb-1">
+                <Icon icon="ph:warning-circle" class="w-3.5 h-3.5" />Decay
+              </div>
+              <WearProgressBar mode="decay" :fill-fraction="decayFillFractionFor(entry)" />
+              <div class="text-sm font-bold text-black mt-0.5">
+                {{ entry.decay_state === 'fully_decayed' ? 'Target and max have fully decayed' : `Total decay in ${decayTimeLeftLabel(entry)}` }}
+              </div>
+            </template>
+            <template v-else>
+              <div class="text-xs text-gray-500 min-h-[22px] flex items-center">
+                <span v-if="entry.decay_start_time !== null"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Start before</span>{{ formatDecayDate(entry.decay_start_time) }}</span>
+                <span v-else>Start your first session</span>
+              </div>
+            </template>
+
+            <!-- Row3: rest stats replace Target/Max while resting -->
+            <div v-if="restRemainingSeconds(entry) > 0" class="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-sm tabular-nums">
+              <span class="text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Remaining</span>{{ shortDuration(restRemainingSeconds(entry)) }}</span>
+              <span class="text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Total</span>{{ shortDuration(restTotalSeconds(entry)) }}</span>
+            </div>
+            <div v-else-if="selectedItemData(entry)" class="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-sm tabular-nums">
+              <span class="text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Target</span>{{ idleTarget(entry) }}</span>
+              <span v-if="idleMax(entry)" class="text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Max</span>{{ idleMax(entry) }}</span>
+            </div>
+          </template>
         </template>
         <template #after>
           <div class="flex gap-2 items-center">
@@ -64,58 +100,27 @@
                 @click="onStop(entry)"
               >Stop</k-button>
             </template>
-            <!-- No session: show item picker + Wear button, with target/max tucked below on small screens -->
+            <!-- No session: show item picker + Wear button -->
             <template v-else>
-              <div class="flex flex-col items-end gap-1">
-              <div class="flex flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-2">
-                <!-- controls — first on mobile, second on wide (sm:order-2) -->
-                <div class="flex gap-2 items-center sm:order-2">
-                  <select
-                    v-if="itemsForCategory(entry.category.id).length > 0"
-                    v-model="selectedItem[entry.category.id]"
-                    class="text-sm border rounded px-1 py-0.5"
-                  >
-                    <option
-                      v-for="item in itemsForCategory(entry.category.id)"
-                      :key="item.id"
-                      :value="item.id"
-                    >{{ item.name }}</option>
-                  </select>
-                  <span v-else class="text-sm text-gray-400 italic">No items</span>
-                  <k-button
-                    small
-                    :disabled="!selectedItem[entry.category.id]"
-                    :class="{ 'opacity-60': restRemainingSeconds(entry) > 0 }"
-                    @click="restRemainingSeconds(entry) > 0 ? showRestWarning(entry) : onWear(entry)"
-                  >Wear</k-button>
-                </div>
-                <!-- target/max — second on mobile (below), first on wide (sm:order-1) -->
-                <div v-if="selectedItemData(entry)" class="text-right tabular-nums leading-snug whitespace-nowrap sm:order-1">
-                  <div class="text-xs text-gray-600 sm:text-sm">
-                    <span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Target</span>{{ idleTarget(entry) }}
-                    <template v-if="idleMax(entry)">
-                      <span class="mx-1 text-gray-300 sm:hidden">·</span>
-                      <span class="hidden sm:inline mx-1 text-gray-300">/</span>
-                      <span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Max</span>{{ idleMax(entry) }}
-                    </template>
-                  </div>
-                </div>
-                <!-- Decay info: "Start before" date + warning badge (category-level, always visible) -->
-                <template v-if="entry.decay_start_time !== null">
-                  <div class="text-right text-xs text-gray-500 mt-0.5 whitespace-nowrap sm:order-1">
-                    <span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Start before</span>{{ formatDecayDate(entry.decay_start_time) }}
-                  </div>
-                  <div v-if="entry.decay_state === 'decaying'" class="text-right text-xs text-orange-500 mt-0.5 sm:order-1">
-                    <Icon icon="ph:warning" class="inline w-3 h-3 mr-0.5" />Durations are decaying
-                  </div>
-                  <div v-else-if="entry.decay_state === 'fully_decayed'" class="text-right text-xs text-red-500 mt-0.5 sm:order-1">
-                    <Icon icon="ph:warning-circle" class="inline w-3 h-3 mr-0.5" />Target and max have returned to initial values
-                  </div>
-                </template>
-              </div>
-              <div v-if="restRemainingSeconds(entry) > 0" class="text-xs text-amber-600">
-                <Icon icon="ph:bed" class="inline w-3 h-3 mr-0.5" />Rest {{ shortDuration(restRemainingSeconds(entry)) }} more
-              </div>
+              <div class="flex gap-2 items-center">
+                <select
+                  v-if="itemsForCategory(entry.category.id).length > 0"
+                  v-model="selectedItem[entry.category.id]"
+                  class="text-sm border rounded px-1 py-0.5"
+                >
+                  <option
+                    v-for="item in itemsForCategory(entry.category.id)"
+                    :key="item.id"
+                    :value="item.id"
+                  >{{ item.name }}</option>
+                </select>
+                <span v-else class="text-sm text-gray-400 italic">No items</span>
+                <k-button
+                  small
+                  :disabled="!selectedItem[entry.category.id]"
+                  :class="{ 'opacity-60': restRemainingSeconds(entry) > 0 }"
+                  @click="restRemainingSeconds(entry) > 0 ? showRestWarning(entry) : onWear(entry)"
+                >Wear</k-button>
               </div>
             </template>
           </div>
@@ -156,7 +161,7 @@ import { useItems } from '../composables/useItems.js';
 import { useNow } from '../composables/useNow.js';
 import { useToast } from '../composables/useToast.js';
 import { formatDuration, shortDuration } from '../utils/formatDuration.js';
-import { targetWearSeconds, maxWearSeconds, currentWear, remainingWearSeconds, lapCount, lapFillFraction } from '../utils/wearCalculations.js';
+import { targetWearSeconds, maxWearSeconds, currentWear, remainingWearSeconds, lapCount, lapFillFraction, fillUpFraction, decayFillFraction, decayTimeLeft } from '../utils/wearCalculations.js';
 
 const router = useRouter();
 const { currentSessions, loaded, startSession, endSession } = useWear();
@@ -290,6 +295,25 @@ function restRemainingSeconds(entry: CurrentEntry): number {
   const item = selectedItemData(entry);
   if (!item || item.ended_at === null || item.rest_seconds === null) return 0;
   return Math.max(0, Math.ceil(item.ended_at + item.rest_seconds - now.value / 1000));
+}
+
+function restTotalSeconds(entry: CurrentEntry): number {
+  const item = selectedItemData(entry);
+  return item?.rest_seconds ?? 0;
+}
+
+function restFillFraction(entry: CurrentEntry): number {
+  return fillUpFraction(restRemainingSeconds(entry), restTotalSeconds(entry));
+}
+
+function decayFillFractionFor(entry: CurrentEntry): number {
+  if (entry.decay_start_time === null || entry.decay_full_time === null) return 0;
+  return decayFillFraction(Math.floor(now.value / 1000), entry.decay_start_time, entry.decay_full_time);
+}
+
+function decayTimeLeftLabel(entry: CurrentEntry): string {
+  if (entry.decay_full_time === null) return '';
+  return shortDuration(decayTimeLeft(Math.floor(now.value / 1000), entry.decay_full_time));
 }
 
 function formatDecayDate(unixSeconds: number): string {
