@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { targetWearSeconds, maxWearSeconds, remainingWearSeconds, lapCount, lapFillFraction, lapTier } from './wearCalculations.js';
+import { targetWearSeconds, maxWearSeconds, remainingWearSeconds, lapCount, lapFillFraction, lapTier, fillUpFraction, decayFillFraction, decayTimeLeft } from './wearCalculations.js';
 
 describe('targetWearSeconds', () => {
   it('reads the stored session target', () => {
@@ -72,5 +72,47 @@ describe('lapTier', () => {
     [0, 0], [1, 0], [2, 1], [3, 2], [4, 2], [5, 3], [7, 3], [8, 4], [20, 4],
   ])('lapTier(%i) === %i', (count, tier) => {
     expect(lapTier(count)).toBe(tier);
+  });
+});
+
+describe('fillUpFraction', () => {
+  it('is 0 when no time has elapsed (remaining === total)', () => {
+    expect(fillUpFraction(100, 100)).toBeCloseTo(0);
+  });
+
+  it('is 1 once remaining reaches 0', () => {
+    expect(fillUpFraction(0, 100)).toBe(1);
+  });
+
+  it('interpolates between the two', () => {
+    expect(fillUpFraction(25, 100)).toBeCloseTo(0.75);
+  });
+});
+
+describe('decayFillFraction', () => {
+  it('is full (1) right at decay_start_time', () => {
+    expect(decayFillFraction(1000, 1000, 2000)).toBeCloseTo(1);
+  });
+
+  it('is empty (0) at decay_full_time', () => {
+    expect(decayFillFraction(2000, 1000, 2000)).toBeCloseTo(0);
+  });
+
+  it('un-fills linearly between the two', () => {
+    expect(decayFillFraction(1500, 1000, 2000)).toBeCloseTo(0.5);
+  });
+
+  it('clamps to 0 past decay_full_time', () => {
+    expect(decayFillFraction(3000, 1000, 2000)).toBe(0);
+  });
+});
+
+describe('decayTimeLeft', () => {
+  it('counts down to decay_full_time', () => {
+    expect(decayTimeLeft(1500, 2000)).toBe(500);
+  });
+
+  it('floors at 0 past decay_full_time', () => {
+    expect(decayTimeLeft(2500, 2000)).toBe(0);
   });
 });

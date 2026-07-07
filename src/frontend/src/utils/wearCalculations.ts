@@ -51,3 +51,22 @@ export function lapTier(lapCount: number): number {
   if (lapCount >= 2) return 1;
   return 0;
 }
+
+/** Generic fill-up fraction (0-1) for a countdown: 1 - remaining/total, clamped. */
+export function fillUpFraction(remaining: number, total: number): number {
+  if (total <= 0) return 1;
+  return Math.max(0, Math.min(1 - remaining / total, 1));
+}
+
+/** Decay bar fill fraction (0-1): starts full at decay_start_time, empties to 0 by decay_full_time. */
+export function decayFillFraction(now: number, decayStartTime: number, decayFullTime: number): number {
+  const window = decayFullTime - decayStartTime;
+  if (window <= 0) return 0;
+  const remaining = decayFullTime - now;
+  return Math.max(0, Math.min(remaining / window, 1));
+}
+
+/** Seconds remaining until fully decayed; 0 once past decay_full_time. */
+export function decayTimeLeft(now: number, decayFullTime: number): number {
+  return Math.max(0, decayFullTime - now);
+}
