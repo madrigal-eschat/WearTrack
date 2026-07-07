@@ -272,8 +272,11 @@ function lapCountFor(entry: CurrentEntry): number {
 }
 
 function rowBg(entry: CurrentEntry): string {
+  if (!entry.session) return '';
+  const max = maxWearSeconds(entry.session);
+  if (max === null) return '';
   const ceiling = barCeiling(entry);
-  if (!entry.session || ceiling <= 0) return '';
+  if (ceiling <= 0) return '';
   const remaining = 1 - sessionSeconds(entry.session) / ceiling;
   if (remaining <= 0) return 'bg-red-100';
   if (remaining <= 0.05) return 'bg-orange-100';
