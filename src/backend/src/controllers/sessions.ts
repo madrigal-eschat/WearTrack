@@ -3,6 +3,7 @@ import { sessionStore, type ItemWithLastSession } from '../db/stores/session-sto
 import { itemStore } from '../db/stores/item-store.js';
 import { categoryStore } from '../db/stores/category-store.js';
 import { injuryStore } from '../db/stores/injury-store.js';
+import { statsStore } from '../db/stores/stats-store.js';
 import { computeSessionStart, computeDecay, type PreviousSession, type Category } from '../db/calculations.js';
 import { NotFoundError, ValidationError, ConflictError } from '../middleware/errors.js';
 import { nowSeconds } from '../utils/time.js';
@@ -69,11 +70,12 @@ router.get('/current', (c) => {
       const previous = sessionStore.findLastEndedInCategory(cat.id) ?? null;
       const injuryActive = injuryStore.hasActiveInCategory(cat.id);
       const { decay_start_time, decay_state, decay_full_time } = computeDecay(previous, cat, now);
+      const streak_count = statsStore.findForCategory(cat.id)?.streak_count ?? 0;
 
       const items = enrichItemsWithExpected(itemsByCategory.get(cat.id) ?? [], cat, previous, now, injuryActive);
 
       const s = sessionByCategory.get(cat.id);
-      if (!s) return { category: cat, item: null, session: null, items, decay_start_time, decay_state, decay_full_time };
+      if (!s) return { category: cat, item: null, session: null, items, decay_start_time, decay_state, decay_full_time, streak_count };
 
       const item = {
         id: s.item_id, category_id: s.category_id, name: s.item_name,
@@ -84,7 +86,7 @@ router.get('/current', (c) => {
         target_wear_seconds: s.target_wear_seconds, max_wear_seconds: s.max_wear_seconds,
         rest_seconds: s.rest_seconds, ended_in_injury: s.ended_in_injury,
       };
-      return { category: cat, item, session, items, decay_start_time, decay_state, decay_full_time };
+      return { category: cat, item, session, items, decay_start_time, decay_state, decay_full_time, streak_count };
     }),
   );
 });
