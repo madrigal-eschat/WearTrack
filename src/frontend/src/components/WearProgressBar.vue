@@ -1,15 +1,19 @@
 <template>
-  <div class="wear-progress" :class="`tier-${tier}`" :style="{ '--glow-color': color }" data-testid="wear-progress-bar">
-    <span v-if="lapCount >= 1" class="lap-badge" data-testid="lap-badge">{{ lapCount }}x</span>
+  <div class="wear-progress" :class="`tier-${tier}`" :style="{ '--glow-color': barColor }" data-testid="wear-progress-bar">
+    <span v-if="mode === 'wear' && lapCount >= 1" class="lap-badge" data-testid="lap-badge">{{ lapCount }}x</span>
     <div class="bar-wrap">
-      <div class="bar-fill" :style="{ width: fillFraction * 100 + '%', background: color }"></div>
       <div
-        v-if="targetMarkerFraction !== null"
+        class="bar-fill"
+        :class="{ 'decay-shadow': mode === 'decay' }"
+        :style="{ width: fillFraction * 100 + '%', background: barColor }"
+      ></div>
+      <div
+        v-if="mode === 'wear' && targetMarkerFraction !== null"
         class="target-marker"
         data-testid="target-marker"
         :style="{ left: targetMarkerFraction * 100 + '%' }"
       ></div>
-      <div v-if="tier >= 2" class="sparkle-field">
+      <div v-if="mode === 'wear' && tier >= 2" class="sparkle-field">
         <div
           v-for="(s, i) in sparkles"
           :key="i"
@@ -27,18 +31,27 @@ import { lapTier } from '../utils/wearCalculations.js';
 
 const props = withDefaults(
   defineProps<{
+    mode?: 'wear' | 'rest' | 'decay';
     fillFraction: number;
-    color: string;
+    color?: string;
     targetMarkerFraction?: number | null;
     lapCount?: number;
   }>(),
   {
+    mode: 'wear',
+    color: '#000000',
     targetMarkerFraction: null,
     lapCount: 0,
   },
 );
 
-const tier = computed(() => lapTier(props.lapCount));
+const barColor = computed(() => {
+  if (props.mode === 'rest') return '#d1d5db';
+  if (props.mode === 'decay') return '#111827';
+  return props.color;
+});
+
+const tier = computed(() => (props.mode === 'wear' ? lapTier(props.lapCount) : 0));
 
 /** Sparkle count per tier: 0 (plain), 1 (glow only), 2, 3, 4 (max, capped). */
 const SPARKLE_COUNTS = [0, 0, 6, 20, 28];
@@ -120,5 +133,8 @@ const sparkles = computed(() => generateSparkles(SPARKLE_COUNTS[tier.value]));
 .tier-4 .bar-fill { animation: glow-pulse 0.7s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
   .bar-fill, .sparkle { animation: none !important; }
+}
+.decay-shadow {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
 }
 </style>
