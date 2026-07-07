@@ -472,3 +472,56 @@ test.describe('Target reached (null-max, no overdue CTA)', () => {
     await row.getByRole('button', { name: /stop/i }).click();
   });
 });
+
+test.describe('Category streak badge', () => {
+  let categoryId: number;
+  let categoryName: string;
+  let itemId: number;
+
+  test.beforeAll(async ({ request }) => {
+    categoryName = `StreakCat-${uid()}`;
+    const catRes = await request.post('/api/categories', {
+      data: {
+        name: categoryName,
+        icon: '🔥',
+        initial_target_wear_duration_seconds: 100,
+        initial_max_wear_duration_seconds: 200,
+        rest_multiplier: 0,
+        minimum_rest: 0,
+        risk_levels: [{ lower: null, upper: null, text: 'Low', severity: 1 }],
+        break_decay_multiplier: 0.91,
+        break_grace_time: 1000,
+      },
+    });
+    const cat = await catRes.json();
+    categoryId = cat.id;
+
+    const itemRes = await request.post('/api/items', {
+      data: { name: `StreakItem-${uid()}`, color: '#f97316', category_id: categoryId },
+    });
+    itemId = (await itemRes.json()).id;
+  });
+
+  test.afterAll(async ({ request }) => {
+    await request.delete(`/api/categories/${categoryId}`);
+  });
+
+  test('hidden with no streak, shown with count after consecutive sessions', async ({ page, request }) => {
+    await page.goto('/');
+    const row = page.locator('li', { hasText: categoryName });
+    await expect(row.getByTestId('streak-badge')).not.toBeVisible();
+
+    const s1 = await (
+      await request.post('/api/sessions/start', { data: { item_id: itemId, started_at: 0 } })
+    ).json();
+    await request.post(`/api/sessions/${s1.id}/end`, { data: { ended_at: 50 } });
+    const s2 = await (
+      await request.post('/api/sessions/start', { data: { item_id: itemId, started_at: 100 } })
+    ).json();
+    await request.post(`/api/sessions/${s2.id}/end`, { data: { ended_at: 150 } });
+
+    await page.reload();
+    await expect(row.getByTestId('streak-badge')).toBeVisible();
+    await expect(row.getByTestId('streak-badge')).toHaveText('2');
+  });
+});
