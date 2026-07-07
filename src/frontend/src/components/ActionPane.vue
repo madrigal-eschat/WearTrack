@@ -27,6 +27,13 @@
         :class="rowBg(entry)"
       >
         <template #title>
+          <span
+            v-if="entry.streak_count > 0"
+            class="ml-1.5 text-xs text-orange-500 inline-flex items-center gap-0.5 align-middle"
+            data-testid="streak-badge"
+          >
+            <Icon icon="ph:flame" class="w-3 h-3" />{{ entry.streak_count }}
+          </span>
           <span v-if="entry.session && entry.item" class="ml-1.5 text-sm font-normal text-gray-500">{{ entry.item.name }}</span>
         </template>
         <template #media>
