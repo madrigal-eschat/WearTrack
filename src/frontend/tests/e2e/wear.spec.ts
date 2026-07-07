@@ -220,3 +220,58 @@ test.describe('Wear session conflict (409)', () => {
     await request.post(`/api/sessions/${session.id}/end`, { data: {} });
   });
 });
+
+test.describe('Lap counter (null-max categories)', () => {
+  let categoryId: number;
+  let categoryName: string;
+  let itemId: number;
+
+  test.beforeAll(async ({ request }) => {
+    categoryName = `LapCat-${uid()}`;
+    const catRes = await request.post('/api/categories', {
+      data: {
+        name: categoryName,
+        icon: '🔁',
+        initial_target_wear_duration_seconds: 2,
+        initial_max_wear_duration_seconds: null,
+        rest_multiplier: 0,
+        minimum_rest: 0,
+        risk_levels: [{ lower: null, upper: null, text: 'Low', severity: 1 }],
+        break_decay_multiplier: 0.91,
+        break_grace_time: 86400,
+      },
+    });
+    const cat = await catRes.json();
+    categoryId = cat.id;
+
+    const itemRes = await request.post('/api/items', {
+      data: { name: `LapItem-${uid()}`, color: '#a855f7', category_id: categoryId },
+    });
+    const item = await itemRes.json();
+    itemId = item.id;
+  });
+
+  test.afterAll(async ({ request }) => {
+    await request.delete(`/api/categories/${categoryId}`);
+  });
+
+  test('lap badge appears after the first lap and advances tiers over time', async ({ page, request }) => {
+    await request.post('/api/sessions/start', { data: { item_id: itemId } });
+    await page.goto('/');
+
+    const row = page.locator('li', { hasText: categoryName });
+    const badge = row.getByTestId('lap-badge');
+
+    // target is 2s; badge is hidden until the first lap completes.
+    await expect(badge).not.toBeVisible();
+    await expect(badge).toHaveText('1x', { timeout: 4000 });
+    await expect(badge).toHaveText('2x', { timeout: 4000 });
+    await expect(row.getByTestId('wear-progress-bar')).toHaveClass(/tier-1/);
+
+    const current = (await request
+      .get('/api/sessions/current')
+      .then((r) => r.json())) as Array<{ category: { id: number }; session: { id: number } | null }>;
+    const entry = current.find((e) => e.category.id === categoryId);
+    if (entry?.session) await request.post(`/api/sessions/${entry.session.id}/end`, { data: {} });
+  });
+});
