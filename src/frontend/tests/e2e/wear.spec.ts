@@ -91,6 +91,38 @@ test.describe('Wear sessions', () => {
     await expect(page.getByRole('button', { name: /stop/i }).first()).toBeVisible({ timeout: 5000 });
     await expect(page.getByTestId('target-marker').first()).toBeVisible();
   });
+
+  test('overdue session shows "Stop wearing" and an Overdue stat', async ({ page, request }) => {
+    // Stop any session left open by other tests in this category first, via the API
+    // rather than a UI click — this category has accumulated growth from earlier
+    // tests in this describe block, and driving cleanup through the API avoids
+    // fighting the live-ticking elapsed-time UI for an interaction the test isn't
+    // actually verifying.
+    const currentRes = await request.get('/api/sessions/current');
+    const current = (await currentRes.json()) as Array<{
+      category: { id: number };
+      session: { id: number } | null;
+      items: Array<{ item_id: number; expected_max: number | null }>;
+    }>;
+    const entry = current.find((e) => e.category.id === categoryId);
+    if (entry?.session) await request.post(`/api/sessions/${entry.session.id}/end`, { data: {} });
+
+    const itemsRes = await request.get(`/api/items?category_id=${categoryId}`);
+    const [item] = await itemsRes.json();
+    // This category's max grows with each completed session (rest_multiplier: 0
+    // means immediate re-wear, so earlier tests keep compounding it). Elapse well
+    // past whatever the max has grown to, rather than a fixed offset, so this stays
+    // overdue regardless of how much prior tests grew it.
+    const expectedMax = entry?.items.find((i) => i.item_id === item.id)?.expected_max ?? 900;
+    const now = Math.floor(Date.now() / 1000);
+    await request.post('/api/sessions/start', { data: { item_id: item.id, started_at: now - expectedMax - 300 } });
+
+    await page.goto('/');
+    await expect(page.getByText('Stop wearing')).toBeVisible();
+    await expect(page.getByText('Overdue')).toBeVisible();
+
+    await page.getByRole('button', { name: /stop/i }).first().click();
+  });
 });
 
 test.describe('Wear session conflict (409)', () => {
@@ -273,5 +305,170 @@ test.describe('Lap counter (null-max categories)', () => {
       .then((r) => r.json())) as Array<{ category: { id: number }; session: { id: number } | null }>;
     const entry = current.find((e) => e.category.id === categoryId);
     if (entry?.session) await request.post(`/api/sessions/${entry.session.id}/end`, { data: {} });
+  });
+});
+
+test.describe('Idle row states', () => {
+  let categoryId: number;
+  let categoryName: string;
+  let itemId: number;
+
+  test.beforeAll(async ({ request }) => {
+    categoryName = `IdleCat-${uid()}`;
+    const catRes = await request.post('/api/categories', {
+      data: {
+        name: categoryName,
+        icon: '🧦',
+        initial_target_wear_duration_seconds: 600,
+        initial_max_wear_duration_seconds: 900,
+        rest_multiplier: 2,
+        minimum_rest: 30,
+        risk_levels: [{ lower: null, upper: null, text: 'Low', severity: 1 }],
+        break_decay_multiplier: 0.5,
+        break_grace_time: 1,
+      },
+    });
+    const cat = await catRes.json();
+    categoryId = cat.id;
+
+    const itemRes = await request.post('/api/items', {
+      data: { name: `IdleItem-${uid()}`, color: '#22c55e', category_id: categoryId },
+    });
+    itemId = (await itemRes.json()).id;
+  });
+
+  test.afterAll(async ({ request }) => {
+    await request.delete(`/api/categories/${categoryId}`);
+  });
+
+  test('shows the resting bar and Remaining/Total stats while resting', async ({ page, request }) => {
+    const now = Math.floor(Date.now() / 1000);
+    const startRes = await request.post('/api/sessions/start', {
+      data: { item_id: itemId, started_at: now - 10 },
+    });
+    const session = await startRes.json();
+    // minimum_rest is 30s — end quickly so most of the rest window is still ahead.
+    await request.post(`/api/sessions/${session.id}/end`, { data: { ended_at: now - 5 } });
+
+    await page.goto('/');
+    const row = page.locator('li', { hasText: categoryName });
+    await expect(row.getByText('Rest')).toBeVisible();
+    await expect(row.getByText(/Remaining/)).toBeVisible();
+    await expect(row.getByText(/Total/)).toBeVisible();
+  });
+
+  test('shows "Total decay in" once the decay window has started', async ({ page, request }) => {
+    // Uses its own category+item (rather than the shared one from beforeAll) because
+    // the backend picks the "previous session" per category by MAX(ended_at) — sharing
+    // a category with the resting-state test (whose session has a real, recent
+    // ended_at) would make that real session outrank this one's backdated ended_at,
+    // and the decay window would never appear to have started.
+    const decayCategoryName = `DecayCat-${uid()}`;
+    const catRes = await request.post('/api/categories', {
+      data: {
+        name: decayCategoryName,
+        icon: '🍂',
+        initial_target_wear_duration_seconds: 600,
+        initial_max_wear_duration_seconds: 900,
+        rest_multiplier: 2,
+        minimum_rest: 30,
+        risk_levels: [{ lower: null, upper: null, text: 'Low', severity: 1 }],
+        break_decay_multiplier: 0.5,
+        break_grace_time: 1,
+      },
+    });
+    const decayCategory = await catRes.json();
+    const itemRes = await request.post('/api/items', {
+      data: { name: `DecayItem-${uid()}`, color: '#f59e0b', category_id: decayCategory.id },
+    });
+    const decayItem = await itemRes.json();
+
+    // ended long enough ago that rest (small) + grace (1s) has passed, but not
+    // long enough to be fully decayed (break_decay_multiplier 0.5 halves per day).
+    const now = Math.floor(Date.now() / 1000);
+    const startRes = await request.post('/api/sessions/start', {
+      data: { item_id: decayItem.id, started_at: now - 3600 - 30 },
+    });
+    const session = await startRes.json();
+    await request.post(`/api/sessions/${session.id}/end`, { data: { ended_at: now - 3600 } });
+
+    await page.goto('/');
+    const row = page.locator('li', { hasText: decayCategoryName });
+    await expect(row.getByText(/Total decay in/)).toBeVisible();
+
+    await request.delete(`/api/categories/${decayCategory.id}`);
+  });
+
+  test('shows "Start your first session" for a category with no previous session', async ({ page, request }) => {
+    const freshCatRes = await request.post('/api/categories', {
+      data: {
+        name: `FreshCat-${uid()}`,
+        icon: '🆕',
+        initial_target_wear_duration_seconds: 600,
+        initial_max_wear_duration_seconds: 900,
+        rest_multiplier: 2,
+        minimum_rest: 30,
+        risk_levels: [{ lower: null, upper: null, text: 'Low', severity: 1 }],
+        break_decay_multiplier: 0.91,
+        break_grace_time: 86400,
+      },
+    });
+    const freshCat = await freshCatRes.json();
+    await request.post('/api/items', {
+      data: { name: `FreshItem-${uid()}`, color: '#0ea5e9', category_id: freshCat.id },
+    });
+
+    await page.goto('/');
+    const row = page.locator('li', { hasText: freshCat.name });
+    await expect(row.getByText('Start your first session')).toBeVisible();
+
+    await request.delete(`/api/categories/${freshCat.id}`);
+  });
+});
+
+test.describe('Target reached (null-max, no overdue CTA)', () => {
+  let categoryId: number;
+  let categoryName: string;
+  let itemId: number;
+
+  test.beforeAll(async ({ request }) => {
+    categoryName = `TargetReachedCat-${uid()}`;
+    const catRes = await request.post('/api/categories', {
+      data: {
+        name: categoryName,
+        icon: '🎯',
+        initial_target_wear_duration_seconds: 100,
+        initial_max_wear_duration_seconds: null,
+        rest_multiplier: 0,
+        minimum_rest: 0,
+        risk_levels: [{ lower: null, upper: null, text: 'Low', severity: 1 }],
+        break_decay_multiplier: 0.91,
+        break_grace_time: 86400,
+      },
+    });
+    const cat = await catRes.json();
+    categoryId = cat.id;
+
+    const itemRes = await request.post('/api/items', {
+      data: { name: `TargetReachedItem-${uid()}`, color: '#f97316', category_id: categoryId },
+    });
+    itemId = (await itemRes.json()).id;
+  });
+
+  test.afterAll(async ({ request }) => {
+    await request.delete(`/api/categories/${categoryId}`);
+  });
+
+  test('shows "Target reached" (not "Overdue"/"Stop wearing") once target passes', async ({ page, request }) => {
+    const now = Math.floor(Date.now() / 1000);
+    await request.post('/api/sessions/start', { data: { item_id: itemId, started_at: now - 150 } });
+
+    await page.goto('/');
+    const row = page.locator('li', { hasText: categoryName });
+    await expect(row.getByText('Target reached')).toBeVisible();
+    await expect(row.getByText('Stop wearing')).not.toBeVisible();
+    await expect(row.getByText('Overdue')).not.toBeVisible();
+
+    await row.getByRole('button', { name: /stop/i }).click();
   });
 });
