@@ -1,0 +1,126 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - uses: pre-commit/action@v3.0.1
+
+  commitlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - uses: wagoid/commitlint-github-action@v6
+
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      - run: npm --prefix src/backend run test:ci
+      - run: npm --prefix src/frontend run test:ci
+
+  docker-build-and-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build native image for e2e
+        # ubuntu-latest's Docker Engine uses the "docker" buildx driver, which
+        # cannot produce a multi-platform image via a single `docker build
+        # --platform a --platform b` invocation (that requires the containerd
+        # image store, which isn't enabled on GitHub-hosted runners). Build
+        # natively and --load it locally for the e2e test below.
+        run: |
+          docker buildx build --platform linux/amd64 --load -t weartrack:ci \
+            --cache-from type=gha,scope=ci \
+            --cache-to type=gha,scope=ci,mode=max .
+      - name: Push debug image to GHCR (non-main branches only)
+        # Native (amd64)-only push, matching the runner's platform. Full
+        # multi-platform (amd64+arm64) builds are reserved for release.yml:
+        # this repo has a native dependency (better-sqlite3) that must be
+        # compiled from source for arm64, and doing that under QEMU
+        # emulation on every branch push takes 30+ minutes, which is not an
+        # acceptable CI turnaround. Real releases can afford that cost;
+        # per-branch debug pushes shouldn't have to.
+        if: github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/')
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          BRANCH_TAG=$(printf '%s' "${{ github.ref_name }}" | tr -c 'a-zA-Z0-9._-' '-')
+          IMAGE="ghcr.io/$(printf '%s' "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')"
+          docker tag weartrack:ci "${IMAGE}:${BRANCH_TAG}"
+          docker push "${IMAGE}:${BRANCH_TAG}"
+      - name: Start native image for e2e
+        run: |
+          docker run -d --name weartrack-e2e --platform linux/amd64 \
+            -p 3000:3000 -e E2E_TEST=1 weartrack:ci
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3000/api/health && break
+            sleep 1
+          done
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm --prefix src/frontend ci
+      - run: npx --prefix src/frontend playwright install --with-deps chromium webkit
+      - name: Run Playwright against the built image
+        working-directory: src/frontend
+        env:
+          BASE_URL: http://localhost:3000
+        run: npx playwright test
+      - name: Stop container
+        if: always()
+        run: docker rm -f weartrack-e2e || true
+
+  semgrep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: semgrep/semgrep-action@v1
+        with:
+          config: auto
+
+  codeql:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+      - uses: github/codeql-action/analyze@v3
+
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4

@@ -1,5 +1,4 @@
-ARG CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX=docker.io
-FROM ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/library/node:24-bookworm AS frontend-build
+FROM node:24-bookworm AS frontend-build
 
 WORKDIR /frontend
 
@@ -10,8 +9,7 @@ COPY src/frontend/ ./
 RUN npm run build
 
 
-ARG CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX=docker.io
-FROM ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/library/node:24-bookworm AS backend-build
+FROM node:24-bookworm AS backend-build
 
 WORKDIR /app
 
@@ -24,8 +22,7 @@ COPY src/backend/tsconfig.json src/backend/tsconfig.build.json ./
 RUN npm ci && npm run build
 
 
-ARG CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX=docker.io
-FROM ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/library/node:24-bookworm-slim AS production
+FROM node:24-bookworm-slim AS production
 
 WORKDIR /app
 
