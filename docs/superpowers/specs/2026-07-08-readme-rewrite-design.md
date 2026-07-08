@@ -91,11 +91,14 @@ README via relative markdown image links.
 
 ## Sections carried over unchanged
 
-Architecture, Development, Production, API table, Tech stack — all stay,
-though the API table has drifted from actual routes (e.g. sessions are
+Architecture, Development, Production, Tech stack — all stay as-is.
+
+## API table — removed
+
+The existing API table has drifted from actual routes (e.g. sessions are
 `POST /api/sessions/start` / `POST /api/sessions/:id/end`, not a generic
-`GET/POST /api/sessions`) and should be corrected while this file is being
-touched anyway.
+`GET/POST /api/sessions`) and isn't worth maintaining in the README. Delete
+it outright rather than fixing it.
 
 ## Out of scope
 
