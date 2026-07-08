@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+    branches:
+      - main
+
+permissions:
+  contents: write
+  packages: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  release:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      released: ${{ steps.semrel.outputs.released }}
+      version: ${{ steps.semrel.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - id: semrel
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npx semantic-release
+          if git describe --tags --exact-match HEAD > /dev/null 2>&1; then
+            echo "released=true" >> "$GITHUB_OUTPUT"
+            echo "version=$(git describe --tags --exact-match HEAD | sed 's/^v//')" >> "$GITHUB_OUTPUT"
+          else
+            echo "released=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  publish-image:
+    needs: release
+    if: needs.release.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Build multi-platform image
+        run: docker build --platform linux/amd64 --platform linux/arm64 -t weartrack:release .
+      - name: Push release tags to GHCR
+        env:
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          IMAGE="ghcr.io/${{ github.repository }}"
+          MAJOR="${VERSION%%.*}"
+          MINOR="${VERSION%.*}"
+          docker tag weartrack:release "${IMAGE}:${VERSION}"
+          docker tag weartrack:release "${IMAGE}:latest"
+          docker tag weartrack:release "${IMAGE}:${MAJOR}"
+          docker tag weartrack:release "${IMAGE}:${MINOR}"
+          docker push "${IMAGE}:${VERSION}"
+          docker push "${IMAGE}:latest"
+          docker push "${IMAGE}:${MAJOR}"
+          docker push "${IMAGE}:${MINOR}"
