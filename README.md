@@ -27,7 +27,9 @@ Track the usage of wearable items — orthotics, braces, retainers, shoes, anyth
 
 ## Screenshots
 
-<!-- Filled in by the README rewrite plan's Task 3. -->
+| Home | Log | Stats |
+|------|-----|-------|
+| ![Home tab](docs/screenshots/home.png) | ![Log tab](docs/screenshots/log.png) | ![Stats tab](docs/screenshots/stats.png) |
 
 ## Architecture
 
