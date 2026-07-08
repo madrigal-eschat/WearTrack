@@ -14,27 +14,5 @@
     "dependencies"
   ],
   "commitHourlyLimit": 2,
-  "prConcurrentLimit": 4,
-  "customManagers": [
-    {
-      "customType": "regex",
-      "managerFilePatterns": [
-        "/\\.gitlab-ci\\.ya?ml$/"
-      ],
-      "matchStrings": [
-        "\\s?_IMAGE:\\s['\"]?(?:(?<registryUrls>.*?)\\/)?(?<depName>[^:'\"\\s\\/]+):(?<currentValue>[^'\"\\s]*)['\"]?"
-      ],
-      "datasourceTemplate": "docker"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": [
-        "/\\.gitlab-ci\\.ya?ml$/"
-      ],
-      "matchStrings": [
-        "\\s?image:\\s['\"]?(?:(?<registryUrls>.*?)\\/)?(?<depName>[^:'\"\\s\\/]+):(?<currentValue>[^'\"\\s]*)['\"]?"
-      ],
-      "datasourceTemplate": "docker"
-    }
-  ]
+  "prConcurrentLimit": 4
 }
