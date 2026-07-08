@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - uses: pre-commit/action@v3.0.1
+
+  commitlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - uses: wagoid/commitlint-github-action@v6
+
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      - run: npm --prefix src/backend run test:ci
+      - run: npm --prefix src/frontend run test:ci
+
+  docker-build-and-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build multi-platform image
+        run: docker build --platform linux/amd64 --platform linux/arm64 -t weartrack:ci .
+      - name: Start native image for e2e
+        run: |
+          docker run -d --name weartrack-e2e --platform linux/amd64 \
+            -p 3000:3000 -e E2E_TEST=1 weartrack:ci
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3000/api/health && break
+            sleep 1
+          done
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm --prefix src/frontend ci
+      - run: npx --prefix src/frontend playwright install --with-deps chromium webkit
+      - name: Run Playwright against the built image
+        working-directory: src/frontend
+        env:
+          BASE_URL: http://localhost:3000
+        run: npx playwright test
+      - name: Stop container
+        if: always()
+        run: docker rm -f weartrack-e2e || true
+
+  semgrep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: semgrep/semgrep-action@v1
+        with:
+          config: auto
+
+  codeql:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+      - uses: github/codeql-action/analyze@v3
+
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
