@@ -44,52 +44,57 @@ test.describe('Wear sessions', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     page.on('dialog', (d) => d.accept());
-    // Stop any active session left from a previous test.
+    // Stop any active session left from a previous test in THIS category only —
+    // the page now lists many categories from other describe blocks/spec files
+    // sharing the same dev DB, so an unscoped "first Stop button" can belong to
+    // an unrelated category.
     // Safe to do because rest_constant_seconds: 0 — no penalty for stopping.
-    const stopBtn = page.getByRole('button', { name: /stop/i }).first();
+    const row = page.locator('li', { hasText: categoryName });
+    const stopBtn = row.getByRole('button', { name: /stop/i });
     if (await stopBtn.isVisible({ timeout: 1500 }).catch(() => false)) {
       await stopBtn.click();
     }
   });
 
   test('shows a Wear button for each item', async ({ page }) => {
-    await expect(page.getByRole('button', { name: /wear/i }).first()).toBeVisible();
+    const row = page.locator('li', { hasText: categoryName });
+    await expect(row.getByRole('button', { name: /wear/i })).toBeVisible();
   });
 
   test('can start a wear session', async ({ page }) => {
-    const wearBtn = page.getByRole('button', { name: /^wear$/i }).filter({ enabled: true }).first();
-    await wearBtn.click();
+    const row = page.locator('li', { hasText: categoryName });
+    await row.getByRole('button', { name: /^wear$/i }).click();
 
-    await expect(page.getByRole('button', { name: /stop/i }).first()).toBeVisible({ timeout: 5000 });
+    await expect(row.getByRole('button', { name: /stop/i })).toBeVisible({ timeout: 5000 });
   });
 
   test('elapsed time is shown while wearing', async ({ page }) => {
-    const wearBtn = page.getByRole('button', { name: /^wear$/i }).filter({ enabled: true }).first();
-    await wearBtn.click();
+    const row = page.locator('li', { hasText: categoryName });
+    await row.getByRole('button', { name: /^wear$/i }).click();
 
     // Wait for session to start (Stop button appears), then check elapsed time.
     // Scope to .tabular-nums to avoid matching hidden <option> elements whose
     // text content also contains digits + letters (e.g. item names like "Item-7m").
-    await expect(page.getByRole('button', { name: /stop/i }).first()).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('.tabular-nums').first()).toBeVisible();
+    await expect(row.getByRole('button', { name: /stop/i })).toBeVisible({ timeout: 5000 });
+    await expect(row.locator('.tabular-nums').first()).toBeVisible();
   });
 
   test('can stop a wear session', async ({ page }) => {
-    const wearBtn = page.getByRole('button', { name: /^wear$/i }).filter({ enabled: true }).first();
-    await wearBtn.click();
+    const row = page.locator('li', { hasText: categoryName });
+    await row.getByRole('button', { name: /^wear$/i }).click();
 
-    const stopBtn = page.getByRole('button', { name: /stop/i }).first();
+    const stopBtn = row.getByRole('button', { name: /stop/i });
     await stopBtn.waitFor({ timeout: 5000 });
     await stopBtn.click();
 
-    await expect(page.getByRole('button', { name: /^wear$/i }).first()).toBeVisible({ timeout: 5000 });
+    await expect(row.getByRole('button', { name: /^wear$/i })).toBeVisible({ timeout: 5000 });
   });
 
   test('active session shows a target marker on the bar', async ({ page }) => {
-    const wearBtn = page.getByRole('button', { name: /^wear$/i }).filter({ enabled: true }).first();
-    await wearBtn.click();
-    await expect(page.getByRole('button', { name: /stop/i }).first()).toBeVisible({ timeout: 5000 });
-    await expect(page.getByTestId('target-marker').first()).toBeVisible();
+    const row = page.locator('li', { hasText: categoryName });
+    await row.getByRole('button', { name: /^wear$/i }).click();
+    await expect(row.getByRole('button', { name: /stop/i })).toBeVisible({ timeout: 5000 });
+    await expect(row.getByTestId('target-marker')).toBeVisible();
   });
 
   test('overdue session shows "Stop wearing" and an Overdue stat', async ({ page, request }) => {
