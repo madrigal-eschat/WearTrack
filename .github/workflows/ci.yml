@@ -61,20 +61,21 @@ jobs:
           docker buildx build --platform linux/amd64 --load -t weartrack:ci \
             --cache-from type=gha,scope=ci \
             --cache-to type=gha,scope=ci,mode=max .
-      - name: Build multi-platform image (push debug tag on non-main branches)
+      - name: Push debug image to GHCR (non-main branches only)
+        # Native (amd64)-only push, matching the runner's platform. Full
+        # multi-platform (amd64+arm64) builds are reserved for release.yml:
+        # this repo has a native dependency (better-sqlite3) that must be
+        # compiled from source for arm64, and doing that under QEMU
+        # emulation on every branch push takes 30+ minutes, which is not an
+        # acceptable CI turnaround. Real releases can afford that cost;
+        # per-branch debug pushes shouldn't have to.
+        if: github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/')
         run: |
-          if [[ "${{ github.ref }}" != "refs/heads/main" && "${{ github.ref }}" != refs/tags/* ]]; then
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-            BRANCH_TAG=$(printf '%s' "${{ github.ref_name }}" | tr -c 'a-zA-Z0-9._-' '-')
-            IMAGE="ghcr.io/$(printf '%s' "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')"
-            docker buildx build --platform linux/amd64,linux/arm64 \
-              -t "${IMAGE}:${BRANCH_TAG}" \
-              --cache-from type=gha,scope=ci \
-              --push .
-          else
-            docker buildx build --platform linux/amd64,linux/arm64 \
-              --cache-from type=gha,scope=ci .
-          fi
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          BRANCH_TAG=$(printf '%s' "${{ github.ref_name }}" | tr -c 'a-zA-Z0-9._-' '-')
+          IMAGE="ghcr.io/$(printf '%s' "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')"
+          docker tag weartrack:ci "${IMAGE}:${BRANCH_TAG}"
+          docker push "${IMAGE}:${BRANCH_TAG}"
       - name: Start native image for e2e
         run: |
           docker run -d --name weartrack-e2e --platform linux/amd64 \

@@ -57,9 +57,12 @@ jobs:
         # ubuntu-latest's Docker Engine uses the "docker" buildx driver, which
         # cannot produce/load a multi-platform image locally (that needs the
         # containerd image store, not enabled on GitHub-hosted runners). Push
-        # straight from buildx with every tag in one multi-platform build,
-        # reusing ci.yml's build cache so this is a cache-hit re-assembly
-        # rather than a full recompile.
+        # straight from buildx with every tag in one multi-platform build.
+        # The amd64 layers are a cache hit against ci.yml's build cache; the
+        # arm64 layers are a full compile under QEMU emulation (this repo's
+        # better-sqlite3 native dependency has to build from source), so
+        # this step is slow (~20-30 minutes). That cost is acceptable here
+        # because it only runs on actual releases, not every push.
         env:
           VERSION: ${{ needs.release.outputs.version }}
         run: |
