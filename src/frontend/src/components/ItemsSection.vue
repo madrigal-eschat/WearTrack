@@ -50,7 +50,7 @@
 
     <template v-if="!loading">
       <div v-for="cat in categories" :key="cat.id">
-        <div class="px-4 mt-4 mb-1">
+        <div class="px-6 mt-4 mb-1">
           <SectionTitle variant="group">{{ cat.name }}</SectionTitle>
         </div>
         <k-list inset class="!my-2">
