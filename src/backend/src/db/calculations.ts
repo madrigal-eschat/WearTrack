@@ -171,19 +171,31 @@ export function computeDecay(
   previous: { ended_at: number; rest_seconds: number; target_wear_seconds: number } | null,
   category: { break_grace_time: number; break_decay_multiplier: number; initial_target_wear_duration_seconds: number },
   now: number,
-): { decay_start_time: number | null; decay_state: DecayState } {
-  if (!previous) return { decay_start_time: null, decay_state: 'none' };
+): { decay_start_time: number | null; decay_state: DecayState; decay_full_time: number | null } {
+  if (!previous) return { decay_start_time: null, decay_state: 'none', decay_full_time: null };
 
   const decayStartTime = previous.ended_at + previous.rest_seconds + category.break_grace_time;
-  if (now <= decayStartTime) return { decay_start_time: decayStartTime, decay_state: 'none' };
+  const initial = category.initial_target_wear_duration_seconds;
+  const daysToFull = daysUntilFullyDecayed(previous.target_wear_seconds, initial, category.break_decay_multiplier);
+  const decayFullTime = decayStartTime + daysToFull * 86400;
+
+  if (now <= decayStartTime) {
+    return { decay_start_time: decayStartTime, decay_state: 'none', decay_full_time: decayFullTime };
+  }
 
   const daysSinceGrace = Math.floor((now - decayStartTime) / 86400);
   const decayFactor = category.break_decay_multiplier ** daysSinceGrace;
-  const initial = category.initial_target_wear_duration_seconds;
   const decayed = (previous.target_wear_seconds + initial) * decayFactor;
 
   const decay_state: DecayState = decayed <= initial ? 'fully_decayed' : 'decaying';
-  return { decay_start_time: decayStartTime, decay_state };
+  return { decay_start_time: decayStartTime, decay_state, decay_full_time: decayFullTime };
+}
+
+/** Full days of decay until (previousTarget + initial) * multiplier^days <= initial. */
+function daysUntilFullyDecayed(previousTarget: number, initial: number, multiplier: number): number {
+  if (previousTarget <= 0 || multiplier <= 0 || multiplier >= 1) return 0;
+  const days = Math.log(initial / (previousTarget + initial)) / Math.log(multiplier);
+  return Math.max(0, Math.ceil(days));
 }
 
 /** Session-End rest formula from docs/design/duration-formula.md. */
