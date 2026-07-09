@@ -1,6 +1,7 @@
 <!-- src/frontend/src/views/Log.vue -->
 <template>
   <k-page class="flex flex-col" style="padding-bottom: 56px">
+    <PageHeader title="Log" />
     <k-block class="flex gap-2 pb-2">
       <select v-model.number="categoryFilter" class="text-sm border rounded px-2 py-1 flex-1">
         <option :value="null">All categories</option>
@@ -123,6 +124,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { kPage, kBlock, kList, kListItem, kDialog, kDialogButton, Actions, ActionsGroup, ActionsButton } from 'konsta/vue';
 import { Icon } from '@iconify/vue';
 import { EllipsisHorizontalIcon } from '@heroicons/vue/24/solid';
+import PageHeader from '../components/PageHeader.vue';
 import { useSessionLog, type SessionLogEntry } from '../composables/useSessionLog.js';
 import { useCategories } from '../composables/useCategories.js';
 import { useItems } from '../composables/useItems.js';
