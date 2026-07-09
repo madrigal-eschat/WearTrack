@@ -37,6 +37,7 @@ if (process.env.NODE_ENV !== 'production' || process.env.E2E_TEST === '1') {
       DELETE FROM injuries;
       DELETE FROM stats;
       DELETE FROM category_stats;
+      DELETE FROM session_day_index;
       DELETE FROM items;
       DELETE FROM categories;
       DELETE FROM push_subscriptions;
