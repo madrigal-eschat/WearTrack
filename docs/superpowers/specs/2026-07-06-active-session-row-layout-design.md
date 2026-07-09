@@ -31,12 +31,19 @@ Three stacked rows inside the `#inner` slot (replacing today's bar-only
 The `#after` slot is no longer used for the active-session branch — Stop
 moves into the `#inner` title row.
 
-### Overdue state
+### Overdue state (max-set categories only)
 
-- In the stats line, the `Remaining` value becomes **`Overdue`**, styled
-  red-600, in the same position as any other stat value.
-- A **"Stop wearing"** call-to-action appears under the title line (in the
-  gap between title and bar rows), styled as a prominent warning.
+This applies only when the category has a max set and elapsed has passed it.
+Null-max (lap-counter) categories never hit this state — passing target
+there means "keep going, you're lapping," not "stop now," so:
+
+- **Max set, elapsed ≥ max:** the `Remaining` value becomes **`Overdue`**,
+  styled red-600, and a **"Stop wearing"** call-to-action appears under the
+  title line (in the gap between title and bar rows), styled as a prominent
+  warning.
+- **Max null, elapsed ≥ target:** the `Remaining` value becomes **`Target
+  reached`**, styled as a neutral stat (not red) — no CTA. The lap badge
+  already communicates that continued wear is expected and fine.
 
 ## Idle row layout
 
