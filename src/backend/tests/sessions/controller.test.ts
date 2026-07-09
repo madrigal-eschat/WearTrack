@@ -942,6 +942,63 @@ describe('PATCH /api/sessions/:id', () => {
   });
 });
 
+describe('GET /api/sessions/current streak_count', () => {
+  it('is 0 for a fresh category with no sessions', async () => {
+    const cat = await (await createCategory({ name: 'Streak Fresh Cat' })).json();
+    await createItem(cat.id, { name: 'Streak Fresh Item' });
+
+    const res = await app.request(`${SESSIONS}/current`);
+    const body = await res.json();
+    const entry = body.find((e: { category: { id: number } }) => e.category.id === cat.id);
+    expect(entry.streak_count).toBe(0);
+  });
+
+  it('reflects the category streak after consecutive sessions', async () => {
+    const cat = await (
+      await createCategory({
+        name: 'Streak Active Cat',
+        rest_multiplier: 0,
+        minimum_rest: 0,
+        break_grace_time: 1000,
+      })
+    ).json();
+    const item = await (await createItem(cat.id, { name: 'Streak Active Item' })).json();
+
+    // First session: 0 -> 50, ends with rest_seconds 0 (rest_multiplier 0).
+    const s1 = await (
+      await app.request(`${SESSIONS}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: item.id, started_at: 0 }),
+      })
+    ).json();
+    await app.request(`${SESSIONS}/${s1.id}/end`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ended_at: 50 }),
+    });
+
+    // Second session starts at 100 — within earliest_start(50)..latest_start(50+1000).
+    const s2 = await (
+      await app.request(`${SESSIONS}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: item.id, started_at: 100 }),
+      })
+    ).json();
+    await app.request(`${SESSIONS}/${s2.id}/end`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ended_at: 150 }),
+    });
+
+    const res = await app.request(`${SESSIONS}/current`);
+    const body = await res.json();
+    const entry = body.find((e: { category: { id: number } }) => e.category.id === cat.id);
+    expect(entry.streak_count).toBe(2);
+  });
+});
+
 describe('DELETE /api/sessions/:id', () => {
   it('deletes the session row', async () => {
     const s = await (await startSession()).json();
