@@ -2,14 +2,6 @@
   <div class="action-pane overflow-y-auto">
     <div class="flex items-center justify-between">
       <k-block-title>Currently Wearing</k-block-title>
-      <button
-        type="button"
-        class="mr-4 text-gray-500"
-        aria-label="Settings"
-        @click="router.push('/settings')"
-      >
-        <Cog6ToothIcon class="w-6 h-6" />
-      </button>
     </div>
 
     <div v-if="!loaded" class="px-4 py-8 text-center text-gray-400">
@@ -158,9 +150,7 @@
 
 <script setup lang="ts">
 import { reactive, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
 import { Icon } from '@iconify/vue';
-import { Cog6ToothIcon } from '@heroicons/vue/24/solid';
 import { kBlockTitle, kList, kListItem, kButton, kDialog, kDialogButton } from 'konsta/vue';
 import WearProgressBar from './WearProgressBar.vue';
 import { useWear, type CurrentEntry, type Session, type ItemWithLastSession } from '../composables/useWear.js';
@@ -170,7 +160,6 @@ import { useToast } from '../composables/useToast.js';
 import { formatDuration, shortDuration } from '../utils/formatDuration.js';
 import { targetWearSeconds, maxWearSeconds, currentWear, remainingWearSeconds, lapCount, lapFillFraction, fillUpFraction, decayFillFraction, decayTimeLeft } from '../utils/wearCalculations.js';
 
-const router = useRouter();
 const { currentSessions, loaded, startSession, endSession } = useWear();
 const { loadItems, itemsForCategory } = useItems();
 const { showError } = useToast();

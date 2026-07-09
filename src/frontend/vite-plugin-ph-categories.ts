@@ -1,6 +1,6 @@
 import type { Plugin } from 'vite';
 import { writeFileSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { icons } from '@phosphor-icons/core';
 import { buildPhCategories } from './src/utils/phCategories.js';
 
@@ -15,9 +15,12 @@ export default function phCategoriesPlugin(): Plugin {
       const data = buildPhCategories(
         icons as unknown as Array<{ name: string; categories: string[]; tags: string[] }>,
       );
-      const outDir = join(process.cwd(), 'src', 'generated');
+      // Resolve relative to this file (not process.cwd()), which differs when
+      // Vite runs in middleware mode from a different working directory (e.g.
+      // the backend dev server importing the frontend app).
+      const outDir = fileURLToPath(new URL('./src/generated', import.meta.url));
       mkdirSync(outDir, { recursive: true });
-      writeFileSync(join(outDir, 'ph-categories.json'), JSON.stringify(data));
+      writeFileSync(fileURLToPath(new URL('./src/generated/ph-categories.json', import.meta.url)), JSON.stringify(data));
     },
   };
 }

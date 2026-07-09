@@ -1,5 +1,6 @@
 <template>
-  <k-page class="pt-4" style="padding-bottom: 56px">
+  <k-page style="padding-bottom: 56px">
+    <PageHeader title="Stats" />
 
     <SegmentedControl
       :options="LEADERBOARD_TYPES"
@@ -44,6 +45,7 @@ import { kPage, kList, kListItem, kBadge, kBlock } from 'konsta/vue';
 import { Icon } from '@iconify/vue';
 import { useStats } from '../composables/useStats.js';
 import SegmentedControl from '../components/SegmentedControl.vue';
+import PageHeader from '../components/PageHeader.vue';
 
 const { leaderboard, activeType, loading, loadLeaderboard, LEADERBOARD_TYPES } = useStats();
 
