@@ -1,3 +1,24 @@
+# [1.1.0](https://github.com/madrigal-eschat/WearTrack/compare/v1.0.0...v1.1.0) (2026-07-09)
+
+
+### Bug Fixes
+
+* **e2e:** scope Wear sessions tests to their own category row ([2b3ac74](https://github.com/madrigal-eschat/WearTrack/commit/2b3ac745bc5e136da9b687af35141cdf19d6c0bc))
+* **frontend:** keep null-max rows neutral, fix decay bar direction, add cross-feature streak test ([78ff645](https://github.com/madrigal-eschat/WearTrack/commit/78ff64543b4368b9690fa8fcfa6e76c346e21895))
+* **frontend:** resolve ph-categories output path from plugin file, not cwd ([1b0be18](https://github.com/madrigal-eschat/WearTrack/commit/1b0be18330322474649e81c2aca00244e7c7c183))
+* **frontend:** update category-heading e2e locator for group-variant styling change ([fa3b0b3](https://github.com/madrigal-eschat/WearTrack/commit/fa3b0b3d0b4d1a523a607a538c9c9f21554ebf35))
+
+
+### Features
+
+* **backend:** add decay_full_time to computeDecay ([e6d0aa8](https://github.com/madrigal-eschat/WearTrack/commit/e6d0aa8c85769c98a07532acc7be381370f0de4f))
+* **backend:** expose category streak_count on /api/sessions/current ([37e86f9](https://github.com/madrigal-eschat/WearTrack/commit/37e86f9658eebf2c04aedc739bb777d2f48981aa))
+* **frontend:** add page headers to Items, Stats, and Log ([9d016c4](https://github.com/madrigal-eschat/WearTrack/commit/9d016c4a8ec7be13a0ca4793423ab4023eb1c344))
+* **frontend:** add PageHeader component ([f24a8f7](https://github.com/madrigal-eschat/WearTrack/commit/f24a8f765e304a57dce21e501faafaa9c9ab9687))
+* **frontend:** add rest and decay modes to WearProgressBar ([995d817](https://github.com/madrigal-eschat/WearTrack/commit/995d817e01e4848f93e8650aa517edfdc60c07dd))
+* **frontend:** add rest/decay fill-fraction helpers and decay_full_time type ([a95f0e7](https://github.com/madrigal-eschat/WearTrack/commit/a95f0e7e028c7cd604279f1655df655cca4b4bce))
+* **frontend:** show category streak badge next to the category name ([2faff48](https://github.com/madrigal-eschat/WearTrack/commit/2faff483349d682e6403ff4971e1f05b761a819d))
+
 # 1.0.0 (2026-07-08)
 
 
