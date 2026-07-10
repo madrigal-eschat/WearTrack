@@ -72,10 +72,11 @@ const sparkles = computed(() => generateSparkles(SPARKLE_COUNTS[tier.value]));
 <style scoped>
 .wear-progress {
   position: relative;
+  padding-top: 8px;
 }
 .lap-badge {
   position: absolute;
-  top: -8px;
+  top: 0;
   right: 4px;
   z-index: 1;
   font-size: 11px;
