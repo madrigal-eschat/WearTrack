@@ -39,7 +39,7 @@ src/
   frontend/  Vue 3 + Vite PWA + Konsta UI (iOS-style components)
 ```
 
-The backend exposes a JSON REST API under `/api/`. In production, both are served from the same Docker container (backend on port 3000). In development they run separately, with Vite proxying `/api` calls to the backend.
+The backend exposes a JSON REST API under `/api/`. In both production and development, everything is served from one process on one port — in dev, the backend runs Vite in middleware mode for HMR; in production, it serves the frontend's static build.
 
 ## Development
 
@@ -50,12 +50,12 @@ Prerequisites: Node.js 22+
 npm ci --prefix src/backend
 npm ci --prefix src/frontend --legacy-peer-deps
 
-# Run backend (port 3000) and frontend (port 5173) in separate terminals:
+# Run the API and frontend (with HMR) together on one port:
 npm run dev --prefix src/backend
-npm run dev --prefix src/frontend
 ```
 
-The frontend dev server proxies `/api/*` to `http://localhost:3000`, so you can hit `http://localhost:5173` and have everything work.
+This starts the Hono API and Vite (in middleware mode, with hot module
+reload) on a single server — visit `http://localhost:3000` for everything.
 
 ## Production
 
