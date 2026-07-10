@@ -74,6 +74,7 @@ const sparkles = computed(() => generateSparkles(SPARKLE_COUNTS[tier.value]));
 <style scoped>
 .wear-progress {
   position: relative;
+  padding-top: 4px;
 }
 .bar-row {
   display: flex;
