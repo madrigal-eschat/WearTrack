@@ -75,8 +75,9 @@ const sparkles = computed(() => generateSparkles(SPARKLE_COUNTS[tier.value]));
 }
 .lap-badge {
   position: absolute;
-  top: -18px;
-  right: 0;
+  top: -8px;
+  right: 4px;
+  z-index: 1;
   font-size: 11px;
   font-weight: 700;
   padding: 1px 7px;
