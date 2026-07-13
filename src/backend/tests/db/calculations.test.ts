@@ -206,28 +206,29 @@ describe('computeDecay', () => {
   });
 
   it('computes decay_start_time and decay_full_time from the previous session', () => {
-    const previous = { ended_at: 0, rest_seconds: 50, target_wear_seconds: 900 };
+    const previous = { ended_at: 0, rest_seconds: 50, target_wear_seconds: 4100 };
     const r = computeDecay(previous, decayCat, 0);
     const decayStart = 0 + 50 + 100; // 150
     expect(r.decay_start_time).toBe(decayStart);
-    // (900+900)*0.91^days <= 900  =>  days >= ln(0.5)/ln(0.91) ≈ 7.35  =>  8
-    expect(r.decay_full_time).toBe(decayStart + 8 * 86400);
+    // (4100+900) decays 5000 -> 4100 -> 3200 -> 2300 -> 1400 -> 900, floor reached after 5 days
+    // (same worked example as Task 1's computeSessionStart test)
+    expect(r.decay_full_time).toBe(decayStart + 5 * 86400);
     expect(r.decay_state).toBe('none');
   });
 
   it('is "decaying" once past decay_start_time but before decay_full_time', () => {
-    const previous = { ended_at: 0, rest_seconds: 50, target_wear_seconds: 900 };
+    const previous = { ended_at: 0, rest_seconds: 50, target_wear_seconds: 4100 };
     const decayStart = 150;
-    const r = computeDecay(previous, decayCat, decayStart + 86400); // 1 day into decay
+    const r = computeDecay(previous, decayCat, decayStart + 3 * 86400); // 3 days into a 5-day decay
     expect(r.decay_state).toBe('decaying');
   });
 
   it('is "fully_decayed" at decay_full_time', () => {
-    const previous = { ended_at: 0, rest_seconds: 50, target_wear_seconds: 900 };
+    const previous = { ended_at: 0, rest_seconds: 50, target_wear_seconds: 4100 };
     const decayStart = 150;
-    const r = computeDecay(previous, decayCat, decayStart + 8 * 86400);
+    const r = computeDecay(previous, decayCat, decayStart + 5 * 86400);
     expect(r.decay_state).toBe('fully_decayed');
-    expect(r.decay_full_time).toBe(decayStart + 8 * 86400);
+    expect(r.decay_full_time).toBe(decayStart + 5 * 86400);
   });
 });
 
