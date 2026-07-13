@@ -47,12 +47,11 @@
       />
       <NumberField
         id="cat-decay"
-        label="Break decay / day"
-        v-model="catForm.breakDecayMultiplier"
-        :min="0"
-        :max="0.99"
-        :default="0.91"
-        :step="0.01"
+        label="Break half-life (days)"
+        v-model="catForm.breakDecayHalfLifeDays"
+        :min="0.1"
+        :default="DEFAULT_HALF_LIFE_DAYS"
+        :step="0.1"
       />
     </div>
     <p class="text-xs text-gray-400 -mt-1">
@@ -149,6 +148,7 @@ import IconPickerSheet from './IconPickerSheet.vue';
 import DurationPickerSheet from './DurationPickerSheet.vue';
 import NumberField from './NumberField.vue';
 import DurationTrigger from './DurationTrigger.vue';
+import { multiplierToHalfLifeDays } from '../utils/categoryForm.js';
 
 export interface CategoryFormState {
   name: string;
@@ -157,11 +157,13 @@ export interface CategoryFormState {
   initialWearMaxSeconds: number | null;
   minimumRestSeconds: number;
   breakGraceSeconds: number;
-  breakDecayMultiplier: number;
+  breakDecayHalfLifeDays: number;
   restMultiplier: number;
   bandCount: number;
   crossoverPoints: number[];
 }
+
+const DEFAULT_HALF_LIFE_DAYS = multiplierToHalfLifeDays(0.91);
 
 const DEFAULT_STATE: CategoryFormState = {
   name: '',
@@ -170,7 +172,7 @@ const DEFAULT_STATE: CategoryFormState = {
   initialWearMaxSeconds: 1350,
   minimumRestSeconds: 86400,
   breakGraceSeconds: 86400,
-  breakDecayMultiplier: 0.91,
+  breakDecayHalfLifeDays: DEFAULT_HALF_LIFE_DAYS,
   restMultiplier: 2,
   bandCount: 3,
   crossoverPoints: [3600, 7200],
@@ -246,7 +248,7 @@ function onSubmit() {
     initialWearMaxSeconds: catForm.initialWearMaxSeconds,
     minimumRestSeconds: catForm.minimumRestSeconds,
     breakGraceSeconds: catForm.breakGraceSeconds,
-    breakDecayMultiplier: catForm.breakDecayMultiplier,
+    breakDecayHalfLifeDays: catForm.breakDecayHalfLifeDays,
     restMultiplier: catForm.restMultiplier,
     bandCount: catForm.bandCount,
     crossoverPoints: [...catForm.crossoverPoints],
