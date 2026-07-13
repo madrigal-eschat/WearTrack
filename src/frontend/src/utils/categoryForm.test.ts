@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { categoryToFormState, formStateToApiPayload } from './categoryForm.js';
+import { categoryToFormState, formStateToApiPayload, multiplierToHalfLifeDays, halfLifeDaysToMultiplier } from './categoryForm.js';
 import type { CategoryApiShape } from './categoryForm.js';
 
 const BASE_CATEGORY: CategoryApiShape = {
@@ -19,6 +19,17 @@ const BASE_CATEGORY: CategoryApiShape = {
   ],
 };
 
+describe('multiplierToHalfLifeDays / halfLifeDaysToMultiplier', () => {
+  it('round-trips a multiplier through half-life and back', () => {
+    const halfLife = multiplierToHalfLifeDays(0.91);
+    expect(halfLifeDaysToMultiplier(halfLife)).toBeCloseTo(0.91);
+  });
+
+  it('a half-life of 1 day means multiplier 0.5', () => {
+    expect(halfLifeDaysToMultiplier(1)).toBeCloseTo(0.5);
+  });
+});
+
 describe('categoryToFormState', () => {
   it('maps target/max/min-rest/grace/decay', () => {
     const s = categoryToFormState(BASE_CATEGORY);
@@ -26,7 +37,7 @@ describe('categoryToFormState', () => {
     expect(s.initialWearMaxSeconds).toBe(1800);
     expect(s.minimumRestSeconds).toBe(86400);
     expect(s.breakGraceSeconds).toBe(86400);
-    expect(s.breakDecayMultiplier).toBeCloseTo(0.91);
+    expect(s.breakDecayHalfLifeDays).toBeCloseTo(7.35, 1);
     expect(s.restMultiplier).toBe(2);
   });
 
@@ -48,14 +59,14 @@ describe('formStateToApiPayload', () => {
       name: 'Test', icon: '🎯',
       initialWearTargetSeconds: 1800, initialWearMaxSeconds: null,
       restMultiplier: 1.5, minimumRestSeconds: 1200,
-      breakGraceSeconds: 3600, breakDecayMultiplier: 0.8,
+      breakGraceSeconds: 3600, breakDecayHalfLifeDays: multiplierToHalfLifeDays(0.8),
       bandCount: 2, crossoverPoints: [3600],
     });
     expect(payload.initial_target_wear_duration_seconds).toBe(1800);
     expect(payload.initial_max_wear_duration_seconds).toBeNull();
     expect(payload.minimum_rest).toBe(1200);
     expect(payload.break_grace_time).toBe(3600);
-    expect(payload.break_decay_multiplier).toBe(0.8);
+    expect(payload.break_decay_multiplier).toBeCloseTo(0.8);
     expect(payload.rest_multiplier).toBe(1.5);
     expect(payload.risk_levels).toEqual([
       { lower: null, upper: 3600, text: 'Low', severity: 1 },
@@ -68,5 +79,6 @@ describe('formStateToApiPayload', () => {
     expect(payload.initial_target_wear_duration_seconds).toBe(900);
     expect(payload.initial_max_wear_duration_seconds).toBe(1800);
     expect(payload.break_grace_time).toBe(86400);
+    expect(payload.break_decay_multiplier).toBeCloseTo(0.91);
   });
 });
