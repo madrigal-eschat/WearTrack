@@ -73,13 +73,17 @@ describe('computeSessionStart', () => {
     expect(r).toEqual({ target: 1000, max: 2000 });
   });
 
-  it('past grace applies daily decay', () => {
+  it('past grace applies floored daily decay', () => {
     const prev = { target_wear_seconds: 900, max_wear_seconds: 1800, ended_at: 0, started_at: -100, rest_seconds: 0 };
     // latest_start = 0 + 0 + 86400. Start 2 days past latest_start => days_since_grace = 2
     const start = 86400 + 2 * 86400;
     const r = computeSessionStart(cat, item, prev, start, false);
-    const grown = 900 + 900; // difficulty 1 * (prev.target + initial)
-    expect(r.target).toBe(Math.floor(grown * 0.91 ** 2));
+    // grown target=1800, max=3600 (dm=1 * (prev + initial)). Each day's loss is
+    // floored at initial (900/1800), so both reach the floor on day 1 already:
+    // day1: target loss = max(0.09*1800, 900) = 900 -> target 900
+    // day1: max loss    = max(0.09*3600, 1800) = 1800 -> max 1800
+    expect(r.target).toBe(900);
+    expect(r.max).toBe(1800);
   });
 
   it('active injury halves the result', () => {
@@ -97,6 +101,40 @@ describe('computeSessionStart', () => {
     const prev = { target_wear_seconds: 100, max_wear_seconds: 200, ended_at: 0, started_at: -100, rest_seconds: 500 };
     // start inside rest period → halved: target=50, max=100 — both below initial (900/1800)
     const r = computeSessionStart(cat, item, prev, 100, false);
+    expect(r.target).toBe(900);
+    expect(r.max).toBe(1800);
+  });
+});
+
+describe('computeSessionStart — floored break decay reaches floor in bounded days', () => {
+  const noMaxCat: Category = { ...cat, initial_max_wear_duration_seconds: null };
+
+  it('matches the day-by-day worked example (5000 -> 900 over 5 days)', () => {
+    const prev = { target_wear_seconds: 4100, max_wear_seconds: null, ended_at: 0, started_at: -100, rest_seconds: 0 };
+    const start = 86400 + 5 * 86400; // 5 days past grace
+    const r = computeSessionStart(noMaxCat, item, prev, start, false);
+    // grown target = 1 * (4100 + 900) = 5000
+    // day1: loss=max(450,900)=900 -> 4100
+    // day2: loss=max(369,900)=900 -> 3200
+    // day3: loss=max(288,900)=900 -> 2300
+    // day4: loss=max(207,900)=900 -> 1400
+    // day5: loss=max(126,900)=900 -> 900 (floor)
+    expect(r.target).toBe(900);
+  });
+
+  it('never overshoots below the floor for very long gaps', () => {
+    const prev = { target_wear_seconds: 4100, max_wear_seconds: null, ended_at: 0, started_at: -100, rest_seconds: 0 };
+    const start = 86400 + 1000 * 86400; // 1000 days past grace
+    const r = computeSessionStart(noMaxCat, item, prev, start, false);
+    expect(r.target).toBe(900);
+  });
+
+  it('applies the same floored decay to max independently, for categories with a maximum', () => {
+    const prev = { target_wear_seconds: 4100, max_wear_seconds: 8200, ended_at: 0, started_at: -100, rest_seconds: 0 };
+    const start = 86400 + 5 * 86400;
+    const r = computeSessionStart(cat, item, prev, start, false);
+    // grown target = 4100+900 = 5000 -> floors to 900 by day 5 (see worked example above)
+    // grown max = 8200+1800 = 10000 -> day1:8200 day2:6400 day3:4600 day4:2800 day5: floor 1800
     expect(r.target).toBe(900);
     expect(r.max).toBe(1800);
   });
