@@ -1,26 +1,28 @@
 <template>
   <div class="wear-progress" :class="`tier-${tier}`" :style="{ '--glow-color': barColor }" data-testid="wear-progress-bar">
-    <span v-if="mode === 'wear' && lapCount >= 1" class="lap-badge" data-testid="lap-badge">{{ lapCount }}x</span>
-    <div class="bar-wrap">
-      <div
-        class="bar-fill"
-        :class="{ 'decay-shadow': mode === 'decay', 'decay-anchor-right': mode === 'decay' }"
-        :style="{ width: fillFraction * 100 + '%', background: barColor }"
-      ></div>
-      <div
-        v-if="mode === 'wear' && targetMarkerFraction !== null"
-        class="target-marker"
-        data-testid="target-marker"
-        :style="{ left: targetMarkerFraction * 100 + '%' }"
-      ></div>
-      <div v-if="mode === 'wear' && tier >= 2" class="sparkle-field">
+    <div class="bar-row">
+      <div class="bar-wrap">
         <div
-          v-for="(s, i) in sparkles"
-          :key="i"
-          class="sparkle"
-          :style="{ left: s.left + '%', top: s.top + '%', animationDelay: s.delay + 's' }"
+          class="bar-fill"
+          :class="{ 'decay-shadow': mode === 'decay', 'decay-anchor-right': mode === 'decay' }"
+          :style="{ width: fillFraction * 100 + '%', background: barColor }"
         ></div>
+        <div
+          v-if="mode === 'wear' && targetMarkerFraction !== null"
+          class="target-marker"
+          data-testid="target-marker"
+          :style="{ left: targetMarkerFraction * 100 + '%' }"
+        ></div>
+        <div v-if="mode === 'wear' && tier >= 2" class="sparkle-field">
+          <div
+            v-for="(s, i) in sparkles"
+            :key="i"
+            class="sparkle"
+            :style="{ left: s.left + '%', top: s.top + '%', animationDelay: s.delay + 's' }"
+          ></div>
+        </div>
       </div>
+      <span v-if="mode === 'wear' && lapCount >= 1" class="lap-badge" data-testid="lap-badge">{{ lapCount }}x</span>
     </div>
   </div>
 </template>
@@ -72,11 +74,15 @@ const sparkles = computed(() => generateSparkles(SPARKLE_COUNTS[tier.value]));
 <style scoped>
 .wear-progress {
   position: relative;
+  padding-top: 4px;
+}
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 .lap-badge {
-  position: absolute;
-  top: -18px;
-  right: 0;
+  flex: none;
   font-size: 11px;
   font-weight: 700;
   padding: 1px 7px;
@@ -86,6 +92,8 @@ const sparkles = computed(() => generateSparkles(SPARKLE_COUNTS[tier.value]));
 }
 .bar-wrap {
   position: relative;
+  flex: 1;
+  min-width: 0;
   height: 6px;
   border-radius: 999px;
   background: #e5e7eb;
