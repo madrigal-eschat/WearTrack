@@ -1,3 +1,11 @@
+## [1.1.1](https://github.com/madrigal-eschat/WearTrack/compare/v1.1.0...v1.1.1) (2026-07-13)
+
+
+### Bug Fixes
+
+* **frontend:** add top padding above the progress bar for clearer button separation ([57b9a69](https://github.com/madrigal-eschat/WearTrack/commit/57b9a69115e9c26123e5fef19f79688d3c939da6))
+* **frontend:** keep lap badge from overlapping Stop button and being cut off by the bar ([afabd2b](https://github.com/madrigal-eschat/WearTrack/commit/afabd2b36bb3ba2c1a5d8459dda7f867adf2bed6))
+
 # [1.1.0](https://github.com/madrigal-eschat/WearTrack/compare/v1.0.0...v1.1.0) (2026-07-09)
 
 
