@@ -112,10 +112,21 @@ Never calculate a value for `max` if `category.initial_max_wear` is null.
     max    = item.difficulty_modifier * (previous_session.max + category.initial_max)
     ```
 
-  * If `start_time > previous_session.latest_start`
+  * If `start_time > previous_session.latest_start`:
+    Decay applies once per full day since grace ended (`new_session.days_since_grace`).
+    Each day's loss amount is itself floored, so `target`/`max` reach
+    `category.initial_target`/`category.initial_max` in a bounded number of
+    days instead of trailing off asymptotically:
     ```
-    target *= pow(category.break_decay_multiplier, new_session.days_since_grace)
-    max    *= pow(category.break_decay_multiplier, new_session.days_since_grace)
+    loss_fraction = 1 - category.break_decay_multiplier
+
+    for day in 1..new_session.days_since_grace:
+      target_loss = max(loss_fraction * target, category.initial_target)
+      target = max(target - target_loss, category.initial_target)
+
+      # only when category has a max:
+      max_loss = max(loss_fraction * max, category.initial_max)
+      max = max(max - max_loss, category.initial_max)
     ```
 
   Else: (`previous_session` does not exist)

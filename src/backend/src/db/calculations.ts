@@ -209,18 +209,24 @@ export function computeDecay(
   }
 
   const daysSinceGrace = Math.floor((now - decayStartTime) / 86400);
-  const decayFactor = category.break_decay_multiplier ** daysSinceGrace;
-  const decayed = (previous.target_wear_seconds + initial) * decayFactor;
+  const lossFraction = 1 - category.break_decay_multiplier;
+  const decayed = decayValue(previous.target_wear_seconds + initial, initial, lossFraction, daysSinceGrace);
 
   const decay_state: DecayState = decayed <= initial ? 'fully_decayed' : 'decaying';
   return { decay_start_time: decayStartTime, decay_state, decay_full_time: decayFullTime };
 }
 
-/** Full days of decay until (previousTarget + initial) * multiplier^days <= initial. */
+/** Full days of floored decay (see `decayOneDay`) until (previousTarget + initial) reaches initial. */
 function daysUntilFullyDecayed(previousTarget: number, initial: number, multiplier: number): number {
   if (previousTarget <= 0 || multiplier <= 0 || multiplier >= 1) return 0;
-  const days = Math.log(initial / (previousTarget + initial)) / Math.log(multiplier);
-  return Math.max(0, Math.ceil(days));
+  const lossFraction = 1 - multiplier;
+  let target = previousTarget + initial;
+  let days = 0;
+  while (target > initial) {
+    target = decayOneDay(target, initial, lossFraction);
+    days++;
+  }
+  return days;
 }
 
 /** Session-End rest formula from docs/design/duration-formula.md. */
