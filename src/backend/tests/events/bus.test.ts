@@ -31,4 +31,30 @@ describe('eventBus', () => {
     });
     expect(listener).not.toHaveBeenCalled();
   });
+
+  it('isolates listener exceptions: a throwing listener does not stop later listeners or propagate to emit()', () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const throwingListener = vi.fn(() => {
+      throw new Error('boom');
+    });
+    const secondListener = vi.fn();
+
+    eventBus.on('decay_soon', throwingListener);
+    eventBus.on('decay_soon', secondListener);
+
+    const payload = {
+      category_id: 3,
+      category_name: 'Hats',
+      timestamp: 3000,
+    };
+
+    expect(() => eventBus.emit('decay_soon', payload)).not.toThrow();
+
+    expect(throwingListener).toHaveBeenCalledWith(payload);
+    expect(secondListener).toHaveBeenCalledWith(payload);
+    expect(consoleErrorSpy).toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
+  });
 });
