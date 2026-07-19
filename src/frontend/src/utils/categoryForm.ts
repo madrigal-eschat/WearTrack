@@ -12,6 +12,8 @@ export interface CategoryApiShape {
   break_decay_multiplier: number;
   break_grace_time: number;
   risk_levels: RiskLevel[];
+  type: 'duration' | 'rotation';
+  consecutive_wear_days: number;
   [key: string]: unknown;
 }
 
@@ -37,6 +39,8 @@ export function categoryToFormState(cat: CategoryApiShape): CategoryFormState {
     restMultiplier: cat.rest_multiplier,
     bandCount: cat.risk_levels.length,
     crossoverPoints: cat.risk_levels.slice(0, -1).map((l) => l.upper as number),
+    type: cat.type,
+    consecutiveWearDays: cat.consecutive_wear_days,
   };
 }
 
@@ -50,6 +54,8 @@ export function formStateToApiPayload(data: CategoryFormState): {
   break_decay_multiplier: number;
   break_grace_time: number;
   risk_levels: RiskLevel[];
+  type: 'duration' | 'rotation';
+  consecutive_wear_days: number;
 } {
   return {
     name: data.name,
@@ -61,5 +67,7 @@ export function formStateToApiPayload(data: CategoryFormState): {
     break_decay_multiplier: halfLifeDaysToMultiplier(data.breakDecayHalfLifeDays),
     break_grace_time: data.breakGraceSeconds,
     risk_levels: buildRiskLevels(data.bandCount, data.crossoverPoints),
+    type: data.type,
+    consecutive_wear_days: data.consecutiveWearDays,
   };
 }

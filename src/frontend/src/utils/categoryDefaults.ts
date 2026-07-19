@@ -14,4 +14,6 @@ export const DEFAULT_CATEGORY_FIELDS: CategoryDefaults = {
   ],
   break_decay_multiplier: 0.91,
   break_grace_time: 86400,
+  type: 'duration',
+  consecutive_wear_days: 1,
 };
