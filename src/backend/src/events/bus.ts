@@ -50,6 +50,10 @@ export interface SessionThresholdEvent extends CategoryContext {
   session_id: number;
 }
 
+export interface PollerTickEvent {
+  timestamp: number;
+}
+
 export interface EventPayloads {
   session_start: SessionStartEvent;
   session_end: SessionEndEvent;
@@ -63,6 +67,7 @@ export interface EventPayloads {
   overtime_warning_30: SessionThresholdEvent;
   overtime_warning_5: SessionThresholdEvent;
   overtime: SessionThresholdEvent;
+  poller_tick: PollerTickEvent;
 }
 
 export type EventName = keyof EventPayloads;

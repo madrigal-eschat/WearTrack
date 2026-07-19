@@ -163,6 +163,8 @@ export function tick(now: number = nowSeconds()): void {
 
     eventPollerStore.upsert(row);
   }
+
+  eventBus.emit('poller_tick', { timestamp: now });
 }
 
 export function startEventsPoller(): void {
