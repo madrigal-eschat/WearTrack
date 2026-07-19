@@ -161,6 +161,8 @@ export interface CategoryFormState {
   restMultiplier: number;
   bandCount: number;
   crossoverPoints: number[];
+  type: 'duration' | 'rotation';
+  consecutiveWearDays: number;
 }
 
 const DEFAULT_HALF_LIFE_DAYS = multiplierToHalfLifeDays(0.91);
@@ -176,6 +178,8 @@ const DEFAULT_STATE: CategoryFormState = {
   restMultiplier: 2,
   bandCount: 3,
   crossoverPoints: [3600, 7200],
+  type: 'duration',
+  consecutiveWearDays: 1,
 };
 
 const props = defineProps<{
@@ -252,6 +256,8 @@ function onSubmit() {
     restMultiplier: catForm.restMultiplier,
     bandCount: catForm.bandCount,
     crossoverPoints: [...catForm.crossoverPoints],
+    type: catForm.type,
+    consecutiveWearDays: catForm.consecutiveWearDays,
   });
 }
 </script>
