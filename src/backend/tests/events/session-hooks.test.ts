@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { runMigrations } from '../../src/db/migrations/index.js';
 import { dbExport } from '../../src/db/index.js';
 import { eventBus } from '../../src/events/bus.js';
+import { eventPollerStore } from '../../src/events/store.js';
 import { createCategory, createItem } from '../fixtures.js';
 import app from '../../src/server.js';
 
@@ -159,6 +160,49 @@ describe('session-store event hooks', () => {
     expect(restEnd).not.toHaveBeenCalled();
     expect(sessionStart).toHaveBeenCalledTimes(1);
     expect(order).toEqual(['decay_finish', 'session_start']);
+  });
+
+  it('does not re-emit decay_finish on session start when the poller already reported fully_decayed for this category', async () => {
+    const cat = await (await createCategory()).json();
+    const item = await (await createItem(cat.id)).json();
+
+    const startResA = await app.request(`${SESSIONS}/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: item.id, started_at: 0 }),
+    });
+    const sessionA = await startResA.json();
+    await app.request(`${SESSIONS}/${sessionA.id}/end`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ended_at: 100 }),
+    });
+    // rest ends at 86500; decay starts at 172900; fully decayed by 864100.
+
+    // Simulate the poller having already ticked and reported decay_finish for this category.
+    eventPollerStore.upsert({
+      category_id: cat.id,
+      decay_state: 'fully_decayed',
+      resting: 0,
+      halfway_notified: 0,
+      decay_soon_notified: 0,
+      last_session_id: null,
+      target_met_notified: 0,
+      overtime_warning_30_notified: 0,
+      overtime_warning_5_notified: 0,
+      overtime_notified: 0,
+    });
+
+    const decayFinish = vi.fn();
+    eventBus.on('decay_finish', decayFinish);
+
+    await app.request(`${SESSIONS}/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: item.id, started_at: 900_000 }),
+    });
+
+    expect(decayFinish).not.toHaveBeenCalled();
   });
 
   it('emits neither rest_end nor decay_finish when a new session starts while merely decaying (not fully decayed)', async () => {

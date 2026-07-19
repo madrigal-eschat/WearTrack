@@ -10,6 +10,7 @@ import {
 import { statsStore } from './stats-store.js';
 import { injuryStore } from './injury-store.js';
 import { eventBus } from '../../events/bus.js';
+import { eventPollerStore } from '../../events/store.js';
 
 export interface Session {
   id: number;
@@ -184,7 +185,9 @@ class SessionStore {
         });
       } else {
         const decay = computeDecay(previous, category, startedAt);
-        if (decay.decay_state === 'fully_decayed') {
+        const storedRow = eventPollerStore.get(category.id);
+        const alreadyReported = storedRow?.decay_state === 'fully_decayed';
+        if (decay.decay_state === 'fully_decayed' && !alreadyReported) {
           eventBus.emit('decay_finish', {
             category_id: category.id,
             category_name: category.name,
