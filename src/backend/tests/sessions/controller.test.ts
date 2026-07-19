@@ -1142,3 +1142,64 @@ describe('DELETE /api/sessions/:id', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('POST /api/sessions/start — rotation availability', () => {
+  it('rejects starting an item that was just worn, before the rest of the rotation has had a turn', async () => {
+    const cat = await (await createCategory({
+      name: 'Rotation Sessions', type: 'rotation', consecutive_wear_days: 1,
+      initial_target_wear_duration_seconds: 57600, initial_max_wear_duration_seconds: null,
+    })).json();
+    const itemA = await (await createItem(cat.id, { name: 'A' })).json();
+    await createItem(cat.id, { name: 'B' });
+
+    const start1 = await app.request(`${SESSIONS}/start`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemA.id }),
+    });
+    const session1 = await start1.json();
+    await app.request(`${SESSIONS}/${session1.id}/end`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+    });
+
+    const start2 = await app.request(`${SESSIONS}/start`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemA.id }),
+    });
+    expect(start2.status).toBe(400);
+  });
+
+  it('allows starting an item whose turn it is', async () => {
+    const cat = await (await createCategory({
+      name: 'Rotation Sessions 2', type: 'rotation', consecutive_wear_days: 1,
+      initial_target_wear_duration_seconds: 57600, initial_max_wear_duration_seconds: null,
+    })).json();
+    const itemA = await (await createItem(cat.id, { name: 'A2' })).json();
+    const itemB = await (await createItem(cat.id, { name: 'B2' })).json();
+
+    const start1 = await app.request(`${SESSIONS}/start`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemA.id }),
+    });
+    const session1 = await start1.json();
+    await app.request(`${SESSIONS}/${session1.id}/end`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+    });
+
+    const start2 = await app.request(`${SESSIONS}/start`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemB.id }),
+    });
+    expect(start2.status).toBe(201);
+  });
+
+  it('does not restrict duration categories', async () => {
+    // itemId/categoryId from the outer beforeAll are a plain duration category.
+    const s1 = await startSession();
+    const body1 = await s1.json();
+    await endSession(body1.id);
+    const s2 = await startSession();
+    expect(s2.status).toBe(201);
+    const body2 = await s2.json();
+    await endSession(body2.id);
+  });
+});
