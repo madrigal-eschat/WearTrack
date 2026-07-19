@@ -16,12 +16,14 @@ import { startScheduler } from './notifications/runner.js';
 import { startEventsPoller } from './events/poller.js';
 import { initMqtt } from './mqtt/client.js';
 import { startMqttSubscriber } from './mqtt/subscriber.js';
+import { startDiscovery } from './mqtt/discovery.js';
 
 runMigrations();
 startScheduler();
 startEventsPoller();
 initMqtt();
 startMqttSubscriber();
+startDiscovery();
 
 const app = new Hono();
 
