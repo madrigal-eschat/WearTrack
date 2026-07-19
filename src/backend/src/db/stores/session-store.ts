@@ -8,6 +8,7 @@ import {
 } from '../calculations.js';
 import { statsStore } from './stats-store.js';
 import { injuryStore } from './injury-store.js';
+import { eventBus } from '../../events/bus.js';
 
 export interface Session {
   id: number;
@@ -171,7 +172,19 @@ class SessionStore {
         'INSERT INTO sessions (item_id, started_at, target_wear_seconds, max_wear_seconds) VALUES (?, ?, ?, ?)',
       )
       .run(itemId, startedAt, target, max);
-    return this.find(result.lastInsertRowid as number)!;
+    const session = this.find(result.lastInsertRowid as number)!;
+
+    eventBus.emit('session_start', {
+      category_id: category.id,
+      category_name: category.name,
+      timestamp: startedAt,
+      session_id: session.id,
+      item_id: itemId,
+      target_wear_seconds: session.target_wear_seconds,
+      max_wear_seconds: session.max_wear_seconds,
+    });
+
+    return session;
   }
 
   /** Write-through derived index: one row per (day, category, item) the first time a session on it completes. */
@@ -199,6 +212,20 @@ class SessionStore {
       statsStore.recordItemSession(snapshot);
       statsStore.recordCategorySession(category.id, category.break_grace_time, snapshot);
       this.recordDayIndex(session.id);
+
+      eventBus.emit('session_end', {
+        category_id: category.id,
+        category_name: category.name,
+        timestamp: endedAt,
+        session_id: session.id,
+        item_id: session.item_id,
+        target_wear_seconds: session.target_wear_seconds,
+        max_wear_seconds: session.max_wear_seconds,
+        actual_duration_seconds: elapsed,
+        rest_seconds: rest,
+        risk_level: riskLevel?.text ?? null,
+      });
+
       return updated;
     })();
   }
