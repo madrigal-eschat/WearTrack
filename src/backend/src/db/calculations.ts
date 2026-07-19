@@ -58,6 +58,32 @@ export function lapCount(previous: PreviousSession): number {
   return Math.floor(elapsed / previous.target_wear_seconds);
 }
 
+/**
+ * Derived rotation availability: no stored cycle state. Walk `recentSessions`
+ * (newest first) collecting active items into `seen`; stop at the first
+ * item already in `seen` (that session belongs to a prior, completed cycle).
+ * If `seen` ends up covering every active item with no repeat encountered,
+ * the most recent session just completed a full rotation, so everyone is
+ * available again. Items not in `activeItemIds` (removed from the category)
+ * are ignored entirely.
+ */
+export function rotationAvailability(
+  activeItemIds: number[],
+  recentSessions: { item_id: number }[],
+): Set<number> {
+  const active = new Set(activeItemIds);
+  const seen = new Set<number>();
+
+  for (const session of recentSessions) {
+    if (!active.has(session.item_id)) continue;
+    if (seen.has(session.item_id)) break;
+    seen.add(session.item_id);
+  }
+
+  if (seen.size === active.size) return active;
+  return new Set([...active].filter((id) => !seen.has(id)));
+}
+
 /** Previous durations grown by one category increment, scaled by difficulty modifier. */
 function growDurations(
   previous: PreviousSession,
