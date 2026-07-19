@@ -58,4 +58,45 @@ describe('PUT /api/mqtt/config', () => {
     });
     expect(res.status).toBe(400);
   });
+
+  it('returns 400 when port is outside the valid TCP port range', async () => {
+    const tooLow = await app.request(`${MQTT}/config`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ port: 0 }),
+    });
+    expect(tooLow.status).toBe(400);
+
+    const tooHigh = await app.request(`${MQTT}/config`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ port: 70000 }),
+    });
+    expect(tooHigh.status).toBe(400);
+  });
+
+  it('returns 400 when topic_prefix is an empty string', async () => {
+    const res = await app.request(`${MQTT}/config`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic_prefix: '   ' }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('leaves the stored password unchanged when password is explicitly null', async () => {
+    await app.request(`${MQTT}/config`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: 'secret' }),
+    });
+    const res = await app.request(`${MQTT}/config`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: null }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.hasPassword).toBe(true);
+  });
 });

@@ -43,4 +43,12 @@ describe('mqttConfigStore', () => {
     mqttConfigStore.update({ password: 'new-secret' });
     expect(mqttConfigStore.get().password).toBe('new-secret');
   });
+
+  it('update() with a null password leaves the stored password unchanged', () => {
+    mqttConfigStore.get();
+    mqttConfigStore.update({ password: 'secret' });
+    // @ts-expect-error -- exercising a runtime guard against a value the HTTP boundary isn't statically typed against
+    mqttConfigStore.update({ password: null });
+    expect(mqttConfigStore.get().password).toBe('secret');
+  });
 });
