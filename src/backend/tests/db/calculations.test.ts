@@ -298,4 +298,11 @@ describe('rotationAvailability', () => {
     const result = rotationAvailability([1, 2, 3], [{ item_id: 1 }, { item_id: 1 }]);
     expect(result).toEqual(new Set([2, 3]));
   });
+
+  it('does not spuriously report a full reset when a new cycle starts with the previous cycle\'s completing item interleaved further back', () => {
+    // Chronologically: wore 1, then 2 (completes a 2-item cycle -> reset), then 1 again (starts a new cycle).
+    // Only item 1 has been worn in the new cycle, so item 2 should be the only one available.
+    const result = rotationAvailability([1, 2], [{ item_id: 1 }, { item_id: 2 }, { item_id: 1 }]);
+    expect(result).toEqual(new Set([2]));
+  });
 });
