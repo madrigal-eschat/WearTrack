@@ -135,6 +135,17 @@ class SessionStore {
       .get(categoryId) as PreviousSession | undefined;
   }
 
+  /** Last `limit` sessions (any item) in a category, newest first. Feeds rotationAvailability. */
+  findRecentInCategory(categoryId: number, limit: number): { item_id: number }[] {
+    return db
+      .prepare(
+        `SELECT s.item_id FROM sessions s JOIN items i ON i.id = s.item_id
+         WHERE i.category_id = ? AND s.ended_at IS NOT NULL
+         ORDER BY s.ended_at DESC LIMIT ?`,
+      )
+      .all(categoryId, limit) as { item_id: number }[];
+  }
+
   findOpenInCategory(categoryId: number): { session_id: number; item_id: number; item_name: string } | undefined {
     return db
       .prepare(
@@ -165,9 +176,17 @@ class SessionStore {
 
   /** Start a new session. category is the raw DB row; item supplies difficulty. */
   start(itemId: number, category: Category, item: { difficulty_multiplier: number }, startedAt: number): Session {
-    const previous = this.findLastEndedInCategory(category.id) ?? null;
-    const injuryActive = injuryStore.hasActiveInCategory(category.id);
-    const { target, max } = computeSessionStart(category, item, previous, startedAt, injuryActive);
+    let target: number;
+    let max: number | null;
+
+    if (category.type === 'rotation') {
+      target = category.initial_target_wear_duration_seconds;
+      max = null;
+    } else {
+      const previous = this.findLastEndedInCategory(category.id) ?? null;
+      const injuryActive = injuryStore.hasActiveInCategory(category.id);
+      ({ target, max } = computeSessionStart(category, item, previous, startedAt, injuryActive));
+    }
 
     // A new session in this category synchronously resolves any rest/decay period the
     // previous session left owing — otherwise it would silently linger until the next
@@ -231,10 +250,15 @@ class SessionStore {
   /** End a session: derive elapsed, compute rest, persist; target/max stay as set at start. */
   end(session: Session, category: Category, endedAt: number): Session {
     return db.transaction(() => {
-      const elapsed = endedAt - session.started_at;
-      const injuryActive = injuryStore.hasActiveInCategory(category.id);
-      const riskLevel = riskLevelFor(elapsed, category);
-      const rest = computeRest(elapsed, session.max_wear_seconds, category, riskLevel, injuryActive);
+      let rest: number | null;
+      if (category.type === 'rotation') {
+        rest = null;
+      } else {
+        const elapsed = endedAt - session.started_at;
+        const injuryActive = injuryStore.hasActiveInCategory(category.id);
+        const riskLevel = riskLevelFor(elapsed, category);
+        rest = computeRest(elapsed, session.max_wear_seconds, category, riskLevel, injuryActive);
+      }
 
       db.prepare('UPDATE sessions SET ended_at = ?, rest_seconds = ? WHERE id = ?').run(endedAt, rest, session.id);
 
@@ -282,9 +306,14 @@ class SessionStore {
       }
 
       const elapsed = newEndedAt - session.started_at;
-      const injuryActive = injuryStore.hasActiveInCategory(category.id);
-      const riskLevel = riskLevelFor(elapsed, category);
-      const rest = computeRest(elapsed, session.max_wear_seconds, category, riskLevel, injuryActive);
+      let rest: number | null;
+      if (category.type === 'rotation') {
+        rest = null;
+      } else {
+        const injuryActive = injuryStore.hasActiveInCategory(category.id);
+        const riskLevel = riskLevelFor(elapsed, category);
+        rest = computeRest(elapsed, session.max_wear_seconds, category, riskLevel, injuryActive);
+      }
 
       db.prepare('UPDATE sessions SET ended_at = ?, rest_seconds = ? WHERE id = ?').run(
         newEndedAt,

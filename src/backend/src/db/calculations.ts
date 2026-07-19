@@ -17,6 +17,8 @@ export interface Category {
   risk_levels: string | RiskLevel[];
   break_decay_multiplier: number;
   break_grace_time: number;
+  type: 'duration' | 'rotation';
+  consecutive_wear_days: number;
 }
 
 export interface PreviousSession {
