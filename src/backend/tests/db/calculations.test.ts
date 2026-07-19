@@ -25,6 +25,8 @@ const cat: Category = {
   ],
   break_decay_multiplier: 0.91,
   break_grace_time: 86400,
+  type: 'duration',
+  consecutive_wear_days: 1,
 };
 const item = { difficulty_multiplier: 1 };
 
