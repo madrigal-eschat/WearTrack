@@ -17,6 +17,8 @@ const BASE_CATEGORY: CategoryApiShape = {
     { lower: 3600, upper: 7200, text: 'Medium', severity: 2 },
     { lower: 7200, upper: null, text: 'High', severity: 3 },
   ],
+  type: 'duration',
+  consecutive_wear_days: 1,
 };
 
 describe('multiplierToHalfLifeDays / halfLifeDaysToMultiplier', () => {
@@ -61,6 +63,7 @@ describe('formStateToApiPayload', () => {
       restMultiplier: 1.5, minimumRestSeconds: 1200,
       breakGraceSeconds: 3600, breakDecayHalfLifeDays: multiplierToHalfLifeDays(0.8),
       bandCount: 2, crossoverPoints: [3600],
+      type: 'duration', consecutiveWearDays: 1,
     });
     expect(payload.initial_target_wear_duration_seconds).toBe(1800);
     expect(payload.initial_max_wear_duration_seconds).toBeNull();
@@ -80,5 +83,34 @@ describe('formStateToApiPayload', () => {
     expect(payload.initial_max_wear_duration_seconds).toBe(1800);
     expect(payload.break_grace_time).toBe(86400);
     expect(payload.break_decay_multiplier).toBeCloseTo(0.91);
+  });
+});
+
+describe('rotation category mapping', () => {
+  it('categoryToFormState maps type and consecutive_wear_days', () => {
+    const state = categoryToFormState({
+      name: 'Socks', icon: 'sock',
+      initial_target_wear_duration_seconds: 57600,
+      initial_max_wear_duration_seconds: null,
+      rest_multiplier: 2, minimum_rest: 0,
+      break_decay_multiplier: 0.91, break_grace_time: 86400,
+      risk_levels: [{ lower: null, upper: null, text: 'x', severity: 1 }],
+      type: 'rotation',
+      consecutive_wear_days: 2,
+    });
+    expect(state.type).toBe('rotation');
+    expect(state.consecutiveWearDays).toBe(2);
+  });
+
+  it('formStateToApiPayload maps type and consecutiveWearDays back', () => {
+    const payload = formStateToApiPayload({
+      name: 'Socks', icon: 'sock',
+      initialWearTargetSeconds: 57600, initialWearMaxSeconds: null,
+      minimumRestSeconds: 0, breakGraceSeconds: 86400, breakDecayMultiplier: 0.91,
+      restMultiplier: 2, bandCount: 1, crossoverPoints: [],
+      type: 'rotation', consecutiveWearDays: 2,
+    });
+    expect(payload.type).toBe('rotation');
+    expect(payload.consecutive_wear_days).toBe(2);
   });
 });
