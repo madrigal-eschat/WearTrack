@@ -69,7 +69,13 @@ class TypedEventBus {
   private emitter = new EventEmitter();
 
   emit<E extends EventName>(event: E, payload: EventPayloads[E]): void {
-    this.emitter.emit(event, payload);
+    for (const listener of this.emitter.listeners(event)) {
+      try {
+        (listener as (payload: EventPayloads[E]) => void)(payload);
+      } catch (error) {
+        console.error(`[eventBus] listener for event "${event}" threw an error:`, error);
+      }
+    }
   }
 
   on<E extends EventName>(event: E, listener: (payload: EventPayloads[E]) => void): void {
