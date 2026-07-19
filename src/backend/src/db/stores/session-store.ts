@@ -2,6 +2,7 @@ import db from '../index.js';
 import {
   computeSessionStart,
   computeRest,
+  computeDecay,
   riskLevelFor,
   type Category,
   type PreviousSession,
@@ -166,6 +167,33 @@ class SessionStore {
     const previous = this.findLastEndedInCategory(category.id) ?? null;
     const injuryActive = injuryStore.hasActiveInCategory(category.id);
     const { target, max } = computeSessionStart(category, item, previous, startedAt, injuryActive);
+
+    // A new session in this category synchronously resolves any rest/decay period the
+    // previous session left owing — otherwise it would silently linger until the next
+    // poller tick, and the poller itself now skips a category's previous-session block
+    // entirely while a session is open (see events/poller.ts).
+    if (previous) {
+      const restEnd = previous.ended_at + previous.rest_seconds;
+      if (startedAt < restEnd) {
+        eventBus.emit('rest_end', {
+          category_id: category.id,
+          category_name: category.name,
+          timestamp: startedAt,
+          rest_seconds: previous.rest_seconds,
+          elapsed_rest_seconds: startedAt - previous.ended_at,
+        });
+      } else {
+        const decay = computeDecay(previous, category, startedAt);
+        if (decay.decay_state === 'fully_decayed') {
+          eventBus.emit('decay_finish', {
+            category_id: category.id,
+            category_name: category.name,
+            timestamp: startedAt,
+            decay_state: 'fully_decayed',
+          });
+        }
+      }
+    }
 
     const result = db
       .prepare(
