@@ -18,6 +18,7 @@ import { nowSeconds } from '../utils/time.js';
 interface ItemWithExpected extends ItemWithLastSession {
   expected_target: number;
   expected_max: number | null;
+  rotation_available: boolean;
 }
 
 function enrichItemsWithExpected(
@@ -26,6 +27,7 @@ function enrichItemsWithExpected(
   previous: PreviousSession | null,
   now: number,
   injuryActive: boolean,
+  rotationAvailableIds: Set<number>,
 ): ItemWithExpected[] {
   return items.map((it) => {
     const { target, max } = computeSessionStart(
@@ -35,7 +37,12 @@ function enrichItemsWithExpected(
       now,
       injuryActive,
     );
-    return { ...it, expected_target: target, expected_max: max };
+    return {
+      ...it,
+      expected_target: target,
+      expected_max: max,
+      rotation_available: rotationAvailableIds.has(it.item_id),
+    };
   });
 }
 
@@ -78,7 +85,15 @@ router.get('/current', (c) => {
       const { decay_start_time, decay_state, decay_full_time } = computeDecay(previous, cat, now);
       const streak_count = statsStore.findForCategory(cat.id)?.streak_count ?? 0;
 
-      const items = enrichItemsWithExpected(itemsByCategory.get(cat.id) ?? [], cat, previous, now, injuryActive);
+      const rotationAvailableIds =
+        cat.type === 'rotation'
+          ? rotationAvailability(
+              itemStore.findAll(cat.id).map((i) => i.id),
+              sessionStore.findRecentInCategory(cat.id, 100),
+            )
+          : new Set((itemsByCategory.get(cat.id) ?? []).map((i) => i.item_id));
+
+      const items = enrichItemsWithExpected(itemsByCategory.get(cat.id) ?? [], cat, previous, now, injuryActive, rotationAvailableIds);
 
       const s = sessionByCategory.get(cat.id);
       if (!s) return { category: cat, item: null, session: null, items, decay_start_time, decay_state, decay_full_time, streak_count };
