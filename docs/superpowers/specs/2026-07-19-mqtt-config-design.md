@@ -43,25 +43,30 @@ re-deriving it independently:
 ### `src/backend/src/events/` — shared internal event bus (new)
 
 - **`bus.ts`** — a small typed wrapper around Node's `EventEmitter` with
-  typed payloads for six event names: `session_start`, `session_end`,
-  `rest_start`, `rest_end`, `decay_start`, `decay_finish`. This is the one
-  place in the backend where transitions become discrete events; both
-  `mqtt/` and `notifications/` subscribe to it rather than each deriving
-  state independently.
+  typed payloads for eight event names: `session_start`, `session_end`,
+  `rest_start`, `rest_end`, `decay_start`, `decay_finish`, `halfway_reached`,
+  `decay_soon`. This is the one place in the backend where transitions
+  become discrete events; both `mqtt/` and `notifications/` subscribe to it
+  rather than each deriving state independently.
 - **`poller.ts`** — a single 30s tick (unchanged cadence from today's
   notification scheduler) that recomputes rest/decay state per category
-  (reusing `computeDecay`-style logic, extracted into a shared function) and
-  diffs it against last-known state, emitting `rest_start` / `rest_end` /
-  `decay_start` / `decay_finish` on the bus exactly once per transition.
-  Started from `server.ts` unconditionally (cheap to run even with no
-  subscribers configured). Last-known state is **DB-backed, not in-memory**
-  (see `event_poller_state` table below) — an in-memory map would forget
-  everything on restart and misread an already-decaying category as a fresh
-  transition on the next tick, re-firing `decay_start` (and duplicating the
-  MQTT/notification side effects) for an event that already happened before
-  the restart. A category with no row yet is initialized to its current
-  computed state without firing an event (avoids backfiring historic
-  transitions on first run).
+  (reusing `computeDecay`-style logic, extracted into a shared function),
+  plus the two lead-time threshold checks (`halfway_reached`: now past the
+  midpoint of the current rest period; `decay_soon`: now within the
+  configured lead time of decay actually starting), and diffs all of it
+  against last-known state, emitting the corresponding bus event exactly
+  once per transition/threshold-crossing. Started from `server.ts`
+  unconditionally (cheap to run even with no subscribers configured).
+  Last-known state is **DB-backed, not in-memory** (see
+  `event_poller_state` table below) — an in-memory map would forget
+  everything on restart and misread an already-decaying category (or a
+  threshold already crossed and already notified) as fresh, re-firing an
+  event for something that already happened before the restart. A category
+  with no row yet is initialized to its current computed state without
+  firing any event (avoids backfiring historic transitions on first run).
+  `halfway_notified` and `decay_soon_notified` are reset to `0` in the same
+  write that flips `resting` from `0` to `1` (a new rest cycle starting), so
+  they can fire again next cycle.
 - `session-store.ts` `start()` and `end()` emit `session_start` /
   `session_end` on the same bus synchronously, right after the DB write —
   one emission point per transition, regardless of who's listening.
@@ -85,9 +90,12 @@ re-deriving it independently:
 - **`events.ts`** — pure functions building JSON payloads per event type
   from the bus event payload (category, item, session, decay state). No DB
   or network access — easy to unit test.
-- **`subscriber.ts`** — registers listeners for all six bus events at
-  startup (gated on `isConfigured`/`enabled`), builds each payload via
-  `events.ts`, and publishes via `client.ts` (QoS 0, not retained).
+- **`subscriber.ts`** — registers listeners for the six MQTT-published bus
+  events (`session_start`/`session_end`/`rest_start`/`rest_end`/
+  `decay_start`/`decay_finish` — `halfway_reached`/`decay_soon` are
+  notification-only, no MQTT message defined for them) at startup (gated on
+  `isConfigured`/`enabled`), builds each payload via `events.ts`, and
+  publishes via `client.ts` (QoS 0, not retained).
 - **`discovery.ts`** — when `ha_discovery_enabled`, publishes a **retained**
   Home Assistant MQTT discovery config topic per category
   (`homeassistant/sensor/weartrack_<category_id>/config`), describing a
@@ -95,19 +103,23 @@ re-deriving it independently:
   payload for that category. Republished on category create/update/delete and
   on MQTT config save (so HA re-discovers after a broker change).
 
-### `src/backend/src/notifications/` — existing module, updated
+### `src/backend/src/notifications/` — existing module, refactored
 
-- `scheduler.ts` subscribes to the bus's `rest_end` event instead of
-  independently re-deriving that specific transition from
-  `previous.ended_at + rest_seconds` — removing the one piece of logic that
-  was duplicated between the two modules.
-- `halfway` and `decay_soon` notification types are **not** moved to the bus:
-  they're lead-time warnings ("decay starts in N minutes"), a different
-  computation from edge detection, and stay as scheduler-owned due-checks
-  exactly as they work today.
+- `scheduler.ts`'s due-computation (`computeDueNotifications` and its
+  DB-polling call sites) and `tryMarkSent` are **removed**. `runner.ts`
+  becomes a pure bus subscriber: it registers listeners for `rest_end`,
+  `halfway_reached`, `decay_soon`, `decay_start`, `decay_finish` and calls
+  `sender.send()` directly when an event fires — no independent polling, no
+  separate dedup store. This was the intent of centralizing on
+  `events/poller.ts`: one DB-backed edge/threshold detector for the whole
+  backend, not two.
+- The push-notification `isConfigured` gate (VAPID env vars) still applies —
+  it just now gates whether `runner.ts` registers its bus listeners, rather
+  than whether its own tick loop runs.
 
 This is new plumbing (no event bus existed before), but it's now a single
-shared one rather than one per consumer.
+shared one rather than one per consumer, and notifications no longer runs
+its own polling loop at all.
 
 ## Data model
 
@@ -131,7 +143,9 @@ object" shape as the frontend form.
 CREATE TABLE event_poller_state (
   category_id INTEGER PRIMARY KEY REFERENCES categories(id) ON DELETE CASCADE,
   decay_state TEXT NOT NULL DEFAULT 'none', -- 'none' | 'decaying' | 'fully_decayed'
-  resting INTEGER NOT NULL DEFAULT 0        -- 0/1, is rest currently active
+  resting INTEGER NOT NULL DEFAULT 0,       -- 0/1, is rest currently active
+  halfway_notified INTEGER NOT NULL DEFAULT 0,   -- 0/1, halfway_reached fired this rest cycle
+  decay_soon_notified INTEGER NOT NULL DEFAULT 0 -- 0/1, decay_soon fired this rest cycle
 );
 ```
 
@@ -201,16 +215,21 @@ When `ha_discovery_enabled`:
 ## Testing
 
 - `events.ts` payload builders: pure-function unit tests, no DB/network.
-- `poller.ts` edge detection: integration-style tests against the real
-  in-memory SQLite DB (seed `event_poller_state` rows directly, same as
+- `poller.ts` edge/threshold detection: integration-style tests against the
+  real in-memory SQLite DB (seed `event_poller_state` rows directly, same as
   `notifications/controller.test.ts`'s direct-DB-assertion style) asserting
-  exactly one `rest_start`/`rest_end`/`decay_start`/`decay_finish` fires per
-  transition across repeated ticks, and — specifically — that re-running a
-  tick against a row already reflecting the post-transition state does not
-  refire the event (the restart-safety property).
+  exactly one `rest_start`/`rest_end`/`decay_start`/`decay_finish`/
+  `halfway_reached`/`decay_soon` fires per transition across repeated ticks,
+  that re-running a tick against a row already reflecting the post-transition
+  state does not refire the event (the restart-safety property), and that
+  `halfway_notified`/`decay_soon_notified` reset to `0` when a new rest cycle
+  starts (`resting` flips `0` → `1`).
 - `client.ts`: thin publish interface so tests inject a fake publisher;
   "not configured in test env → skip" convention matches
   `notifications/sender.ts`'s `isConfigured` gate (no real broker in CI).
+- `notifications/runner.ts`: replace the old scheduler/due-computation tests
+  with tests asserting `sender.send()` is called once per bus event received,
+  and not called again on a repeated/duplicate event.
 - Settings API (`config-store.ts` + routes): integration tests against the
   real Hono app + in-memory SQLite, same pattern as
   `notifications/controller.test.ts` (assert DB rows after PUT, assert
