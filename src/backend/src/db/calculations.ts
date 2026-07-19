@@ -60,28 +60,30 @@ export function lapCount(previous: PreviousSession): number {
 
 /**
  * Derived rotation availability: no stored cycle state. Walk `recentSessions`
- * (newest first) collecting active items into `seen`; stop at the first
- * item already in `seen` (that session belongs to a prior, completed cycle).
- * If `seen` ends up covering every active item with no repeat encountered,
- * the most recent session just completed a full rotation, so everyone is
- * available again. Items not in `activeItemIds` (removed from the category)
- * are ignored entirely.
+ * in chronological order (oldest to newest, i.e. the reverse of the
+ * newest-first input) and track which active items have been used in the
+ * current, still-open cycle. The moment that tracking set covers every
+ * active item, a full rotation just completed, so it resets to empty and a
+ * new cycle begins. A repeat of an item already used in the current open
+ * cycle (e.g. from a consecutive-wear-days lock) is a no-op: it doesn't
+ * force a reset. Items not in `activeItemIds` (removed from the category)
+ * are ignored entirely. The items available next are whatever active items
+ * haven't been used yet in the current cycle.
  */
 export function rotationAvailability(
   activeItemIds: number[],
   recentSessions: { item_id: number }[],
 ): Set<number> {
   const active = new Set(activeItemIds);
-  const seen = new Set<number>();
+  let usedThisCycle = new Set<number>();
 
-  for (const session of recentSessions) {
+  for (const session of [...recentSessions].reverse()) {
     if (!active.has(session.item_id)) continue;
-    if (seen.has(session.item_id)) break;
-    seen.add(session.item_id);
+    usedThisCycle.add(session.item_id);
+    if (usedThisCycle.size === active.size) usedThisCycle = new Set();
   }
 
-  if (seen.size === active.size) return active;
-  return new Set([...active].filter((id) => !seen.has(id)));
+  return new Set([...active].filter((id) => !usedThisCycle.has(id)));
 }
 
 /** Previous durations grown by one category increment, scaled by difficulty modifier. */
