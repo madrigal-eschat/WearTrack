@@ -15,11 +15,13 @@ import { router as mqttRouter } from './controllers/mqtt.js';
 import { startScheduler } from './notifications/runner.js';
 import { startEventsPoller } from './events/poller.js';
 import { initMqtt } from './mqtt/client.js';
+import { startMqttSubscriber } from './mqtt/subscriber.js';
 
 runMigrations();
 startScheduler();
 startEventsPoller();
 initMqtt();
+startMqttSubscriber();
 
 const app = new Hono();
 
