@@ -13,6 +13,8 @@ export interface Category {
   risk_levels: Array<{ lower: number | null; upper: number | null; text: string; severity: number }>;
   break_decay_multiplier: number;
   break_grace_time: number;
+  type: 'duration' | 'rotation';
+  consecutive_wear_days: number;
 }
 
 export interface Item {
@@ -47,6 +49,7 @@ export interface ItemWithLastSession {
   rest_seconds: number | null;
   expected_target: number;
   expected_max: number | null;
+  rotation_available: boolean;
 }
 
 export interface CurrentEntry {
