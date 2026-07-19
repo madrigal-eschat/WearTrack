@@ -37,33 +37,57 @@ state/percentage, and IDs for correlation).
 
 ## Architecture
 
-New `src/backend/src/mqtt/` module, modeled on `notifications/`:
+Two things share one source of truth for transitions instead of each
+re-deriving it independently:
+
+### `src/backend/src/events/` — shared internal event bus (new)
+
+- **`bus.ts`** — a small typed wrapper around Node's `EventEmitter` with
+  typed payloads for six event names: `session_start`, `session_end`,
+  `rest_start`, `rest_end`, `decay_start`, `decay_finish`. This is the one
+  place in the backend where transitions become discrete events; both
+  `mqtt/` and `notifications/` subscribe to it rather than each deriving
+  state independently.
+- **`poller.ts`** — a single 30s tick (unchanged cadence from today's
+  notification scheduler) that recomputes rest/decay state per category
+  (reusing `computeDecay`-style logic, extracted into a shared function) and
+  diffs it against last-known state, emitting `rest_start` / `rest_end` /
+  `decay_start` / `decay_finish` on the bus exactly once per transition.
+  Started from `server.ts` unconditionally (cheap to run even with no
+  subscribers configured). Last-known state is **DB-backed, not in-memory**
+  (see `event_poller_state` table below) — an in-memory map would forget
+  everything on restart and misread an already-decaying category as a fresh
+  transition on the next tick, re-firing `decay_start` (and duplicating the
+  MQTT/notification side effects) for an event that already happened before
+  the restart. A category with no row yet is initialized to its current
+  computed state without firing an event (avoids backfiring historic
+  transitions on first run).
+- `session-store.ts` `start()` and `end()` emit `session_start` /
+  `session_end` on the same bus synchronously, right after the DB write —
+  one emission point per transition, regardless of who's listening.
+
+### `src/backend/src/mqtt/` — MQTT-specific consumer
 
 - **`config-store.ts`** — new `mqtt_config` DB table (single row): `id`,
   `enabled`, `host`, `port`, `username`, `password`, `topic_prefix`,
   `ha_discovery_enabled`. CRUD used by the Settings API.
 - **`client.ts`** — persistent MQTT client using the `mqtt` npm package.
-  `initMqtt()` runs at server boot (called from `server.ts`, alongside
-  `startScheduler()`), reads `mqtt_config` from the DB, and connects
-  immediately if `enabled=true` and a host is set — so a stored config
-  survives a server restart with no user action needed. Also
-  connects/reconnects whenever config is saved with `enabled=true` and a
-  host is set (picking up host/port/auth changes without a restart);
-  disconnects on disable or config clear; reconnects automatically on drop
-  (library's built-in reconnect). Exposes `publish(topic, payload, opts)` and
-  a `getStatus()` (`connected` / `disconnected` / `error`) for the Settings UI
-  to poll. Plain `mqtt://` only (no TLS) for v1.
-- **`events.ts`** — pure functions building JSON payloads per event type from
-  domain data already available at each call site (category, item, session,
-  decay state). No DB or network access — easy to unit test.
-- **`session-hooks.ts`** — called directly from `session-store.ts`
-  `start()` and `end()` for immediate `session_start` / `session_end`
-  publishes (QoS 0, not retained).
-- **`poller.ts`** — new 60s tick (separate from, alongside, the existing
-  notification scheduler) that recomputes decay/rest state per category
-  (reusing `computeDecay`-style logic) and diffs against last-known state
-  (kept in memory, one process only) to detect edges, firing `rest_start`,
-  `rest_end`, `decay_start`, `decay_finish` exactly once per transition.
+  `initMqtt()` runs at server boot (called from `server.ts`, alongside the
+  events poller), reads `mqtt_config` from the DB, and connects immediately
+  if `enabled=true` and a host is set — so a stored config survives a server
+  restart with no user action needed. Also connects/reconnects whenever
+  config is saved with `enabled=true` and a host is set (picking up
+  host/port/auth changes without a restart); disconnects on disable or
+  config clear; reconnects automatically on drop (library's built-in
+  reconnect). Exposes `publish(topic, payload, opts)` and a `getStatus()`
+  (`connected` / `disconnected` / `error`) for the Settings UI to poll.
+  Plain `mqtt://` only (no TLS) for v1.
+- **`events.ts`** — pure functions building JSON payloads per event type
+  from the bus event payload (category, item, session, decay state). No DB
+  or network access — easy to unit test.
+- **`subscriber.ts`** — registers listeners for all six bus events at
+  startup (gated on `isConfigured`/`enabled`), builds each payload via
+  `events.ts`, and publishes via `client.ts` (QoS 0, not retained).
 - **`discovery.ts`** — when `ha_discovery_enabled`, publishes a **retained**
   Home Assistant MQTT discovery config topic per category
   (`homeassistant/sensor/weartrack_<category_id>/config`), describing a
@@ -71,9 +95,19 @@ New `src/backend/src/mqtt/` module, modeled on `notifications/`:
   payload for that category. Republished on category create/update/delete and
   on MQTT config save (so HA re-discovers after a broker change).
 
-Nothing here plugs into a generic event bus — this is new plumbing end to
-end, matching the codebase's existing poll-based/direct-call style rather
-than introducing a pub/sub abstraction.
+### `src/backend/src/notifications/` — existing module, updated
+
+- `scheduler.ts` subscribes to the bus's `rest_end` event instead of
+  independently re-deriving that specific transition from
+  `previous.ended_at + rest_seconds` — removing the one piece of logic that
+  was duplicated between the two modules.
+- `halfway` and `decay_soon` notification types are **not** moved to the bus:
+  they're lead-time warnings ("decay starts in N minutes"), a different
+  computation from edge detection, and stay as scheduler-owned due-checks
+  exactly as they work today.
+
+This is new plumbing (no event bus existed before), but it's now a single
+shared one rather than one per consumer.
 
 ## Data model
 
@@ -92,6 +126,17 @@ CREATE TABLE mqtt_config (
 
 Single row (`id = 1`), upserted by the Settings API — same "one config
 object" shape as the frontend form.
+
+```sql
+CREATE TABLE event_poller_state (
+  category_id INTEGER PRIMARY KEY REFERENCES categories(id) ON DELETE CASCADE,
+  decay_state TEXT NOT NULL DEFAULT 'none', -- 'none' | 'decaying' | 'fully_decayed'
+  resting INTEGER NOT NULL DEFAULT 0        -- 0/1, is rest currently active
+);
+```
+
+One row per category, written by `events/poller.ts` after each tick.
+Durable across restarts by design — see `poller.ts` above.
 
 ## Settings panel UI
 
@@ -156,10 +201,13 @@ When `ha_discovery_enabled`:
 ## Testing
 
 - `events.ts` payload builders: pure-function unit tests, no DB/network.
-- `poller.ts` edge detection: fixture-style tests (`state(overrides)` helper,
-  same style as `notifications/scheduler.test.ts`) asserting exactly one
-  `rest_start`/`rest_end`/`decay_start`/`decay_finish` fires per transition
-  across repeated ticks.
+- `poller.ts` edge detection: integration-style tests against the real
+  in-memory SQLite DB (seed `event_poller_state` rows directly, same as
+  `notifications/controller.test.ts`'s direct-DB-assertion style) asserting
+  exactly one `rest_start`/`rest_end`/`decay_start`/`decay_finish` fires per
+  transition across repeated ticks, and — specifically — that re-running a
+  tick against a row already reflecting the post-transition state does not
+  refire the event (the restart-safety property).
 - `client.ts`: thin publish interface so tests inject a fake publisher;
   "not configured in test env → skip" convention matches
   `notifications/sender.ts`'s `isConfigured` gate (no real broker in CI).
