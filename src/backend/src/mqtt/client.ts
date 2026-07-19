@@ -28,18 +28,19 @@ export function disconnect(): void {
 export function connect(config: ConnectConfig): void {
   disconnect();
   status = 'connecting';
-  client = mqtt.connect(`mqtt://${config.host}:${config.port}`, {
+  const thisClient = mqtt.connect(`mqtt://${config.host}:${config.port}`, {
     username: config.username ?? undefined,
     password: config.password ?? undefined,
   });
-  client.on('connect', () => {
-    status = 'connected';
+  client = thisClient;
+  thisClient.on('connect', () => {
+    if (client === thisClient) status = 'connected';
   });
-  client.on('close', () => {
-    status = 'disconnected';
+  thisClient.on('close', () => {
+    if (client === thisClient) status = 'disconnected';
   });
-  client.on('error', () => {
-    status = 'error';
+  thisClient.on('error', () => {
+    if (client === thisClient) status = 'error';
   });
 }
 
