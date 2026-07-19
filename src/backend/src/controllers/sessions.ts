@@ -4,7 +4,13 @@ import { itemStore } from '../db/stores/item-store.js';
 import { categoryStore } from '../db/stores/category-store.js';
 import { injuryStore } from '../db/stores/injury-store.js';
 import { statsStore } from '../db/stores/stats-store.js';
-import { computeSessionStart, computeDecay, type PreviousSession, type Category } from '../db/calculations.js';
+import {
+  computeSessionStart,
+  computeDecay,
+  rotationAvailability,
+  type PreviousSession,
+  type Category,
+} from '../db/calculations.js';
 import { NotFoundError, ValidationError, ConflictError } from '../middleware/errors.js';
 import { nowSeconds } from '../utils/time.js';
 
@@ -133,6 +139,16 @@ router.post('/start', async (c) => {
   }
 
   const category = categoryStore.findRaw(item.category_id)!;
+
+  if (category.type === 'rotation') {
+    const activeItemIds = itemStore.findAll(item.category_id).map((i) => i.id);
+    const recent = sessionStore.findRecentInCategory(item.category_id, 100);
+    const available = rotationAvailability(activeItemIds, recent);
+    if (!available.has(item_id)) {
+      throw new ValidationError(`Item ${item_id} is not available yet — it's another item's turn in the rotation`);
+    }
+  }
+
   const startTs = typeof started_at === 'number' ? started_at : nowSeconds();
   const session = sessionStore.start(item_id, category, item, startTs);
   return c.json(session, 201);
