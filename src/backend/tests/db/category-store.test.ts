@@ -126,3 +126,33 @@ describe('categoryStore.delete', () => {
     expect(categoryStore.find(cat.id)).toBeUndefined();
   });
 });
+
+describe('categoryStore rotation fields', () => {
+  it('defaults type to duration and consecutive_wear_days to 1 when omitted', () => {
+    const cat = categoryStore.create({ ...baseCategory, name: 'Default Type' });
+    expect(cat.type).toBe('duration');
+    expect(cat.consecutive_wear_days).toBe(1);
+  });
+
+  it('persists an explicit rotation type and consecutive_wear_days', () => {
+    const cat = categoryStore.create({
+      ...baseCategory,
+      name: 'Rotation Cat',
+      type: 'rotation',
+      consecutive_wear_days: 2,
+    });
+    expect(cat.type).toBe('rotation');
+    expect(cat.consecutive_wear_days).toBe(2);
+
+    const found = categoryStore.find(cat.id)!;
+    expect(found.type).toBe('rotation');
+    expect(found.consecutive_wear_days).toBe(2);
+  });
+
+  it('update() can change type and consecutive_wear_days', () => {
+    const cat = categoryStore.create({ ...baseCategory, name: 'Update Type' });
+    const updated = categoryStore.update(cat.id, { type: 'rotation', consecutive_wear_days: 3 });
+    expect(updated.type).toBe('rotation');
+    expect(updated.consecutive_wear_days).toBe(3);
+  });
+});

@@ -13,6 +13,8 @@ interface CategoryRow {
   risk_levels: string;
   break_decay_multiplier: number;
   break_grace_time: number;
+  type: 'duration' | 'rotation';
+  consecutive_wear_days: number;
 }
 
 export interface Category extends Omit<CategoryRow, 'risk_levels'> {
@@ -29,6 +31,8 @@ export interface CategoryCreate {
   risk_levels: RiskLevel[];
   break_decay_multiplier: number;
   break_grace_time: number;
+  type?: 'duration' | 'rotation';
+  consecutive_wear_days?: number;
 }
 
 export type CategoryUpdate = Partial<CategoryCreate>;
@@ -57,8 +61,9 @@ class CategoryStore {
       .prepare(
         `INSERT INTO categories
            (name, icon, initial_target_wear_duration_seconds, initial_max_wear_duration_seconds,
-            rest_multiplier, minimum_rest, risk_levels, break_decay_multiplier, break_grace_time)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            rest_multiplier, minimum_rest, risk_levels, break_decay_multiplier, break_grace_time,
+            type, consecutive_wear_days)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         data.name,
@@ -70,6 +75,8 @@ class CategoryStore {
         JSON.stringify(data.risk_levels),
         data.break_decay_multiplier,
         data.break_grace_time,
+        data.type ?? 'duration',
+        data.consecutive_wear_days ?? 1,
       );
     const category = this.find(result.lastInsertRowid as number)!;
     db.prepare('INSERT OR IGNORE INTO category_stats (category_id) VALUES (?)').run(category.id);
@@ -87,6 +94,8 @@ class CategoryStore {
       'break_decay_multiplier',
       'break_grace_time',
       'risk_levels',
+      'type',
+      'consecutive_wear_days',
     ]);
 
     const dbData: Record<string, unknown> = { ...data };
