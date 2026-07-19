@@ -43,30 +43,45 @@ re-deriving it independently:
 ### `src/backend/src/events/` — shared internal event bus (new)
 
 - **`bus.ts`** — a small typed wrapper around Node's `EventEmitter` with
-  typed payloads for eight event names: `session_start`, `session_end`,
+  typed payloads for twelve event names: `session_start`, `session_end`,
   `rest_start`, `rest_end`, `decay_start`, `decay_finish`, `halfway_reached`,
-  `decay_soon`. This is the one place in the backend where transitions
-  become discrete events; both `mqtt/` and `notifications/` subscribe to it
-  rather than each deriving state independently.
+  `decay_soon`, `target_met`, `overtime_warning_30`, `overtime_warning_5`,
+  `overtime`. This is the one place in the backend where transitions become
+  discrete events; both `mqtt/` and `notifications/` subscribe to it rather
+  than each deriving state independently. `notifications/` is a pure
+  subscriber now — it runs no polling of its own at all.
 - **`poller.ts`** — a single 30s tick (unchanged cadence from today's
-  notification scheduler) that recomputes rest/decay state per category
-  (reusing `computeDecay`-style logic, extracted into a shared function),
-  plus the two lead-time threshold checks (`halfway_reached`: now past the
-  midpoint of the current rest period; `decay_soon`: now within the
-  configured lead time of decay actually starting), and diffs all of it
-  against last-known state, emitting the corresponding bus event exactly
-  once per transition/threshold-crossing. Started from `server.ts`
-  unconditionally (cheap to run even with no subscribers configured).
-  Last-known state is **DB-backed, not in-memory** (see
-  `event_poller_state` table below) — an in-memory map would forget
+  notification scheduler) that, per category, recomputes:
+  - rest/decay state (reusing `computeDecay`-style logic, extracted into a
+    shared function) → `rest_start`/`rest_end`/`decay_start`/`decay_finish`.
+  - the two lead-time thresholds anchored to the *previous session's end*
+    (`halfway_reached`: past the midpoint of the current rest period;
+    `decay_soon`: within the configured lead time of decay actually
+    starting) → `halfway_reached`/`decay_soon`.
+  - if the category has an open session, the four lead-time thresholds
+    anchored to that *session's start* (`elapsed >= target_wear_seconds`;
+    `elapsed >= max_wear_seconds - 1800/-300/-0`, mirroring the exact
+    `fire_at` formulas and `overtime_warning_*` suppression conditions from
+    today's `scheduler.ts:34-57`) → `target_met`/`overtime_warning_30`/
+    `overtime_warning_5`/`overtime`.
+
+  All of the above are diffed against last-known state, emitting the
+  corresponding bus event exactly once per transition/threshold-crossing.
+  Started from `server.ts` unconditionally (cheap to run even with no
+  subscribers configured). Last-known state is **DB-backed, not in-memory**
+  (see `event_poller_state` table below) — an in-memory map would forget
   everything on restart and misread an already-decaying category (or a
   threshold already crossed and already notified) as fresh, re-firing an
   event for something that already happened before the restart. A category
   with no row yet is initialized to its current computed state without
   firing any event (avoids backfiring historic transitions on first run).
-  `halfway_notified` and `decay_soon_notified` are reset to `0` in the same
-  write that flips `resting` from `0` to `1` (a new rest cycle starting), so
-  they can fire again next cycle.
+  `halfway_notified`/`decay_soon_notified` reset to `0` in the same write
+  that flips `resting` from `0` to `1` (a new rest cycle starting).
+  `target_met_notified`/`overtime_warning_30_notified`/
+  `overtime_warning_5_notified`/`overtime_notified` reset to `0` whenever
+  the category's open session id differs from the stored `last_session_id`
+  (a new session started) — no event fires for the reset itself, only the
+  id bookkeeping update, matching the same "baseline, don't backfire" rule.
 - `session-store.ts` `start()` and `end()` emit `session_start` /
   `session_end` on the same bus synchronously, right after the DB write —
   one emission point per transition, regardless of who's listening.
@@ -103,38 +118,33 @@ re-deriving it independently:
   payload for that category. Republished on category create/update/delete and
   on MQTT config save (so HA re-discovers after a broker change).
 
-### `src/backend/src/notifications/` — existing module, refactored (partially)
+### `src/backend/src/notifications/` — existing module, fully refactored
 
-`scheduler.ts` today drives **seven** notification types: three tied to
-rest/decay (`rest_end`, `halfway`, `decay_soon`) and four tied to an
-*active* session's elapsed time (`target_met`, `overtime_warning_30`,
-`overtime_warning_5`, `overtime`). Only the first three overlap with what
-`events/poller.ts` computes — the other four are a different concern
-(in-session time thresholds, not decay/rest state) and are **not** touched
-by this refactor; they keep their existing due-check + `tryMarkSent` dedup
-in `scheduler.ts`/`store.ts` exactly as today. `decay_start`/`decay_finish`
-were never notification types and stay MQTT-only — nothing in
-`notifications/` subscribes to them.
+`scheduler.ts` (the `computeDueNotifications` function and its `Candidate`
+types), `store.ts`'s `tryMarkSent`/`getSentForSessions`/`getSchedulerState`,
+`types.ts`'s `CategorySchedulerState`/`DueNotification`, and the
+`sent_notifications` table are **all removed** — every notification type
+`scheduler.ts` used to compute (`rest_end`, `halfway` → `halfway_reached`,
+`decay_soon`, `target_met`, `overtime_warning_30`, `overtime_warning_5`,
+`overtime`) is now an `events/poller.ts`-detected edge on the shared bus.
+`decay_start`/`decay_finish` were never notification types and stay
+MQTT-only — nothing in `notifications/` subscribes to them.
 
-- `rest_end`, `halfway` → `halfway_reached`, and `decay_soon` are **removed**
-  from `computeDueNotifications` and its candidate list. `runner.ts` instead
-  registers bus listeners for `rest_end`, `halfway_reached`, `decay_soon` and
-  calls `sender.send()` directly when one fires — no independent polling or
-  `tryMarkSent` row for these three specifically (the bus's DB-backed
-  `event_poller_state` already provides the dedup).
-- `computeDueNotifications`, `tryMarkSent`, and the `sent_notifications`
-  table **stay** — they still own dedup for `target_met`/`overtime_warning_30`
-  /`overtime_warning_5`/`overtime`, which remain a DB-polling tick in
-  `runner.ts` (unchanged cadence/shape) running alongside the new bus
-  listeners, not replaced by them.
-- The push-notification `isConfigured` gate (VAPID env vars) still applies —
-  it now gates both the remaining poll tick and whether `runner.ts` registers
-  its three new bus listeners, rather
-  than whether its own tick loop runs.
+- `runner.ts` becomes a pure bus subscriber: at startup, if `isConfigured`
+  (VAPID env vars set), it registers a listener for each of the seven
+  notification-relevant bus events and calls `sender.send()` with that
+  event's title/body (same copy `scheduler.ts` used to produce) when it
+  fires. No polling, no timer, no dedup logic of its own — `event_poller_state`
+  is the single dedup mechanism for the whole backend.
+- `store.ts` keeps `getSubscription`/`upsertSubscription`/`deleteSubscription`
+  (still needed by `controllers/notifications.ts`) and drops everything
+  scheduler-related.
+- `NotificationType` (in `types.ts`) is removed — event names are now the
+  bus's own event name type, defined once in `events/bus.ts`.
 
 This is new plumbing (no event bus existed before), but it's now a single
-shared one rather than one per consumer, and notifications no longer runs
-its own polling loop at all.
+shared one for every transition/threshold in the backend, with one DB-backed
+dedup table and no independent polling loops left anywhere.
 
 ## Data model
 
@@ -159,13 +169,21 @@ CREATE TABLE event_poller_state (
   category_id INTEGER PRIMARY KEY REFERENCES categories(id) ON DELETE CASCADE,
   decay_state TEXT NOT NULL DEFAULT 'none', -- 'none' | 'decaying' | 'fully_decayed'
   resting INTEGER NOT NULL DEFAULT 0,       -- 0/1, is rest currently active
-  halfway_notified INTEGER NOT NULL DEFAULT 0,   -- 0/1, halfway_reached fired this rest cycle
-  decay_soon_notified INTEGER NOT NULL DEFAULT 0 -- 0/1, decay_soon fired this rest cycle
+  halfway_notified INTEGER NOT NULL DEFAULT 0,     -- 0/1, halfway_reached fired this rest cycle
+  decay_soon_notified INTEGER NOT NULL DEFAULT 0,  -- 0/1, decay_soon fired this rest cycle
+  last_session_id INTEGER,                         -- most recent open-session id seen, for reset detection
+  target_met_notified INTEGER NOT NULL DEFAULT 0,          -- 0/1, fired for last_session_id
+  overtime_warning_30_notified INTEGER NOT NULL DEFAULT 0, -- 0/1, fired for last_session_id
+  overtime_warning_5_notified INTEGER NOT NULL DEFAULT 0,  -- 0/1, fired for last_session_id
+  overtime_notified INTEGER NOT NULL DEFAULT 0             -- 0/1, fired for last_session_id
 );
 ```
 
 One row per category, written by `events/poller.ts` after each tick.
-Durable across restarts by design — see `poller.ts` above.
+Durable across restarts by design — see `poller.ts` above. The four
+session-anchored `*_notified` columns are reset to `0` (without firing an
+event) whenever the category's currently-open session id differs from
+`last_session_id`, which is then updated to match.
 
 ## Settings panel UI
 
@@ -239,12 +257,13 @@ When `ha_discovery_enabled`:
 - `poller.ts` edge/threshold detection: integration-style tests against the
   real in-memory SQLite DB (seed `event_poller_state` rows directly, same as
   `notifications/controller.test.ts`'s direct-DB-assertion style) asserting
-  exactly one `rest_start`/`rest_end`/`decay_start`/`decay_finish`/
-  `halfway_reached`/`decay_soon` fires per transition across repeated ticks,
-  that re-running a tick against a row already reflecting the post-transition
-  state does not refire the event (the restart-safety property), and that
-  `halfway_notified`/`decay_soon_notified` reset to `0` when a new rest cycle
-  starts (`resting` flips `0` → `1`).
+  exactly one event fires per transition across repeated ticks for all
+  twelve bus events, that re-running a tick against a row already reflecting
+  the post-transition state does not refire the event (the restart-safety
+  property), that `halfway_notified`/`decay_soon_notified` reset to `0` when
+  a new rest cycle starts (`resting` flips `0` → `1`), and that the four
+  session-anchored `*_notified` columns reset to `0` when `last_session_id`
+  changes (a new session started) without firing an event for the reset.
 - `client.ts`: thin publish interface so tests inject a fake publisher;
   "not configured in test env → skip" convention matches
   `notifications/sender.ts`'s `isConfigured` gate (no real broker in CI).
