@@ -1203,3 +1203,39 @@ describe('POST /api/sessions/start — rotation availability', () => {
     await endSession(body2.id);
   });
 });
+
+describe('GET /api/sessions/current — rotation_available', () => {
+  it('marks the just-worn item unavailable and others available', async () => {
+    const cat = await (await createCategory({
+      name: 'Rotation Current', type: 'rotation', consecutive_wear_days: 1,
+      initial_target_wear_duration_seconds: 57600, initial_max_wear_duration_seconds: null,
+    })).json();
+    const itemA = await (await createItem(cat.id, { name: 'CA' })).json();
+    const itemB = await (await createItem(cat.id, { name: 'CB' })).json();
+
+    const start1 = await app.request(`${SESSIONS}/start`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemA.id }),
+    });
+    const session1 = await start1.json();
+    await app.request(`${SESSIONS}/${session1.id}/end`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+    });
+
+    const res = await app.request(`${SESSIONS}/current`);
+    const body = await res.json();
+    const entry = body.find((e: { category: { id: number } }) => e.category.id === cat.id);
+    const rowA = entry.items.find((i: { item_id: number }) => i.item_id === itemA.id);
+    const rowB = entry.items.find((i: { item_id: number }) => i.item_id === itemB.id);
+    expect(rowA.rotation_available).toBe(false);
+    expect(rowB.rotation_available).toBe(true);
+  });
+
+  it('duration category items are always rotation_available=true', async () => {
+    const res = await app.request(`${SESSIONS}/current`);
+    const body = await res.json();
+    const entry = body.find((e: { category: { id: number } }) => e.category.id === categoryId);
+    const ourItem = entry.items.find((i: { item_id: number }) => i.item_id === itemId);
+    expect(ourItem.rotation_available).toBe(true);
+  });
+});
