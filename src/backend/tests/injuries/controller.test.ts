@@ -188,3 +188,20 @@ describe('GET /api/injuries/:id', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('POST /api/injuries — rotation categories', () => {
+  it('rejects recording an injury for a rotation-category item', async () => {
+    const cat = await (await createCategory({
+      name: 'Injury Rotation', type: 'rotation', consecutive_wear_days: 1,
+      initial_target_wear_duration_seconds: 57600, initial_max_wear_duration_seconds: null,
+    })).json();
+    const item = await (await createItem(cat.id, { name: 'Injury Rotation Item' })).json();
+
+    const res = await app.request(INJURIES, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: item.id }),
+    });
+    expect(res.status).toBe(400);
+  });
+});
