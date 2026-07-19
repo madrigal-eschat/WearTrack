@@ -10,7 +10,7 @@ const SESSIONS = '/api/sessions';
 runMigrations();
 
 beforeEach(() => {
-  dbExport.exec('DELETE FROM sessions; DELETE FROM items; DELETE FROM categories;');
+  dbExport.exec('DELETE FROM sessions; DELETE FROM session_day_index; DELETE FROM items; DELETE FROM categories;');
 });
 
 describe('session-store event hooks', () => {
@@ -70,5 +70,126 @@ describe('session-store event hooks', () => {
     });
     expect(typeof payload.rest_seconds).toBe('number');
     expect(payload.risk_level === null || typeof payload.risk_level === 'string').toBe(true);
+  });
+
+  it('synchronously emits rest_end (before session_start) when a new session starts during the previous session\'s active rest window', async () => {
+    const cat = await (await createCategory()).json();
+    const item = await (await createItem(cat.id)).json();
+
+    const startResA = await app.request(`${SESSIONS}/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: item.id, started_at: 0 }),
+    });
+    const sessionA = await startResA.json();
+    await app.request(`${SESSIONS}/${sessionA.id}/end`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ended_at: 100 }),
+    });
+    // rest_seconds is floored at minimum_rest = 86400, so rest window runs to 86500.
+
+    const order: string[] = [];
+    const restEnd = vi.fn(() => order.push('rest_end'));
+    const decayFinish = vi.fn(() => order.push('decay_finish'));
+    const sessionStart = vi.fn(() => order.push('session_start'));
+    eventBus.on('rest_end', restEnd);
+    eventBus.on('decay_finish', decayFinish);
+    eventBus.on('session_start', sessionStart);
+
+    // Session B starts at 200: well within A's rest window (ends 86500).
+    await app.request(`${SESSIONS}/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: item.id, started_at: 200 }),
+    });
+
+    expect(restEnd).toHaveBeenCalledTimes(1);
+    expect(restEnd.mock.calls[0][0]).toMatchObject({
+      category_id: cat.id,
+      category_name: cat.name,
+      timestamp: 200,
+      rest_seconds: 86400,
+      elapsed_rest_seconds: 100, // 200 - 100 (previous.ended_at)
+    });
+    expect(decayFinish).not.toHaveBeenCalled();
+    expect(sessionStart).toHaveBeenCalledTimes(1);
+    expect(order).toEqual(['rest_end', 'session_start']);
+  });
+
+  it('synchronously emits decay_finish (before session_start) when a new session starts after the previous session has fully decayed', async () => {
+    const cat = await (await createCategory()).json();
+    const item = await (await createItem(cat.id)).json();
+
+    const startResA = await app.request(`${SESSIONS}/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: item.id, started_at: 0 }),
+    });
+    const sessionA = await startResA.json();
+    await app.request(`${SESSIONS}/${sessionA.id}/end`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ended_at: 100 }),
+    });
+    // rest ends at 86500; decay starts at 86500 + break_grace_time(86400) = 172900;
+    // fully decayed 8 days later, at 864100.
+
+    const order: string[] = [];
+    const restEnd = vi.fn(() => order.push('rest_end'));
+    const decayFinish = vi.fn(() => order.push('decay_finish'));
+    const sessionStart = vi.fn(() => order.push('session_start'));
+    eventBus.on('rest_end', restEnd);
+    eventBus.on('decay_finish', decayFinish);
+    eventBus.on('session_start', sessionStart);
+
+    await app.request(`${SESSIONS}/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: item.id, started_at: 900_000 }),
+    });
+
+    expect(decayFinish).toHaveBeenCalledTimes(1);
+    expect(decayFinish.mock.calls[0][0]).toMatchObject({
+      category_id: cat.id,
+      category_name: cat.name,
+      timestamp: 900_000,
+      decay_state: 'fully_decayed',
+    });
+    expect(restEnd).not.toHaveBeenCalled();
+    expect(sessionStart).toHaveBeenCalledTimes(1);
+    expect(order).toEqual(['decay_finish', 'session_start']);
+  });
+
+  it('emits neither rest_end nor decay_finish when a new session starts while merely decaying (not fully decayed)', async () => {
+    const cat = await (await createCategory()).json();
+    const item = await (await createItem(cat.id)).json();
+
+    const startResA = await app.request(`${SESSIONS}/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: item.id, started_at: 0 }),
+    });
+    const sessionA = await startResA.json();
+    await app.request(`${SESSIONS}/${sessionA.id}/end`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ended_at: 100 }),
+    });
+    // decay starts at 172900, only 'decaying' (not fully) until 864100.
+
+    const restEnd = vi.fn();
+    const decayFinish = vi.fn();
+    eventBus.on('rest_end', restEnd);
+    eventBus.on('decay_finish', decayFinish);
+
+    await app.request(`${SESSIONS}/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: item.id, started_at: 300_000 }),
+    });
+
+    expect(restEnd).not.toHaveBeenCalled();
+    expect(decayFinish).not.toHaveBeenCalled();
   });
 });

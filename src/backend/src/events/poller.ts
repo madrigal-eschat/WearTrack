@@ -36,7 +36,7 @@ export function tick(now: number = nowSeconds()): void {
     const row: EventPollerRow = stored ?? defaultRow(category.id);
     const shouldEmit = !isFirstRun;
 
-    if (previous) {
+    if (previous && !session) {
       const restEnd = previous.ended_at + previous.rest_seconds;
       const resting = now < restEnd ? 1 : 0;
       const decay = computeDecay(previous, category, now);

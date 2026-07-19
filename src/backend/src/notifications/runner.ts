@@ -55,11 +55,17 @@ async function notify(event: EventName, categoryId: number, categoryName: string
   }
 }
 
+let started = false;
+
 export function startScheduler(): void {
   if (!isConfigured) {
     console.warn('[notifications] VAPID env vars not set — push notifications disabled');
     return;
   }
+  // Guard against double-registration: a second call would attach a duplicate set of
+  // eventBus listeners and cause every notification to be sent twice.
+  if (started) return;
+  started = true;
   for (const event of NOTIFICATION_EVENTS) {
     eventBus.on(event, (payload) => {
       void notify(event, payload.category_id, payload.category_name);
