@@ -224,8 +224,14 @@ When `ha_discovery_enabled`:
   config's `state_topic`/`json_attributes_topic` both point here. Every
   event publish (session/rest/decay) also republishes to this state topic in
   addition to its own event topic.
-- Republished whenever: a category is created/updated/deleted, or the MQTT
-  config is saved (covers broker/prefix changes so HA re-discovers).
+- Republished on every `events/poller.ts` tick (30s) for all current
+  categories, rather than hooking into category create/update/delete
+  directly — the poller already iterates every category each tick, so this
+  covers category changes within one tick without adding a dependency from
+  `controllers/categories.ts` into the MQTT module. Publishes are retained
+  and idempotent (same content republished is a no-op for subscribers), so
+  the extra traffic has no side effect. Also republished immediately when
+  the MQTT config itself is saved (covers broker/prefix changes).
 
 ## Testing
 
