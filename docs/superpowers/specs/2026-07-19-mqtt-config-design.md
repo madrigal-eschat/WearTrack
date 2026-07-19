@@ -43,7 +43,12 @@ New `src/backend/src/mqtt/` module, modeled on `notifications/`:
   `enabled`, `host`, `port`, `username`, `password`, `topic_prefix`,
   `ha_discovery_enabled`. CRUD used by the Settings API.
 - **`client.ts`** — persistent MQTT client using the `mqtt` npm package.
-  Connects when config is saved with `enabled=true` and a host is set;
+  `initMqtt()` runs at server boot (called from `server.ts`, alongside
+  `startScheduler()`), reads `mqtt_config` from the DB, and connects
+  immediately if `enabled=true` and a host is set — so a stored config
+  survives a server restart with no user action needed. Also
+  connects/reconnects whenever config is saved with `enabled=true` and a
+  host is set (picking up host/port/auth changes without a restart);
   disconnects on disable or config clear; reconnects automatically on drop
   (library's built-in reconnect). Exposes `publish(topic, payload, opts)` and
   a `getStatus()` (`connected` / `disconnected` / `error`) for the Settings UI
