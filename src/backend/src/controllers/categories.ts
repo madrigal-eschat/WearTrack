@@ -17,6 +17,10 @@ function validateRiskLevels(levels: unknown): levels is RiskLevel[] {
   );
 }
 
+function validateType(type: unknown): type is 'duration' | 'rotation' {
+  return type === 'duration' || type === 'rotation';
+}
+
 export const router = new Hono();
 
 // GET /api/categories
@@ -66,6 +70,8 @@ router.post('/', async (c) => {
     risk_levels,
     break_decay_multiplier,
     break_grace_time,
+    type,
+    consecutive_wear_days,
   } = body;
 
   if (!name || typeof name !== 'string') throw new ValidationError('name is required');
@@ -77,6 +83,10 @@ router.post('/', async (c) => {
   if (!validateRiskLevels(risk_levels)) throw new ValidationError('risk_levels must be an array of valid risk level objects');
   if (typeof break_decay_multiplier !== 'number') throw new ValidationError('break_decay_multiplier must be a number');
   if (typeof break_grace_time !== 'number') throw new ValidationError('break_grace_time must be a number');
+  if (type !== undefined && !validateType(type)) throw new ValidationError("type must be 'duration' or 'rotation'");
+  if (consecutive_wear_days !== undefined && (typeof consecutive_wear_days !== 'number' || consecutive_wear_days < 1)) {
+    throw new ValidationError('consecutive_wear_days must be a positive number');
+  }
 
   // categoryStore.create() also initialises the category_stats row
   const category = categoryStore.create({
@@ -89,6 +99,8 @@ router.post('/', async (c) => {
     risk_levels,
     break_decay_multiplier,
     break_grace_time,
+    type,
+    consecutive_wear_days,
   });
 
   return c.json(category, 201);
@@ -138,6 +150,16 @@ router.patch('/:id', async (c) => {
   if ('break_grace_time' in body) {
     if (typeof body.break_grace_time !== 'number') throw new ValidationError('break_grace_time must be a number');
     updates.break_grace_time = body.break_grace_time;
+  }
+  if ('type' in body) {
+    if (!validateType(body.type)) throw new ValidationError("type must be 'duration' or 'rotation'");
+    updates.type = body.type;
+  }
+  if ('consecutive_wear_days' in body) {
+    if (typeof body.consecutive_wear_days !== 'number' || body.consecutive_wear_days < 1) {
+      throw new ValidationError('consecutive_wear_days must be a positive number');
+    }
+    updates.consecutive_wear_days = body.consecutive_wear_days;
   }
 
   if (Object.keys(updates).length === 0) {

@@ -323,3 +323,38 @@ describe('target/max validation', () => {
     expect(body.minimum_rest).toBe(1200);
   });
 });
+
+describe('rotation category fields', () => {
+  it('POST accepts type=rotation and consecutive_wear_days', async () => {
+    const res = await createCategory({ name: 'Socks', type: 'rotation', consecutive_wear_days: 2 });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.type).toBe('rotation');
+    expect(body.consecutive_wear_days).toBe(2);
+  });
+
+  it('POST defaults type to duration when omitted', async () => {
+    const res = await createCategory({ name: 'Default Socks' });
+    const body = await res.json();
+    expect(body.type).toBe('duration');
+    expect(body.consecutive_wear_days).toBe(1);
+  });
+
+  it('POST rejects an invalid type', async () => {
+    const res = await createCategory({ name: 'Bad Type', type: 'weekly' });
+    expect(res.status).toBe(400);
+  });
+
+  it('PATCH updates type and consecutive_wear_days', async () => {
+    const created = await (await createCategory({ name: 'Patchable' })).json();
+    const res = await app.request(`${BASE}/${created.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'rotation', consecutive_wear_days: 3 }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.type).toBe('rotation');
+    expect(body.consecutive_wear_days).toBe(3);
+  });
+});
