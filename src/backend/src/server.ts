@@ -12,9 +12,11 @@ import { router as injuriesRouter } from './controllers/injuries.js';
 import { router as leaderboardsRouter } from './controllers/leaderboards.js';
 import { router as notificationsRouter } from './controllers/notifications.js';
 import { startScheduler } from './notifications/runner.js';
+import { startEventsPoller } from './events/poller.js';
 
 runMigrations();
 startScheduler();
+startEventsPoller();
 
 const app = new Hono();
 
@@ -41,7 +43,7 @@ if (process.env.NODE_ENV !== 'production' || process.env.E2E_TEST === '1') {
       DELETE FROM items;
       DELETE FROM categories;
       DELETE FROM push_subscriptions;
-      DELETE FROM sent_notifications;
+      DELETE FROM event_poller_state;
     `);
     return c.json({ ok: true });
   });
