@@ -45,6 +45,9 @@ router.post('/', async (c) => {
     typeof wear_seconds === 'number' ? wear_seconds : injuryStore.lastSessionWear(item_id);
 
   const category = categoryStore.findRaw(item.category_id)!;
+  if (category.type === 'rotation') {
+    throw new ValidationError('Injuries are not supported for rotation categories');
+  }
   const riskLevel = riskLevelFor(wearSeconds, category);
   const severity = riskLevel?.severity ?? 1;
 
