@@ -28,7 +28,7 @@ function copyFor(event: EventName, categoryName: string): Copy | null {
   }
 }
 
-const NOTIFICATION_EVENTS: EventName[] = [
+const NOTIFICATION_EVENTS: Array<Exclude<EventName, 'poller_tick'>> = [
   'rest_end',
   'halfway_reached',
   'decay_soon',
