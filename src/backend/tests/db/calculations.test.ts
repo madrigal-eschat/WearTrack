@@ -6,6 +6,7 @@ import {
   computeRest,
   computeDecay,
   lapCount,
+  rotationAvailability,
   type Category,
 } from '../../src/db/calculations.js';
 
@@ -257,5 +258,44 @@ describe('computeRest', () => {
 
   it('multiplies by 1.5 when injured', () => {
     expect(computeRest(1800, 1800, cat, riskLevelFor(1800, cat), true)).toBe(Math.floor(86400 * 1.5));
+  });
+});
+
+describe('rotationAvailability', () => {
+  it('all items available when there is no history', () => {
+    const result = rotationAvailability([1, 2, 3], []);
+    expect(result).toEqual(new Set([1, 2, 3]));
+  });
+
+  it('excludes items worn since the last reset (partial cycle)', () => {
+    // Newest first: C then B were worn; A was not.
+    const result = rotationAvailability([1, 2, 3], [{ item_id: 3 }, { item_id: 2 }]);
+    expect(result).toEqual(new Set([1]));
+  });
+
+  it('resets to all available once every active item has had a turn with no repeat', () => {
+    // Newest first: A, C, B — covers all three active items before any repeat.
+    const result = rotationAvailability([1, 2, 3], [{ item_id: 1 }, { item_id: 3 }, { item_id: 2 }]);
+    expect(result).toEqual(new Set([1, 2, 3]));
+  });
+
+  it('a newly added item (never worn) is immediately available even mid-cycle', () => {
+    // Item 4 was added after B and C were worn; it has never appeared in history.
+    const result = rotationAvailability([1, 2, 3, 4], [{ item_id: 3 }, { item_id: 2 }]);
+    expect(result).toEqual(new Set([1, 4]));
+  });
+
+  it('a removed item drops out of consideration even if it was worn most recently', () => {
+    // Item 3 was worn most recently but has since been removed from the category (not in activeItemIds).
+    const result = rotationAvailability([1, 2], [{ item_id: 3 }, { item_id: 1 }]);
+    // Scan: 3 (not active, skip for seen-tracking purposes but still "consumes" the repeat-stop check only for active items)
+    // 1 is active and unseen -> seen={1}. No repeat among active items encountered. seen({1}) != full active set {1,2}.
+    expect(result).toEqual(new Set([2]));
+  });
+
+  it('lock scenario: two consecutive sessions of the same item collapse to one occurrence', () => {
+    // A worn on day1 and day2 (consecutive-wear-days lock), B and C never worn.
+    const result = rotationAvailability([1, 2, 3], [{ item_id: 1 }, { item_id: 1 }]);
+    expect(result).toEqual(new Set([2, 3]));
   });
 });
