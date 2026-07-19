@@ -16,7 +16,7 @@ export interface MqttConfigUpdate {
   host?: string | null;
   port?: number;
   username?: string | null;
-  password?: string;
+  password?: string | undefined;
   topic_prefix?: string;
   ha_discovery_enabled?: boolean;
 }
@@ -39,7 +39,7 @@ class MqttConfigStore {
     if (data.host !== undefined) dbData.host = data.host;
     if (data.port !== undefined) dbData.port = data.port;
     if (data.username !== undefined) dbData.username = data.username;
-    if (data.password !== undefined && data.password !== '') dbData.password = data.password;
+    if (data.password !== undefined && data.password !== null && data.password !== '') dbData.password = data.password;
     if (data.topic_prefix !== undefined) dbData.topic_prefix = data.topic_prefix;
     if (data.ha_discovery_enabled !== undefined) dbData.ha_discovery_enabled = data.ha_discovery_enabled ? 1 : 0;
 
