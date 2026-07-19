@@ -422,4 +422,13 @@ describe('events poller tick()', () => {
     expect(row?.halfway_notified).toBe(0);
     expect(row?.decay_soon_notified).toBe(0);
   });
+
+  it('emits poller_tick once per tick(), after category processing', async () => {
+    await setupCategoryAndItem();
+    const listener = vi.fn();
+    eventBus.on('poller_tick', listener);
+    tick(500);
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener).toHaveBeenCalledWith({ timestamp: 500 });
+  });
 });
