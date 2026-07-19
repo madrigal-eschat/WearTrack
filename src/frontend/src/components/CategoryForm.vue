@@ -8,101 +8,120 @@
       </div>
     </div>
 
+    <SegmentedControl
+      :modelValue="catForm.type"
+      :options="[{ value: 'duration', label: 'Duration' }, { value: 'rotation', label: 'Rotation' }]"
+      @update:modelValue="catForm.type = $event"
+    />
+
     <div class="flex gap-4 flex-wrap items-end">
       <DurationTrigger
         label="Target wear"
         :displayValue="shortDuration(catForm.initialWearTargetSeconds)"
         @click="openDurationPicker('target')"
       />
-      <DurationTrigger
-        label="Maximum wear"
-        :displayValue="catForm.initialWearMaxSeconds === null ? 'None' : shortDuration(catForm.initialWearMaxSeconds)"
-        :clearable="catForm.initialWearMaxSeconds !== null"
-        clearTestid="clear-max"
-        @click="openDurationPicker('max')"
-        @clear="catForm.initialWearMaxSeconds = null"
-      />
       <NumberField
-        id="cat-rest-mult"
-        label="Rest multiplier"
-        v-model="catForm.restMultiplier"
-        :min="0"
-        :default="2"
-        :step="0.1"
+        v-if="catForm.type === 'rotation'"
+        id="cat-consecutive-days"
+        label="Consecutive wear days"
+        v-model="catForm.consecutiveWearDays"
+        :min="1"
+        :default="1"
+        :step="1"
       />
+      <template v-if="catForm.type === 'duration'">
+        <DurationTrigger
+          label="Maximum wear"
+          :displayValue="catForm.initialWearMaxSeconds === null ? 'None' : shortDuration(catForm.initialWearMaxSeconds)"
+          :clearable="catForm.initialWearMaxSeconds !== null"
+          clearTestid="clear-max"
+          @click="openDurationPicker('max')"
+          @clear="catForm.initialWearMaxSeconds = null"
+        />
+        <NumberField
+          id="cat-rest-mult"
+          label="Rest multiplier"
+          v-model="catForm.restMultiplier"
+          :min="0"
+          :default="2"
+          :step="0.1"
+        />
+      </template>
     </div>
 
-    <div class="flex gap-4 flex-wrap items-end">
-      <DurationTrigger
-        label="Minimum rest period"
-        :displayValue="shortDuration(catForm.minimumRestSeconds)"
-        :disabled="catForm.initialWearMaxSeconds === null"
-        testid="min-rest"
-        @click="openDurationPicker('minRest')"
-      />
-      <DurationTrigger
-        label="Break grace time"
-        :displayValue="shortDuration(catForm.breakGraceSeconds)"
-        @click="openDurationPicker('grace')"
-      />
-      <NumberField
-        id="cat-decay"
-        label="Break half-life (days)"
-        v-model="catForm.breakDecayHalfLifeDays"
-        :min="0.1"
-        :default="DEFAULT_HALF_LIFE_DAYS"
-        :step="0.1"
-      />
-    </div>
-    <p class="text-xs text-gray-400 -mt-1">
-      <strong>Target</strong> is the goal duration; <strong>Maximum</strong> (optional) is the hard ceiling.
-      Minimum rest only applies when a maximum is set.
-    </p>
-
-    <!-- Risk bands -->
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Risk bands</label>
-      <p class="text-xs text-gray-400 mb-2">
-        Bands are triggered by cumulative wear time. Tap a threshold (▾) to change where one band ends and the next begins.
-      </p>
-      <div class="space-y-1">
-        <template v-for="(bandName, i) in bandNames" :key="i">
-          <!-- Band row -->
-          <div
-            class="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium"
-            :class="bandColors[i]"
-          >
-            <span>{{ bandName }}</span>
-            <!-- +/- controls sit on the last band row -->
-            <div v-if="i === catForm.bandCount - 1" class="flex gap-1">
-              <button
-                type="button"
-                class="w-7 h-7 rounded-full border border-gray-400 flex items-center justify-center text-gray-600 disabled:opacity-30"
-                :disabled="catForm.bandCount <= 1"
-                @click="removeBand"
-              >−</button>
-              <button
-                type="button"
-                data-testid="add-band"
-                class="w-7 h-7 rounded-full border border-gray-400 flex items-center justify-center text-gray-600 disabled:opacity-30"
-                :disabled="catForm.bandCount >= 5"
-                @click="addBand"
-              >+</button>
-            </div>
-          </div>
-          <!-- Crossover point (between bands) -->
-          <button
-            v-if="i < catForm.bandCount - 1"
-            type="button"
-            class="flex items-center gap-1 px-3 text-sm text-gray-500"
-            @click="openDurationPicker(i)"
-          >
-            <span>{{ shortDuration(catForm.crossoverPoints[i]) }}</span>
-            <span>▾</span>
-          </button>
-        </template>
+    <template v-if="catForm.type === 'duration'">
+      <div class="flex gap-4 flex-wrap items-end">
+        <DurationTrigger
+          label="Minimum rest period"
+          :displayValue="shortDuration(catForm.minimumRestSeconds)"
+          :disabled="catForm.initialWearMaxSeconds === null"
+          testid="min-rest"
+          @click="openDurationPicker('minRest')"
+        />
+        <DurationTrigger
+          label="Break grace time"
+          :displayValue="shortDuration(catForm.breakGraceSeconds)"
+          @click="openDurationPicker('grace')"
+        />
+        <NumberField
+          id="cat-decay"
+          label="Break half-life (days)"
+          v-model="catForm.breakDecayHalfLifeDays"
+          :min="0.1"
+          :default="DEFAULT_HALF_LIFE_DAYS"
+          :step="0.1"
+        />
       </div>
-    </div>
+      <p class="text-xs text-gray-400 -mt-1">
+        <strong>Target</strong> is the goal duration; <strong>Maximum</strong> (optional) is the hard ceiling.
+        Minimum rest only applies when a maximum is set.
+      </p>
+
+      <!-- Risk bands -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Risk bands</label>
+        <p class="text-xs text-gray-400 mb-2">
+          Bands are triggered by cumulative wear time. Tap a threshold (▾) to change where one band ends and the next begins.
+        </p>
+        <div class="space-y-1">
+          <template v-for="(bandName, i) in bandNames" :key="i">
+            <!-- Band row -->
+            <div
+              class="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium"
+              :class="bandColors[i]"
+            >
+              <span>{{ bandName }}</span>
+              <!-- +/- controls sit on the last band row -->
+              <div v-if="i === catForm.bandCount - 1" class="flex gap-1">
+                <button
+                  type="button"
+                  class="w-7 h-7 rounded-full border border-gray-400 flex items-center justify-center text-gray-600 disabled:opacity-30"
+                  :disabled="catForm.bandCount <= 1"
+                  @click="removeBand"
+                >−</button>
+                <button
+                  type="button"
+                  data-testid="add-band"
+                  class="w-7 h-7 rounded-full border border-gray-400 flex items-center justify-center text-gray-600 disabled:opacity-30"
+                  :disabled="catForm.bandCount >= 5"
+                  @click="addBand"
+                >+</button>
+              </div>
+            </div>
+            <!-- Crossover point (between bands) -->
+            <button
+              v-if="i < catForm.bandCount - 1"
+              type="button"
+              class="flex items-center gap-1 px-3 text-sm text-gray-500"
+              @click="openDurationPicker(i)"
+            >
+              <span>{{ shortDuration(catForm.crossoverPoints[i]) }}</span>
+              <span>▾</span>
+            </button>
+          </template>
+        </div>
+      </div>
+    </template>
 
     <!-- Save / Cancel -->
     <div class="flex gap-2 pt-1">
@@ -149,6 +168,7 @@ import DurationPickerSheet from './DurationPickerSheet.vue';
 import NumberField from './NumberField.vue';
 import DurationTrigger from './DurationTrigger.vue';
 import { multiplierToHalfLifeDays } from '../utils/categoryForm.js';
+import SegmentedControl from './SegmentedControl.vue';
 
 export interface CategoryFormState {
   name: string;
