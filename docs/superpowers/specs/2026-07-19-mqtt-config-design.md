@@ -103,18 +103,33 @@ re-deriving it independently:
   payload for that category. Republished on category create/update/delete and
   on MQTT config save (so HA re-discovers after a broker change).
 
-### `src/backend/src/notifications/` — existing module, refactored
+### `src/backend/src/notifications/` — existing module, refactored (partially)
 
-- `scheduler.ts`'s due-computation (`computeDueNotifications` and its
-  DB-polling call sites) and `tryMarkSent` are **removed**. `runner.ts`
-  becomes a pure bus subscriber: it registers listeners for `rest_end`,
-  `halfway_reached`, `decay_soon`, `decay_start`, `decay_finish` and calls
-  `sender.send()` directly when an event fires — no independent polling, no
-  separate dedup store. This was the intent of centralizing on
-  `events/poller.ts`: one DB-backed edge/threshold detector for the whole
-  backend, not two.
+`scheduler.ts` today drives **seven** notification types: three tied to
+rest/decay (`rest_end`, `halfway`, `decay_soon`) and four tied to an
+*active* session's elapsed time (`target_met`, `overtime_warning_30`,
+`overtime_warning_5`, `overtime`). Only the first three overlap with what
+`events/poller.ts` computes — the other four are a different concern
+(in-session time thresholds, not decay/rest state) and are **not** touched
+by this refactor; they keep their existing due-check + `tryMarkSent` dedup
+in `scheduler.ts`/`store.ts` exactly as today. `decay_start`/`decay_finish`
+were never notification types and stay MQTT-only — nothing in
+`notifications/` subscribes to them.
+
+- `rest_end`, `halfway` → `halfway_reached`, and `decay_soon` are **removed**
+  from `computeDueNotifications` and its candidate list. `runner.ts` instead
+  registers bus listeners for `rest_end`, `halfway_reached`, `decay_soon` and
+  calls `sender.send()` directly when one fires — no independent polling or
+  `tryMarkSent` row for these three specifically (the bus's DB-backed
+  `event_poller_state` already provides the dedup).
+- `computeDueNotifications`, `tryMarkSent`, and the `sent_notifications`
+  table **stay** — they still own dedup for `target_met`/`overtime_warning_30`
+  /`overtime_warning_5`/`overtime`, which remain a DB-polling tick in
+  `runner.ts` (unchanged cadence/shape) running alongside the new bus
+  listeners, not replaced by them.
 - The push-notification `isConfigured` gate (VAPID env vars) still applies —
-  it just now gates whether `runner.ts` registers its bus listeners, rather
+  it now gates both the remaining poll tick and whether `runner.ts` registers
+  its three new bus listeners, rather
   than whether its own tick loop runs.
 
 This is new plumbing (no event bus existed before), but it's now a single
