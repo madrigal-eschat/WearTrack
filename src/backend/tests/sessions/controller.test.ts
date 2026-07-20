@@ -409,7 +409,7 @@ describe('GET /api/sessions/current — decay fields', () => {
   });
 
   it('returns decay_state decaying when past grace period', async () => {
-    // Use a fresh category so findLastEndedInCategory only sees this test's session
+    // Use a fresh category so findLastEndedInCategory only sees this test's sessions
     const now = Math.floor(Date.now() / 1000);
     const decayingCatRes = await app.request(CATEGORIES, {
       method: 'POST',
@@ -434,19 +434,52 @@ describe('GET /api/sessions/current — decay fields', () => {
     });
     const decayingItem = await decayingItemRes.json();
 
-    // End a session 5 days ago so decay_start_time is in the past but not fully decayed
-    // (0.91^3 ≈ 0.75 * 1800 > 900 initial, so still decaying)
-    const endTs = now - 5 * 86400;
+    // Under the new floored-loss decay formula, a session that only ever reached
+    // the category's initial target (900) decays to the floor in 1 day — too fast
+    // to observe a "decaying" (not yet fully decayed) state. Grow the target across
+    // three normal rest-and-restart cycles first (900 -> 1800 -> 2700 -> 3600), each
+    // restarting exactly at its predecessor's earliest allowed start
+    // (ended_at + rest_seconds, with rest_seconds floored to minimum_rest=86400),
+    // so every restart takes the normal-growth branch, not decay or halving.
+    // The final (4th) session then ends 5 days ago, decays for 3 days since grace
+    // (5 days - 2 days of rest+grace), and — per the same worked example as the
+    // backend unit tests (calculations.test.ts) — target 3600+900=4500 decays
+    // 4500 -> 3600 -> 2700 -> 1800 over 3 days, still above the 900 floor.
+    const end4 = now - 5 * 86400;
+    const start4 = end4 - 3600;
+    const end3 = start4 - 86400;
+    const start3 = end3 - 3600;
+    const end2 = start3 - 86400;
+    const start2 = end2 - 3600;
+    const end1 = start2 - 86400;
+    const start1 = end1 - 3600;
+
+    for (const [started_at, ended_at] of [
+      [start1, end1],
+      [start2, end2],
+      [start3, end3],
+    ]) {
+      const session = await (await app.request(`${SESSIONS}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: decayingItem.id, started_at }),
+      })).json();
+      await app.request(`${SESSIONS}/${session.id}/end`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ended_at }),
+      });
+    }
+
     const s = await (await app.request(`${SESSIONS}/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ item_id: decayingItem.id, started_at: endTs - 3600 }),
+      body: JSON.stringify({ item_id: decayingItem.id, started_at: start4 }),
     })).json();
-    // End with ended_at so rest_seconds is minimal (elapsed is small → rest ≈ minimum)
     await app.request(`${SESSIONS}/${s.id}/end`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ended_at: endTs }),
+      body: JSON.stringify({ ended_at: end4 }),
     });
 
     const res = await app.request(`${SESSIONS}/current`);

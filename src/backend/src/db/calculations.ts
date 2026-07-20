@@ -74,15 +74,33 @@ function growDurations(
   };
 }
 
-/** Compound daily decay applied for each full day past the grace period. */
+/** One day's floored decay step: loses at least `floor` even if the percentage loss would be smaller. */
+function decayOneDay(value: number, floor: number, lossFraction: number): number {
+  const loss = Math.max(lossFraction * value, floor);
+  return Math.max(value - loss, floor);
+}
+
+/** `value` decayed by `days` floored daily steps (see `decayOneDay`). */
+function decayValue(value: number, floor: number, lossFraction: number, days: number): number {
+  let v = value;
+  for (let day = 0; day < days; day++) v = decayOneDay(v, floor, lossFraction);
+  return v;
+}
+
+/** Day-by-day decay past grace: each day's loss is at least `floorTarget`/`floorMax`, so the value reaches the floor in a bounded number of days instead of trailing off asymptotically. */
 function applyBreakDecay(
   target: number,
   max: number | null,
   daysSinceGrace: number,
   decayMultiplier: number,
+  floorTarget: number,
+  floorMax: number | null,
 ): { target: number; max: number | null } {
-  const decay = decayMultiplier ** daysSinceGrace;
-  return { target: target * decay, max: max === null ? null : max * decay };
+  const lossFraction = 1 - decayMultiplier;
+  return {
+    target: decayValue(target, floorTarget, lossFraction, daysSinceGrace),
+    max: max === null || floorMax === null ? max : decayValue(max, floorMax, lossFraction, daysSinceGrace),
+  };
 }
 
 /** Raw durations for the three start situations: first session, inside rest (halve), or post-rest (grow + optional decay). */
@@ -117,7 +135,14 @@ function rawDurations(
 
   if (startTime > latestStart) {
     const daysSinceGrace = Math.floor((startTime - latestStart) / 86400);
-    ({ target, max } = applyBreakDecay(target, max, daysSinceGrace, category.break_decay_multiplier));
+    ({ target, max } = applyBreakDecay(
+      target,
+      max,
+      daysSinceGrace,
+      category.break_decay_multiplier,
+      dm * category.initial_target_wear_duration_seconds,
+      maxIsSet ? dm * category.initial_max_wear_duration_seconds! : null,
+    ));
   }
 
   return { target, max };
@@ -184,18 +209,24 @@ export function computeDecay(
   }
 
   const daysSinceGrace = Math.floor((now - decayStartTime) / 86400);
-  const decayFactor = category.break_decay_multiplier ** daysSinceGrace;
-  const decayed = (previous.target_wear_seconds + initial) * decayFactor;
+  const lossFraction = 1 - category.break_decay_multiplier;
+  const decayed = decayValue(previous.target_wear_seconds + initial, initial, lossFraction, daysSinceGrace);
 
   const decay_state: DecayState = decayed <= initial ? 'fully_decayed' : 'decaying';
   return { decay_start_time: decayStartTime, decay_state, decay_full_time: decayFullTime };
 }
 
-/** Full days of decay until (previousTarget + initial) * multiplier^days <= initial. */
+/** Full days of floored decay (see `decayOneDay`) until (previousTarget + initial) reaches initial. */
 function daysUntilFullyDecayed(previousTarget: number, initial: number, multiplier: number): number {
   if (previousTarget <= 0 || multiplier <= 0 || multiplier >= 1) return 0;
-  const days = Math.log(initial / (previousTarget + initial)) / Math.log(multiplier);
-  return Math.max(0, Math.ceil(days));
+  const lossFraction = 1 - multiplier;
+  let target = previousTarget + initial;
+  let days = 0;
+  while (target > initial) {
+    target = decayOneDay(target, initial, lossFraction);
+    days++;
+  }
+  return days;
 }
 
 /** Session-End rest formula from docs/design/duration-formula.md. */
