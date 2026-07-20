@@ -162,5 +162,7 @@ export function tick(now: number = nowSeconds()): void {
 
 export function startEventsPoller(): void {
   tick();
-  setInterval(() => tick(), 30_000);
+  if (process.env.NODE_ENV !== 'test') {
+    setInterval(() => tick(), 30_000);
+  }
 }
