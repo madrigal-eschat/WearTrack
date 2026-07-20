@@ -88,6 +88,31 @@ export function rotationAvailability(
   return new Set([...active].filter((id) => !usedThisCycle.has(id)));
 }
 
+/**
+ * Whether starting `itemId` is a legitimate consecutive-wear-days re-wear: it must be
+ * the most-recently-worn item in the category, and the trailing run of consecutive
+ * sessions for that same item (scanning `recentSessions`, newest-first, counting how
+ * many in a row are that same item before hitting a different item) must be strictly
+ * less than `consecutiveWearDays`. Mirrors `trailingRunLength`/`forcedItemId` in
+ * ActionPane.vue.
+ */
+export function isConsecutiveLockEligible(
+  recentSessions: { item_id: number }[],
+  itemId: number,
+  consecutiveWearDays: number,
+): boolean {
+  if (recentSessions.length === 0) return false;
+  if (recentSessions[0].item_id !== itemId) return false;
+
+  let runLength = 0;
+  for (const session of recentSessions) {
+    if (session.item_id !== itemId) break;
+    runLength++;
+  }
+
+  return runLength < consecutiveWearDays;
+}
+
 /** Previous durations grown by one category increment, scaled by difficulty modifier. */
 function growDurations(
   previous: PreviousSession,
