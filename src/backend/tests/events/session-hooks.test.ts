@@ -220,8 +220,10 @@ describe('session-store event hooks', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ended_at: 100 }),
     });
-    // decay starts at 172900, only 'decaying' (not fully) until 864100.
-
+    // decay starts at 172900. Pick a time on the same day decay starts (daysSinceGrace
+    // still 0, i.e. before 172900 + 86400 = 259300): no decay step has been applied yet
+    // under any decay curve, so decay_state is reliably 'decaying' regardless of exactly
+    // how fast the category's decay formula tapers off after that first day.
     const restEnd = vi.fn();
     const decayFinish = vi.fn();
     eventBus.on('rest_end', restEnd);
@@ -230,7 +232,7 @@ describe('session-store event hooks', () => {
     await app.request(`${SESSIONS}/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ item_id: item.id, started_at: 300_000 }),
+      body: JSON.stringify({ item_id: item.id, started_at: 200_000 }),
     });
 
     expect(restEnd).not.toHaveBeenCalled();
