@@ -102,24 +102,35 @@
             <!-- No session: show item picker + Wear button -->
             <template v-else>
               <div class="flex gap-2 items-center">
-                <select
-                  v-if="itemsForCategory(entry.category.id).length > 0"
-                  v-model="selectedItem[entry.category.id]"
-                  class="text-sm border rounded px-1 py-0.5"
-                >
-                  <option
-                    v-for="item in itemsForCategory(entry.category.id)"
-                    :key="item.id"
-                    :value="item.id"
-                  >{{ item.name }}</option>
-                </select>
-                <span v-else class="text-sm text-gray-400 italic">No items</span>
-                <k-button
-                  small
-                  :disabled="!selectedItem[entry.category.id]"
-                  :class="{ 'opacity-60': restRemainingSeconds(entry) > 0 }"
-                  @click="restRemainingSeconds(entry) > 0 ? showRestWarning(entry) : onWear(entry)"
-                >Wear</k-button>
+                <template v-if="isLocked(entry)">
+                  <span class="text-sm font-medium" data-testid="forced-item-label">{{ forcedItemName(entry) }}</span>
+                  <k-button small outline data-testid="wear-something-else" @click="overrideLock[entry.category.id] = true">Wear something else</k-button>
+                  <k-button
+                    small
+                    @click="restRemainingSeconds(entry) > 0 ? showRestWarning(entry) : onWear(entry, forcedItemId(entry) ?? undefined)"
+                  >Wear</k-button>
+                </template>
+                <template v-else>
+                  <select
+                    v-if="itemsForCategory(entry.category.id).length > 0"
+                    v-model="selectedItem[entry.category.id]"
+                    class="text-sm border rounded px-1 py-0.5"
+                  >
+                    <option
+                      v-for="item in itemsForCategory(entry.category.id)"
+                      :key="item.id"
+                      :value="item.id"
+                      :disabled="entry.category.type === 'rotation' && !itemRotationAvailable(entry, item.id)"
+                    >{{ item.name }}</option>
+                  </select>
+                  <span v-else class="text-sm text-gray-400 italic">No items</span>
+                  <k-button
+                    small
+                    :disabled="!selectedItem[entry.category.id]"
+                    :class="{ 'opacity-60': restRemainingSeconds(entry) > 0 }"
+                    @click="restRemainingSeconds(entry) > 0 ? showRestWarning(entry) : onWear(entry)"
+                  >Wear</k-button>
+                </template>
               </div>
             </template>
           </div>
@@ -157,6 +168,7 @@ import { useWear, type CurrentEntry, type Session, type ItemWithLastSession } fr
 import { useItems } from '../composables/useItems.js';
 import { useNow } from '../composables/useNow.js';
 import { useToast } from '../composables/useToast.js';
+import { apiFetch } from '../utils/apiFetch.js';
 import { formatDuration, shortDuration } from '../utils/formatDuration.js';
 import { targetWearSeconds, maxWearSeconds, currentWear, remainingWearSeconds, lapCount, lapFillFraction, fillUpFraction, decayFillFraction, decayTimeLeft } from '../utils/wearCalculations.js';
 
@@ -166,6 +178,51 @@ const { showError } = useToast();
 const now = useNow();
 
 const selectedItem = reactive<Record<number, number | null>>({});
+const recentSessionsByCategory = reactive<Record<number, { item_id: number }[]>>({});
+const overrideLock = reactive<Record<number, boolean>>({});
+
+async function loadRecentSessions(categoryId: number) {
+  const res = await apiFetch(`/api/sessions?category_id=${categoryId}&limit=20`);
+  if (!res.ok) return;
+  const sessions: { item_id: number }[] = await res.json();
+  recentSessionsByCategory[categoryId] = sessions; // already newest-first per session-store.findAll ORDER BY started_at DESC
+}
+
+/** Trailing run length of the most-recent item at the front of `sessions` (newest first). */
+function trailingRunLength(sessions: { item_id: number }[]): number {
+  if (sessions.length === 0) return 0;
+  const mostRecent = sessions[0].item_id;
+  let count = 0;
+  for (const s of sessions) {
+    if (s.item_id !== mostRecent) break;
+    count++;
+  }
+  return count;
+}
+
+function forcedItemId(entry: CurrentEntry): number | null {
+  if (entry.category.type !== 'rotation') return null;
+  const sessions = recentSessionsByCategory[entry.category.id];
+  if (!sessions || sessions.length === 0) return null;
+  const mostRecent = sessions[0].item_id;
+  const runLength = trailingRunLength(sessions);
+  if (runLength < entry.category.consecutive_wear_days) return mostRecent;
+  return null;
+}
+
+function isLocked(entry: CurrentEntry): boolean {
+  return forcedItemId(entry) !== null && !overrideLock[entry.category.id];
+}
+
+function forcedItemName(entry: CurrentEntry): string {
+  const id = forcedItemId(entry);
+  if (id === null) return '';
+  return itemsForCategory(entry.category.id).find((i) => i.id === id)?.name ?? '';
+}
+
+function itemRotationAvailable(entry: CurrentEntry, itemId: number): boolean {
+  return entry.items.find((i) => i.item_id === itemId)?.rotation_available ?? true;
+}
 
 const restWarning = reactive<{
   visible: boolean;
@@ -179,7 +236,7 @@ function showRestWarning(entry: CurrentEntry) {
 
 async function onWearConfirmed() {
   restWarning.visible = false;
-  if (restWarning.entry) await onWear(restWarning.entry);
+  if (restWarning.entry) await onWear(restWarning.entry, forcedItemId(restWarning.entry) ?? undefined);
 }
 
 onMounted(async () => {
@@ -187,6 +244,9 @@ onMounted(async () => {
   for (const entry of currentSessions.value) {
     const first = itemsForCategory(entry.category.id)[0];
     selectedItem[entry.category.id] = first?.id ?? null;
+  }
+  for (const entry of currentSessions.value) {
+    if (entry.category.type === 'rotation') await loadRecentSessions(entry.category.id);
   }
 });
 
@@ -319,11 +379,15 @@ function formatDecayDate(unixSeconds: number): string {
   return new Date(unixSeconds * 1000).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 }
 
-async function onWear(entry: CurrentEntry) {
-  const itemId = selectedItem[entry.category.id];
+async function onWear(entry: CurrentEntry, itemIdOverride?: number) {
+  const itemId = itemIdOverride ?? selectedItem[entry.category.id];
   if (!itemId) return;
   try {
     await startSession(itemId);
+    if (entry.category.type === 'rotation') {
+      overrideLock[entry.category.id] = false;
+      await loadRecentSessions(entry.category.id);
+    }
   } catch (e) {
     showError(String(e));
   }
@@ -333,6 +397,10 @@ async function onStop(entry: CurrentEntry) {
   if (!entry.session) return;
   try {
     await endSession(entry.session.id);
+    if (entry.category.type === 'rotation') {
+      overrideLock[entry.category.id] = false;
+      await loadRecentSessions(entry.category.id);
+    }
   } catch (e) {
     showError(String(e));
   }
