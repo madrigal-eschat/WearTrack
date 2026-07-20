@@ -8,6 +8,7 @@ import {
   computeSessionStart,
   computeDecay,
   rotationAvailability,
+  isConsecutiveLockEligible,
   type PreviousSession,
   type Category,
 } from '../db/calculations.js';
@@ -159,7 +160,8 @@ router.post('/start', async (c) => {
     const activeItemIds = itemStore.findAll(item.category_id).map((i) => i.id);
     const recent = sessionStore.findRecentInCategory(item.category_id, 100);
     const available = rotationAvailability(activeItemIds, recent);
-    if (!available.has(item_id)) {
+    const consecutiveLockEligible = isConsecutiveLockEligible(recent, item_id, category.consecutive_wear_days);
+    if (!available.has(item_id) && !consecutiveLockEligible) {
       throw new ValidationError(`Item ${item_id} is not available yet — it's another item's turn in the rotation`);
     }
   }
