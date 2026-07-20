@@ -535,6 +535,36 @@ describe('GET /api/sessions/current — decay fields', () => {
 
     expect(entry.decay_state).toBe('fully_decayed');
   });
+
+  it('rotation categories never show decay, even long after a session ended (would be fully_decayed for a duration category)', async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const rotationCat = await (await createCategory({
+      name: 'Rotation No Decay', type: 'rotation', consecutive_wear_days: 1,
+      initial_target_wear_duration_seconds: 57600, initial_max_wear_duration_seconds: null,
+    })).json();
+    const rotationItem = await (await createItem(rotationCat.id, { name: 'No Decay Shoe' })).json();
+
+    // End a session 10 000 days ago — a duration category would be fully_decayed here.
+    const endTs = now - 10_000 * 86400;
+    const s = await (await app.request(`${SESSIONS}/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: rotationItem.id, started_at: endTs - 3600 }),
+    })).json();
+    await app.request(`${SESSIONS}/${s.id}/end`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ended_at: endTs }),
+    });
+
+    const res = await app.request(`${SESSIONS}/current`);
+    const body = await res.json();
+    const entry = body.find((e: { category: { id: number } }) => e.category.id === rotationCat.id);
+
+    expect(entry.decay_state).toBe('none');
+    expect(entry.decay_start_time).toBeNull();
+    expect(entry.decay_full_time).toBeNull();
+  });
 });
 
 describe('Stats updates after session end', () => {
