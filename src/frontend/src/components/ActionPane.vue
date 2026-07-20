@@ -107,7 +107,7 @@
                   <k-button small outline data-testid="wear-something-else" @click="overrideLock[entry.category.id] = true">Wear something else</k-button>
                   <k-button
                     small
-                    @click="restRemainingSeconds(entry) > 0 ? showRestWarning(entry) : onWear(entry, forcedItemId(entry) ?? undefined)"
+                    @click="restRemainingSeconds(entry, forcedItemId(entry)) > 0 ? showRestWarning(entry) : onWear(entry, forcedItemId(entry) ?? undefined)"
                   >Wear</k-button>
                 </template>
                 <template v-else>
@@ -147,9 +147,9 @@
     <template #title>Start during rest?</template>
     <template #content>
       <template v-if="restWarning.entry">
-        {{ shortDuration(restRemainingSeconds(restWarning.entry)) }} of rest remaining.
+        {{ shortDuration(restRemainingSeconds(restWarning.entry, dialogItemIdOverride(restWarning.entry))) }} of rest remaining.
         Starting early reduces your target to
-        <strong>{{ idleTarget(restWarning.entry) }}</strong>.
+        <strong>{{ idleTarget(restWarning.entry, dialogItemIdOverride(restWarning.entry)) }}</strong>.
       </template>
     </template>
     <template #buttons>
@@ -234,9 +234,18 @@ function showRestWarning(entry: CurrentEntry) {
   restWarning.visible = true;
 }
 
+/**
+ * Which item id the rest dialog (and its confirm action) should act on:
+ * the forced item when the entry is still locked (label path), or `undefined`
+ * to fall back to whatever's selected in the dropdown (override/unlocked path).
+ */
+function dialogItemIdOverride(entry: CurrentEntry): number | undefined {
+  return isLocked(entry) ? forcedItemId(entry) ?? undefined : undefined;
+}
+
 async function onWearConfirmed() {
   restWarning.visible = false;
-  if (restWarning.entry) await onWear(restWarning.entry, forcedItemId(restWarning.entry) ?? undefined);
+  if (restWarning.entry) await onWear(restWarning.entry, dialogItemIdOverride(restWarning.entry));
 }
 
 onMounted(async () => {
@@ -333,25 +342,29 @@ function rowBg(entry: CurrentEntry): string {
   return '';
 }
 
-function selectedItemData(entry: CurrentEntry): ItemWithLastSession | null {
-  const id = selectedItem[entry.category.id];
+/**
+ * Data for a specific item id, or (when `itemIdOverride` is omitted/null) for
+ * whatever's currently selected in the dropdown for this category.
+ */
+function selectedItemData(entry: CurrentEntry, itemIdOverride?: number | null): ItemWithLastSession | null {
+  const id = itemIdOverride ?? selectedItem[entry.category.id];
   if (!id) return null;
   return entry.items.find((i) => i.item_id === id) ?? null;
 }
 
-function idleTarget(entry: CurrentEntry): string {
-  const item = selectedItemData(entry);
+function idleTarget(entry: CurrentEntry, itemIdOverride?: number | null): string {
+  const item = selectedItemData(entry, itemIdOverride);
   return item ? formatDuration(item.expected_target) : '';
 }
 
-function idleMax(entry: CurrentEntry): string {
-  const item = selectedItemData(entry);
+function idleMax(entry: CurrentEntry, itemIdOverride?: number | null): string {
+  const item = selectedItemData(entry, itemIdOverride);
   if (!item || item.expected_max === null) return '';
   return formatDuration(item.expected_max);
 }
 
-function restRemainingSeconds(entry: CurrentEntry): number {
-  const item = selectedItemData(entry);
+function restRemainingSeconds(entry: CurrentEntry, itemIdOverride?: number | null): number {
+  const item = selectedItemData(entry, itemIdOverride);
   if (!item || item.ended_at === null || item.rest_seconds === null) return 0;
   return Math.max(0, Math.ceil(item.ended_at + item.rest_seconds - now.value / 1000));
 }
