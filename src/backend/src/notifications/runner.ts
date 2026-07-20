@@ -1,18 +1,26 @@
-import { eventBus, type EventName } from '../events/bus.js';
+import { eventBus, type EventName, type EventPayloads } from '../events/bus.js';
 import { send, isConfigured } from './sender.js';
 import { notificationStore } from './store.js';
+import { formatDuration } from '../utils/time.js';
 
 interface Copy {
   title: string;
   body: string;
 }
 
-function copyFor(event: EventName, categoryName: string): Copy | null {
+function copyFor<E extends EventName>(event: E, payload: EventPayloads[E]): Copy | null {
+  const categoryName = payload.category_name;
   switch (event) {
     case 'rest_end':
       return { title: `${categoryName} wearable`, body: 'Rest period is over' };
-    case 'halfway_reached':
-      return { title: `Wear ${categoryName} soon`, body: 'Your idle time is halfway up' };
+    case 'idle_halfway_reached': {
+      const p = payload as EventPayloads['idle_halfway_reached'];
+      const remaining = p.decay_start_time - p.timestamp;
+      return {
+        title: `Wear ${categoryName} soon`,
+        body: `Durations start decaying in ${formatDuration(remaining)}`,
+      };
+    }
     case 'decay_soon':
       return { title: `Wear ${categoryName} now!`, body: 'Durations start decaying in 1 hour' };
     case 'target_met':
@@ -28,9 +36,9 @@ function copyFor(event: EventName, categoryName: string): Copy | null {
   }
 }
 
-const NOTIFICATION_EVENTS: EventName[] = [
+const NOTIFICATION_EVENTS: Array<Exclude<EventName, 'poller_tick'>> = [
   'rest_end',
-  'halfway_reached',
+  'idle_halfway_reached',
   'decay_soon',
   'target_met',
   'overtime_warning_30',
@@ -38,20 +46,20 @@ const NOTIFICATION_EVENTS: EventName[] = [
   'overtime',
 ];
 
-async function notify(event: EventName, categoryId: number, categoryName: string): Promise<void> {
+async function notify<E extends EventName>(event: E, payload: EventPayloads[E]): Promise<void> {
   const subscription = notificationStore.getSubscription();
   if (!subscription) return;
-  const copy = copyFor(event, categoryName);
+  const copy = copyFor(event, payload);
   if (!copy) return;
   try {
-    await send(subscription, { title: copy.title, body: copy.body, tag: `category-${categoryId}` });
+    await send(subscription, { title: copy.title, body: copy.body, tag: `category-${payload.category_id}` });
   } catch (e: unknown) {
     const status = (e as { statusCode?: number }).statusCode;
     if (status === 410 || status === 404) {
       notificationStore.deleteSubscription();
       return;
     }
-    console.error(`[notifications] Failed to send ${event} for category ${categoryId}:`, e);
+    console.error(`[notifications] Failed to send ${event} for category ${payload.category_id}:`, e);
   }
 }
 
@@ -68,7 +76,7 @@ export function startScheduler(): void {
   started = true;
   for (const event of NOTIFICATION_EVENTS) {
     eventBus.on(event, (payload) => {
-      void notify(event, payload.category_id, payload.category_name);
+      void notify(event, payload);
     });
   }
 }

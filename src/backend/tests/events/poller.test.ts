@@ -152,7 +152,7 @@ describe('events poller tick()', () => {
     const decayFinish = vi.fn();
     eventBus.on('rest_start', restStart);
     eventBus.on('rest_end', restEnd);
-    eventBus.on('halfway_reached', halfway);
+    eventBus.on('idle_halfway_reached', halfway);
     eventBus.on('decay_soon', decaySoon);
     eventBus.on('decay_start', decayStart);
     eventBus.on('decay_finish', decayFinish);
@@ -267,7 +267,7 @@ describe('events poller tick()', () => {
     expect(listener).toHaveBeenCalledTimes(1); // no refire
   });
 
-  it('fires halfway_reached once when now crosses the halfway point, does not refire', async () => {
+  it('fires idle_halfway_reached once when now crosses the halfway point, does not refire', async () => {
     const { categoryId, itemId } = await setupCategoryAndItem();
     const startRes = await app.request(`${SESSIONS}/start`, {
       method: 'POST',
@@ -289,10 +289,10 @@ describe('events poller tick()', () => {
     });
 
     const listener = vi.fn();
-    eventBus.on('halfway_reached', listener);
+    eventBus.on('idle_halfway_reached', listener);
     tick(129700);
     expect(listener).toHaveBeenCalledTimes(1);
-    expect(listener.mock.calls[0][0]).toMatchObject({ category_id: categoryId });
+    expect(listener.mock.calls[0][0]).toMatchObject({ category_id: categoryId, decay_start_time: 172900 });
 
     tick(129701);
     expect(listener).toHaveBeenCalledTimes(1); // no refire
