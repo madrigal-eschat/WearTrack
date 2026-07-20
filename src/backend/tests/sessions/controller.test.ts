@@ -1239,3 +1239,105 @@ describe('GET /api/sessions/current — rotation_available', () => {
     expect(ourItem.rotation_available).toBe(true);
   });
 });
+
+describe('POST /api/sessions/start — consecutive-wear-days lock', () => {
+  it('allows re-wearing the same item within the consecutive-wear-days lock, and rejects it once the lock is satisfied', async () => {
+    const cat = await (await createCategory({
+      name: 'Consecutive Lock', type: 'rotation', consecutive_wear_days: 2,
+      initial_target_wear_duration_seconds: 57600, initial_max_wear_duration_seconds: null,
+    })).json();
+    const itemA = await (await createItem(cat.id, { name: 'Lock A' })).json();
+    await createItem(cat.id, { name: 'Lock B' });
+    await createItem(cat.id, { name: 'Lock C' });
+
+    // First wear of A.
+    const start1 = await app.request(`${SESSIONS}/start`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemA.id }),
+    });
+    expect(start1.status).toBe(201);
+    const session1 = await start1.json();
+    await app.request(`${SESSIONS}/${session1.id}/end`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+    });
+
+    // Second (immediate repeat) wear of A: this is the consecutive-lock re-wear the feature
+    // exists for. Without the fix, rotationAvailability alone would reject this (A just went,
+    // it's B/C's turn per the base rule) — the fix's OR-eligibility must allow it here.
+    const start2 = await app.request(`${SESSIONS}/start`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemA.id }),
+    });
+    expect(start2.status).toBe(201);
+    const session2 = await start2.json();
+    await app.request(`${SESSIONS}/${session2.id}/end`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+    });
+
+    // Third wear of A: consecutive_wear_days (2) is already satisfied by the two prior A sessions.
+    // The lock eligibility must be bounded, not an unconditional bypass.
+    const start3 = await app.request(`${SESSIONS}/start`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemA.id }),
+    });
+    expect(start3.status).toBe(400);
+  });
+
+  it('leaves items other than the most-recently-worn one, and items whose lock is already satisfied, rejected as before the fix', async () => {
+    // With 3 items (A, B, C), after only A has worn once, B and C haven't had a turn yet this
+    // cycle, so the base rotationAvailability rule (untouched by this fix) already makes them
+    // startable — that's correct, unchanged, pre-existing behavior, not something this test
+    // needs to re-verify (see the "GET /api/sessions/current — rotation_available" and
+    // "POST /api/sessions/start — rotation availability" describe blocks above for that
+    // coverage). What this test actually guards against: the new isConsecutiveLockEligible check
+    // must not accidentally make an item eligible when it is NOT the most-recently-worn item —
+    // i.e. the OR-condition in the controller must be item-identity-scoped, not just
+    // category-scoped.
+    const cat = await (await createCategory({
+      name: 'Consecutive Lock Non-Locked Items', type: 'rotation', consecutive_wear_days: 5,
+      initial_target_wear_duration_seconds: 57600, initial_max_wear_duration_seconds: null,
+    })).json();
+    const itemA = await (await createItem(cat.id, { name: 'NL A' })).json();
+    const itemB = await (await createItem(cat.id, { name: 'NL B' })).json();
+    const itemC = await (await createItem(cat.id, { name: 'NL C' })).json();
+
+    // A wears, then B wears (both legitimate per the base rule — neither had gone yet). Use
+    // explicit, clearly-separated timestamps so findRecentInCategory's `ORDER BY ended_at DESC`
+    // has an unambiguous "most recently worn" item — same-second ties would otherwise make
+    // ordering between A and B nondeterministic.
+    const now = Math.floor(Date.now() / 1000);
+    const startA = await app.request(`${SESSIONS}/start`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemA.id, started_at: now - 200 }),
+    });
+    const sessionA = await startA.json();
+    await app.request(`${SESSIONS}/${sessionA.id}/end`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ended_at: now - 100 }),
+    });
+    const startB = await app.request(`${SESSIONS}/start`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemB.id, started_at: now - 50 }),
+    });
+    const sessionB = await startB.json();
+    await app.request(`${SESSIONS}/${sessionB.id}/end`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ended_at: now }),
+    });
+
+    // Now B is the most-recently-worn item. A repeat of A (not the most-recently-worn item, even
+    // though A's own run of 1 is well under consecutive_wear_days=5) must still be rejected — the
+    // fix's eligibility check is scoped to whichever item was most recently worn, not any item
+    // with room left under consecutive_wear_days.
+    const startA2 = await app.request(`${SESSIONS}/start`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemA.id }),
+    });
+    expect(startA2.status).toBe(400);
+
+    // C, which has never been worn, remains available via the base rule regardless of the fix.
+    const startC = await app.request(`${SESSIONS}/start`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemC.id }),
+    });
+    expect(startC.status).toBe(201);
+  });
+});
