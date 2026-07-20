@@ -83,7 +83,10 @@ router.get('/current', (c) => {
     categories.map((cat) => {
       const previous = sessionStore.findLastEndedInCategory(cat.id) ?? null;
       const injuryActive = injuryStore.hasActiveInCategory(cat.id);
-      const { decay_start_time, decay_state, decay_full_time } = computeDecay(previous, cat, now);
+      const { decay_start_time, decay_state, decay_full_time } =
+        cat.type === 'duration'
+          ? computeDecay(previous, cat, now)
+          : { decay_start_time: null, decay_state: 'none' as const, decay_full_time: null };
       const streak_count = statsStore.findForCategory(cat.id)?.streak_count ?? 0;
 
       const rotationAvailableIds =
