@@ -41,7 +41,9 @@ export interface DecayFinishEvent extends CategoryContext {
   decay_state: 'fully_decayed';
 }
 
-export type HalfwayReachedEvent = CategoryContext;
+export interface IdleHalfwayReachedEvent extends CategoryContext {
+  decay_start_time: number;
+}
 export type DecaySoonEvent = CategoryContext;
 
 export interface SessionThresholdEvent extends CategoryContext {
@@ -55,7 +57,7 @@ export interface EventPayloads {
   rest_end: RestEndEvent;
   decay_start: DecayStartEvent;
   decay_finish: DecayFinishEvent;
-  halfway_reached: HalfwayReachedEvent;
+  idle_halfway_reached: IdleHalfwayReachedEvent;
   decay_soon: DecaySoonEvent;
   target_met: SessionThresholdEvent;
   overtime_warning_30: SessionThresholdEvent;

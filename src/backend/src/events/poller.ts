@@ -91,7 +91,12 @@ export function tick(now: number = nowSeconds()): void {
 
       if (row.halfway_notified === 0 && now >= halfway) {
         if (shouldEmit) {
-          eventBus.emit('halfway_reached', { category_id: category.id, category_name: category.name, timestamp: now });
+          eventBus.emit('idle_halfway_reached', {
+            category_id: category.id,
+            category_name: category.name,
+            timestamp: now,
+            decay_start_time: decayStart,
+          });
         }
         row.halfway_notified = 1;
       }

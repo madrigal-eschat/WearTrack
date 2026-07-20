@@ -28,6 +28,18 @@ describe('notifications runner (bus subscriber)', () => {
     );
   });
 
+  it('sends a push notification with a formatted time-to-decay when idle_halfway_reached fires', async () => {
+    startScheduler();
+    eventBus.emit('idle_halfway_reached', {
+      category_id: 1, category_name: 'Footwear', timestamp: 100, decay_start_time: 100 + 7200,
+    });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(send).toHaveBeenCalledWith(
+      '{"endpoint":"https://x"}',
+      expect.objectContaining({ body: 'Durations start decaying in 2 hours', tag: 'category-1' }),
+    );
+  });
+
   it('sends nothing for decay_start (no notification defined for it)', async () => {
     startScheduler();
     eventBus.emit('decay_start', {
