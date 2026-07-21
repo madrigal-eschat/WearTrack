@@ -104,9 +104,10 @@
               <div class="flex gap-2 items-center">
                 <template v-if="isLocked(entry)">
                   <span class="text-sm font-medium" data-testid="forced-item-label">{{ forcedItemName(entry) }}</span>
-                  <k-button small outline data-testid="wear-something-else" @click="overrideLock[entry.category.id] = true">Wear something else</k-button>
+                  <k-button small inline outline data-testid="wear-something-else" @click="chooseSomethingElse(entry)">Choose Something Else</k-button>
                   <k-button
                     small
+                    inline
                     @click="restRemainingSeconds(entry, forcedItemId(entry)) > 0 ? showRestWarning(entry) : onWear(entry, forcedItemId(entry) ?? undefined)"
                   >Wear</k-button>
                 </template>
@@ -224,6 +225,18 @@ function itemRotationAvailable(entry: CurrentEntry, itemId: number): boolean {
   return entry.items.find((i) => i.item_id === itemId)?.rotation_available ?? true;
 }
 
+/** First item in the category that's actually pickable right now (falls back to the first item at all if none are marked available). */
+function firstAvailableItemId(entry: CurrentEntry): number | null {
+  const items = itemsForCategory(entry.category.id);
+  const available = items.find((i) => itemRotationAvailable(entry, i.id));
+  return available?.id ?? items[0]?.id ?? null;
+}
+
+function chooseSomethingElse(entry: CurrentEntry) {
+  overrideLock[entry.category.id] = true;
+  selectedItem[entry.category.id] = firstAvailableItemId(entry);
+}
+
 const restWarning = reactive<{
   visible: boolean;
   entry: CurrentEntry | null;
@@ -251,11 +264,10 @@ async function onWearConfirmed() {
 onMounted(async () => {
   await loadItems();
   for (const entry of currentSessions.value) {
-    const first = itemsForCategory(entry.category.id)[0];
-    selectedItem[entry.category.id] = first?.id ?? null;
+    if (entry.category.type === 'rotation') await loadRecentSessions(entry.category.id);
   }
   for (const entry of currentSessions.value) {
-    if (entry.category.type === 'rotation') await loadRecentSessions(entry.category.id);
+    selectedItem[entry.category.id] = firstAvailableItemId(entry);
   }
 });
 
