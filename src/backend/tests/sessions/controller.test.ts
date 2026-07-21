@@ -1446,3 +1446,48 @@ describe('POST /api/sessions/start — rotation daily cap', () => {
     await endSession(body2.id);
   });
 });
+
+describe('GET /api/sessions/current — resting_until', () => {
+  it('sets resting_until to the next local midnight after a same-day session', async () => {
+    const cat = await (await createCategory({
+      name: 'Resting Until Cat', type: 'rotation', consecutive_wear_days: 1,
+      initial_target_wear_duration_seconds: 57600, initial_max_wear_duration_seconds: null,
+    })).json();
+    const itemA = await (await createItem(cat.id, { name: 'RUA' })).json();
+
+    const start1 = await app.request(`${SESSIONS}/start`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemA.id }),
+    });
+    const session1 = await start1.json();
+    await app.request(`${SESSIONS}/${session1.id}/end`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+    });
+
+    const res = await app.request(`${SESSIONS}/current`);
+    const body = await res.json();
+    const entry = body.find((e: { category: { id: number } }) => e.category.id === cat.id);
+    expect(entry.resting_until).not.toBeNull();
+    expect(entry.resting_until).toBeGreaterThan(Math.floor(Date.now() / 1000));
+  });
+
+  it('resting_until is null for a rotation category with no session today', async () => {
+    const cat = await (await createCategory({
+      name: 'Resting Until Cat 2', type: 'rotation', consecutive_wear_days: 1,
+      initial_target_wear_duration_seconds: 57600, initial_max_wear_duration_seconds: null,
+    })).json();
+    await createItem(cat.id, { name: 'RUB' });
+
+    const res = await app.request(`${SESSIONS}/current`);
+    const body = await res.json();
+    const entry = body.find((e: { category: { id: number } }) => e.category.id === cat.id);
+    expect(entry.resting_until).toBeNull();
+  });
+
+  it('resting_until is always null for duration categories', async () => {
+    const res = await app.request(`${SESSIONS}/current`);
+    const body = await res.json();
+    const entry = body.find((e: { category: { id: number } }) => e.category.id === categoryId);
+    expect(entry.resting_until).toBeNull();
+  });
+});
