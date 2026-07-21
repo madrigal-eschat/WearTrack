@@ -8,7 +8,7 @@ interface Copy {
   body: string;
 }
 
-function copyFor<E extends EventName>(event: E, payload: EventPayloads[E]): Copy | null {
+function copyFor<E extends Exclude<EventName, 'poller_tick'>>(event: E, payload: EventPayloads[E]): Copy | null {
   const categoryName = payload.category_name;
   switch (event) {
     case 'rest_end':
@@ -46,7 +46,7 @@ const NOTIFICATION_EVENTS: Array<Exclude<EventName, 'poller_tick'>> = [
   'overtime',
 ];
 
-async function notify<E extends EventName>(event: E, payload: EventPayloads[E]): Promise<void> {
+async function notify<E extends Exclude<EventName, 'poller_tick'>>(event: E, payload: EventPayloads[E]): Promise<void> {
   const subscription = notificationStore.getSubscription();
   if (!subscription) return;
   const copy = copyFor(event, payload);
