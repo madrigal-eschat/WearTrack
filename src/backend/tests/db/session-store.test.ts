@@ -107,3 +107,49 @@ describe('sessionStore.findRecentInCategory', () => {
     expect(recent.map((r) => r.item_id)).toEqual([itemB, itemA]);
   });
 });
+
+describe('sessionStore.findSessionStartedTodayInCategory', () => {
+  it('finds a session that started on/after dayStart in the category (any item)', () => {
+    const cat = categoryStore.create({
+      name: 'DailyCapFind', icon: 'x',
+      initial_target_wear_duration_seconds: 100,
+      initial_max_wear_duration_seconds: null,
+      rest_multiplier: 1, minimum_rest: 0,
+      risk_levels: [{ lower: null, upper: null, text: 'Only', severity: 1 }],
+      break_decay_multiplier: 0.91, break_grace_time: 86400,
+      type: 'rotation', consecutive_wear_days: 1,
+    });
+    db.prepare(`INSERT INTO items (category_id, name, color, difficulty_multiplier) VALUES (?,'dcf','#fff',1)`).run(cat.id);
+    const rawCat = db.prepare('SELECT * FROM categories WHERE id = ?').get(cat.id) as never;
+    const itemId = (db.prepare('SELECT id FROM items WHERE category_id = ? AND name = ?').get(cat.id, 'dcf') as { id: number }).id;
+
+    const dayStart = 2_000_000;
+    const s = sessionStore.start(itemId, rawCat, item, dayStart + 3600); // started 1h into the day
+    sessionStore.end(s, rawCat, dayStart + 3700);
+
+    const found = sessionStore.findSessionStartedTodayInCategory(cat.id, dayStart);
+    expect(found).toBeDefined();
+    expect(found!.started_at).toBe(dayStart + 3600);
+  });
+
+  it('returns undefined when the only session started before dayStart', () => {
+    const cat = categoryStore.create({
+      name: 'DailyCapFind2', icon: 'x',
+      initial_target_wear_duration_seconds: 100,
+      initial_max_wear_duration_seconds: null,
+      rest_multiplier: 1, minimum_rest: 0,
+      risk_levels: [{ lower: null, upper: null, text: 'Only', severity: 1 }],
+      break_decay_multiplier: 0.91, break_grace_time: 86400,
+      type: 'rotation', consecutive_wear_days: 1,
+    });
+    db.prepare(`INSERT INTO items (category_id, name, color, difficulty_multiplier) VALUES (?,'dcf2','#fff',1)`).run(cat.id);
+    const rawCat = db.prepare('SELECT * FROM categories WHERE id = ?').get(cat.id) as never;
+    const itemId = (db.prepare('SELECT id FROM items WHERE category_id = ? AND name = ?').get(cat.id, 'dcf2') as { id: number }).id;
+
+    const dayStart = 5_000_000;
+    const s = sessionStore.start(itemId, rawCat, item, dayStart - 3600); // started before dayStart (yesterday)
+    sessionStore.end(s, rawCat, dayStart - 3500);
+
+    expect(sessionStore.findSessionStartedTodayInCategory(cat.id, dayStart)).toBeUndefined();
+  });
+});
