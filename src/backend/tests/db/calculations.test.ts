@@ -7,6 +7,8 @@ import {
   computeDecay,
   lapCount,
   rotationAvailability,
+  startOfTodayLocal,
+  startOfNextLocalMidnight,
   type Category,
 } from '../../src/db/calculations.js';
 
@@ -306,5 +308,38 @@ describe('rotationAvailability', () => {
     // Only item 1 has been worn in the new cycle, so item 2 should be the only one available.
     const result = rotationAvailability([1, 2], [{ item_id: 1 }, { item_id: 2 }, { item_id: 1 }]);
     expect(result).toEqual(new Set([2]));
+  });
+});
+
+describe('startOfTodayLocal / startOfNextLocalMidnight', () => {
+  it('startOfTodayLocal returns a timestamp at local midnight on the same day as `now`', () => {
+    const now = Math.floor(new Date(2026, 6, 21, 14, 30, 0).getTime() / 1000); // 2026-07-21 14:30 local
+    const today = startOfTodayLocal(now);
+    const d = new Date(today * 1000);
+    expect(d.getFullYear()).toBe(2026);
+    expect(d.getMonth()).toBe(6); // July (0-indexed)
+    expect(d.getDate()).toBe(21);
+    expect(d.getHours()).toBe(0);
+    expect(d.getMinutes()).toBe(0);
+    expect(d.getSeconds()).toBe(0);
+  });
+
+  it('startOfNextLocalMidnight returns midnight the following day', () => {
+    const now = Math.floor(new Date(2026, 6, 21, 14, 30, 0).getTime() / 1000);
+    const next = startOfNextLocalMidnight(now);
+    const d = new Date(next * 1000);
+    expect(d.getDate()).toBe(22);
+    expect(d.getHours()).toBe(0);
+  });
+
+  it('startOfTodayLocal is idempotent when `now` is already exactly midnight', () => {
+    const midnight = Math.floor(new Date(2026, 6, 21, 0, 0, 0).getTime() / 1000);
+    expect(startOfTodayLocal(midnight)).toBe(midnight);
+  });
+
+  it('startOfNextLocalMidnight is exactly 24h * N seconds after startOfTodayLocal for a non-DST day', () => {
+    const now = Math.floor(new Date(2026, 6, 21, 14, 30, 0).getTime() / 1000);
+    expect(startOfNextLocalMidnight(now) - startOfTodayLocal(now)).toBeGreaterThanOrEqual(23 * 3600);
+    expect(startOfNextLocalMidnight(now) - startOfTodayLocal(now)).toBeLessThanOrEqual(25 * 3600);
   });
 });

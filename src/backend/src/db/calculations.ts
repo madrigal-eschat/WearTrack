@@ -113,6 +113,23 @@ export function isConsecutiveLockEligible(
   return runLength < consecutiveWearDays;
 }
 
+function localMidnight(now: number, dayOffset: number): number {
+  const d = new Date(now * 1000);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + dayOffset);
+  return Math.floor(d.getTime() / 1000);
+}
+
+/** Unix timestamp of local midnight on the same calendar day as `now`. */
+export function startOfTodayLocal(now: number): number {
+  return localMidnight(now, 0);
+}
+
+/** Unix timestamp of the next local midnight strictly after `now`'s calendar day starts. */
+export function startOfNextLocalMidnight(now: number): number {
+  return localMidnight(now, 1);
+}
+
 /** Previous durations grown by one category increment, scaled by difficulty modifier. */
 function growDurations(
   previous: PreviousSession,
