@@ -1206,13 +1206,16 @@ describe('POST /api/sessions/start — rotation availability', () => {
     const itemA = await (await createItem(cat.id, { name: 'A2' })).json();
     const itemB = await (await createItem(cat.id, { name: 'B2' })).json();
 
+    // A's session is on a prior day so it doesn't trip the same-day daily cap for B's attempt
+    // below — this test is about rotation-availability, not the daily cap (covered separately).
+    const yesterday = Math.floor(Date.now() / 1000) - 90000;
     const start1 = await app.request(`${SESSIONS}/start`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ item_id: itemA.id }),
+      body: JSON.stringify({ item_id: itemA.id, started_at: yesterday }),
     });
     const session1 = await start1.json();
     await app.request(`${SESSIONS}/${session1.id}/end`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ended_at: yesterday + 100 }),
     });
 
     const start2 = await app.request(`${SESSIONS}/start`, {
@@ -1280,28 +1283,36 @@ describe('POST /api/sessions/start — consecutive-wear-days lock', () => {
     await createItem(cat.id, { name: 'Lock B' });
     await createItem(cat.id, { name: 'Lock C' });
 
+    // Spread the three wears across three distinct calendar days (>1 day apart each) so the
+    // same-day daily cap (a separate, unrelated feature) doesn't interfere with what this test
+    // is actually verifying — the fix's OR-eligibility. Wearing the same item on consecutive
+    // *days* is exactly the scenario consecutive_wear_days describes anyway.
+    const now = Math.floor(Date.now() / 1000);
+    const day1 = now - 190000; // ~2.2 days ago
+    const day2 = now - 90000; // ~1 day ago, distinct calendar day from day1 and from today
+
     // First wear of A.
     const start1 = await app.request(`${SESSIONS}/start`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ item_id: itemA.id }),
+      body: JSON.stringify({ item_id: itemA.id, started_at: day1 }),
     });
     expect(start1.status).toBe(201);
     const session1 = await start1.json();
     await app.request(`${SESSIONS}/${session1.id}/end`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ended_at: day1 + 100 }),
     });
 
-    // Second (immediate repeat) wear of A: this is the consecutive-lock re-wear the feature
+    // Second (next-day repeat) wear of A: this is the consecutive-lock re-wear the feature
     // exists for. Without the fix, rotationAvailability alone would reject this (A just went,
     // it's B/C's turn per the base rule) — the fix's OR-eligibility must allow it here.
     const start2 = await app.request(`${SESSIONS}/start`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ item_id: itemA.id }),
+      body: JSON.stringify({ item_id: itemA.id, started_at: day2 }),
     });
     expect(start2.status).toBe(201);
     const session2 = await start2.json();
     await app.request(`${SESSIONS}/${session2.id}/end`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ended_at: day2 + 100 }),
     });
 
     // Third wear of A: consecutive_wear_days (2) is already satisfied by the two prior A sessions.
@@ -1334,23 +1345,26 @@ describe('POST /api/sessions/start — consecutive-wear-days lock', () => {
     // A wears, then B wears (both legitimate per the base rule — neither had gone yet). Use
     // explicit, clearly-separated timestamps so findRecentInCategory's `ORDER BY ended_at DESC`
     // has an unambiguous "most recently worn" item — same-second ties would otherwise make
-    // ordering between A and B nondeterministic.
+    // ordering between A and B nondeterministic. Both are placed on a prior calendar day so the
+    // same-day daily cap (a separate, unrelated feature) doesn't interfere with the startA2/startC
+    // assertions below, which need to happen "today".
     const now = Math.floor(Date.now() / 1000);
+    const yesterday = now - 90000;
     const startA = await app.request(`${SESSIONS}/start`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ item_id: itemA.id, started_at: now - 200 }),
+      body: JSON.stringify({ item_id: itemA.id, started_at: yesterday - 200 }),
     });
     const sessionA = await startA.json();
     await app.request(`${SESSIONS}/${sessionA.id}/end`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ended_at: now - 100 }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ended_at: yesterday - 100 }),
     });
     const startB = await app.request(`${SESSIONS}/start`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ item_id: itemB.id, started_at: now - 50 }),
+      body: JSON.stringify({ item_id: itemB.id, started_at: yesterday - 50 }),
     });
     const sessionB = await startB.json();
     await app.request(`${SESSIONS}/${sessionB.id}/end`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ended_at: now }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ended_at: yesterday }),
     });
 
     // Now B is the most-recently-worn item. A repeat of A (not the most-recently-worn item, even
@@ -1369,5 +1383,66 @@ describe('POST /api/sessions/start — consecutive-wear-days lock', () => {
       body: JSON.stringify({ item_id: itemC.id }),
     });
     expect(startC.status).toBe(201);
+  });
+});
+
+describe('POST /api/sessions/start — rotation daily cap', () => {
+  it('rejects a second session the same day for a different item', async () => {
+    const cat = await (await createCategory({
+      name: 'Daily Cap Sessions', type: 'rotation', consecutive_wear_days: 1,
+      initial_target_wear_duration_seconds: 57600, initial_max_wear_duration_seconds: null,
+    })).json();
+    const itemA = await (await createItem(cat.id, { name: 'DCA' })).json();
+    const itemB = await (await createItem(cat.id, { name: 'DCB' })).json();
+
+    const start1 = await app.request(`${SESSIONS}/start`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemA.id }),
+    });
+    const session1 = await start1.json();
+    await app.request(`${SESSIONS}/${session1.id}/end`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+    });
+
+    const start2 = await app.request(`${SESSIONS}/start`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemB.id }),
+    });
+    expect(start2.status).toBe(400);
+  });
+
+  it('allows a session the next day', async () => {
+    const cat = await (await createCategory({
+      name: 'Daily Cap Sessions 2', type: 'rotation', consecutive_wear_days: 1,
+      initial_target_wear_duration_seconds: 57600, initial_max_wear_duration_seconds: null,
+    })).json();
+    const itemA = await (await createItem(cat.id, { name: 'DCA2' })).json();
+    const itemB = await (await createItem(cat.id, { name: 'DCB2' })).json();
+
+    const yesterday = Math.floor(Date.now() / 1000) - 90000; // well over a day ago
+    const start1 = await app.request(`${SESSIONS}/start`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemA.id, started_at: yesterday }),
+    });
+    const session1 = await start1.json();
+    await app.request(`${SESSIONS}/${session1.id}/end`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ended_at: yesterday + 100 }),
+    });
+
+    const start2 = await app.request(`${SESSIONS}/start`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemB.id }),
+    });
+    expect(start2.status).toBe(201);
+  });
+
+  it('does not affect duration categories', async () => {
+    const s1 = await startSession();
+    const body1 = await s1.json();
+    await endSession(body1.id);
+    const s2 = await startSession();
+    expect(s2.status).toBe(201);
+    const body2 = await s2.json();
+    await endSession(body2.id);
   });
 });

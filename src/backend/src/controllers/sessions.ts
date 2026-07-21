@@ -9,6 +9,7 @@ import {
   computeDecay,
   rotationAvailability,
   isConsecutiveLockEligible,
+  startOfTodayLocal,
   type PreviousSession,
   type Category,
 } from '../db/calculations.js';
@@ -160,6 +161,11 @@ router.post('/start', async (c) => {
   const category = categoryStore.findRaw(item.category_id)!;
 
   if (category.type === 'rotation') {
+    const dayStart = startOfTodayLocal(nowSeconds());
+    if (sessionStore.findSessionStartedTodayInCategory(item.category_id, dayStart)) {
+      throw new ValidationError('Category has already had a session today');
+    }
+
     const activeItemIds = itemStore.findAll(item.category_id).map((i) => i.id);
     const recent = sessionStore.findRecentInCategory(item.category_id, 100);
     const available = rotationAvailability(activeItemIds, recent);
