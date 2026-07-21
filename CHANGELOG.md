@@ -1,3 +1,27 @@
+# [1.3.0](https://github.com/madrigal-eschat/WearTrack/compare/v1.2.0...v1.3.0) (2026-07-21)
+
+
+### Bug Fixes
+
+* **mqtt:** prevent stale client from clobbering status after reconnect ([785422d](https://github.com/madrigal-eschat/WearTrack/commit/785422d1b6d26c36d858d410ebaac38c92c16a21))
+* **mqtt:** republish discovery on config save, harden config validation ([eb1e968](https://github.com/madrigal-eschat/WearTrack/commit/eb1e968011ea2f17a3c8d0a15d29edaea133b9ca))
+* **notifications:** narrow copyFor/notify generics to exclude poller_tick ([e28b8d6](https://github.com/madrigal-eschat/WearTrack/commit/e28b8d6ff21c155d096f71fda294c76047470ffa))
+
+
+### Features
+
+* **backend:** add GET/PUT /api/mqtt/config, wire initMqtt into server boot ([bcf16fd](https://github.com/madrigal-eschat/WearTrack/commit/bcf16fdb19504b8d397de44ced6fa5cba687319b))
+* **backend:** add mqtt payload builders ([78ac47f](https://github.com/madrigal-eschat/WearTrack/commit/78ac47f4c2081ab00281f083dc12568e9ab0754f))
+* **backend:** add mqtt_config single-row store ([e1ba7bd](https://github.com/madrigal-eschat/WearTrack/commit/e1ba7bdd57793a2a1277c145db6584ac6f3a5700))
+* **backend:** add mqtt_config table ([859c2ee](https://github.com/madrigal-eschat/WearTrack/commit/859c2ee80e3fb7db3c671b17046f9cac97a0d790))
+* **backend:** add persistent mqtt client wrapper ([6dfd6a6](https://github.com/madrigal-eschat/WearTrack/commit/6dfd6a637097b30e65167ac06961de6cd796a135))
+* **backend:** add poller_tick bus event for tick-driven subscribers ([b3b3e03](https://github.com/madrigal-eschat/WearTrack/commit/b3b3e03fab16bc6af53dbd248e76c70129144891))
+* **backend:** publish Home Assistant discovery configs on poller tick ([c50709c](https://github.com/madrigal-eschat/WearTrack/commit/c50709c77defc99325897f31f8a26fdb0db0f29c))
+* **backend:** publish mqtt messages on session/rest/decay bus events ([d50a1f9](https://github.com/madrigal-eschat/WearTrack/commit/d50a1f9d422edbad475f7e28b4a264fb39b40a92))
+* **frontend:** add MQTT configuration section to Settings ([d37901d](https://github.com/madrigal-eschat/WearTrack/commit/d37901d0f1c134021f0f95186484fbc3b1b99772))
+* **frontend:** add optional type prop to TextField for password inputs ([883ae32](https://github.com/madrigal-eschat/WearTrack/commit/883ae329088100173c3c3121971aab735d59de15))
+* **frontend:** add useMqtt composable for the settings panel ([b827a81](https://github.com/madrigal-eschat/WearTrack/commit/b827a8145212036a46984d07bc56e87ec3c7dd0d))
+
 # [1.2.0](https://github.com/madrigal-eschat/WearTrack/compare/v1.1.1...v1.2.0) (2026-07-21)
 
 
