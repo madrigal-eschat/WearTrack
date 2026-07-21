@@ -1,3 +1,29 @@
+# [1.2.0](https://github.com/madrigal-eschat/WearTrack/compare/v1.1.1...v1.2.0) (2026-07-21)
+
+
+### Bug Fixes
+
+* **events:** don't run the poller's setInterval during tests ([4dd386d](https://github.com/madrigal-eschat/WearTrack/commit/4dd386d3defe63115d84c713780ab6b0f12cbff8))
+* **events:** isolate listener exceptions in TypedEventBus.emit ([4160d69](https://github.com/madrigal-eschat/WearTrack/commit/4160d69a555b81da739c454d6d00d044135c006a))
+* **events:** resolve rest/decay state before an overlapping session starts ([e629fbd](https://github.com/madrigal-eschat/WearTrack/commit/e629fbdf8ecdebe4484dbbab7fe8de071b0656de))
+* **sessions:** stop start() re-emitting decay_finish already reported by poller ([a0cad5c](https://github.com/madrigal-eschat/WearTrack/commit/a0cad5c7807dd753c0943ab8411e5b7e15883386))
+* **test:** pick a formula-agnostic timestamp for the merely-decaying case ([80a2709](https://github.com/madrigal-eschat/WearTrack/commit/80a270989646d6535877b7a45be9f4f5d4c8f179))
+
+
+### Features
+
+* add half-life <-> multiplier conversion helpers to categoryForm ([ea836ab](https://github.com/madrigal-eschat/WearTrack/commit/ea836abc10bf759d4d26401abf0dcced6d79b64f))
+* **backend:** add DB-backed event poller state store ([c0da297](https://github.com/madrigal-eschat/WearTrack/commit/c0da2979a064ece8f1d3bee2ce3d7eef88907f42))
+* **backend:** add event_poller_state table, drop sent_notifications ([9321da4](https://github.com/madrigal-eschat/WearTrack/commit/9321da4a963ec0e942b247abec3d0a4a4e9c5532))
+* **backend:** add events poller — single tick, DB-backed edge detection ([526046b](https://github.com/madrigal-eschat/WearTrack/commit/526046b60915c810274568e63abb14bf825ec63b))
+* **backend:** add typed internal event bus ([d1c93d3](https://github.com/madrigal-eschat/WearTrack/commit/d1c93d3cd0ade7793481b6ed19923eec1efb2890))
+* **backend:** emit session_start/session_end on the event bus ([0bbcd51](https://github.com/madrigal-eschat/WearTrack/commit/0bbcd51d96d9b7d5af80ba4d15ba710f4fb1f690))
+* **backend:** start the events poller alongside the notification scheduler ([198dde8](https://github.com/madrigal-eschat/WearTrack/commit/198dde803daea644c1089bf26ece053a1a1d07b8))
+* floor break decay loss amount per-day, not just the final value ([e59e20f](https://github.com/madrigal-eschat/WearTrack/commit/e59e20f62250f70b23624806cfba877600f0bfe7))
+* floor daily decay loss in decay-progress calculation, update formula docs ([83878ba](https://github.com/madrigal-eschat/WearTrack/commit/83878baa8c20c85708374ea8622b86744b9e06a9))
+* **notifications:** rename halfway_reached to idle_halfway_reached, add time-to-decay to its copy ([ceb6e4b](https://github.com/madrigal-eschat/WearTrack/commit/ceb6e4b114391cfe4542cfced4838f276528b010))
+* replace break-decay multiplier input with a half-life (days) field ([4c41756](https://github.com/madrigal-eschat/WearTrack/commit/4c41756ddfeffc53bcb2e7925643f15a41bd5741))
+
 ## [1.1.1](https://github.com/madrigal-eschat/WearTrack/compare/v1.1.0...v1.1.1) (2026-07-13)
 
 
