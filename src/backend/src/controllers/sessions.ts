@@ -10,6 +10,7 @@ import {
   rotationAvailability,
   isConsecutiveLockEligible,
   startOfTodayLocal,
+  startOfNextLocalMidnight,
   type PreviousSession,
   type Category,
 } from '../db/calculations.js';
@@ -98,10 +99,15 @@ router.get('/current', (c) => {
             )
           : new Set((itemsByCategory.get(cat.id) ?? []).map((i) => i.item_id));
 
+      const restingUntil =
+        cat.type === 'rotation' && sessionStore.findSessionStartedTodayInCategory(cat.id, startOfTodayLocal(now))
+          ? startOfNextLocalMidnight(now)
+          : null;
+
       const items = enrichItemsWithExpected(itemsByCategory.get(cat.id) ?? [], cat, previous, now, injuryActive, rotationAvailableIds);
 
       const s = sessionByCategory.get(cat.id);
-      if (!s) return { category: cat, item: null, session: null, items, decay_start_time, decay_state, decay_full_time, streak_count };
+      if (!s) return { category: cat, item: null, session: null, items, decay_start_time, decay_state, decay_full_time, streak_count, resting_until: restingUntil };
 
       const item = {
         id: s.item_id, category_id: s.category_id, name: s.item_name,
@@ -112,7 +118,7 @@ router.get('/current', (c) => {
         target_wear_seconds: s.target_wear_seconds, max_wear_seconds: s.max_wear_seconds,
         rest_seconds: s.rest_seconds, ended_in_injury: s.ended_in_injury,
       };
-      return { category: cat, item, session, items, decay_start_time, decay_state, decay_full_time, streak_count };
+      return { category: cat, item, session, items, decay_start_time, decay_state, decay_full_time, streak_count, resting_until: restingUntil };
     }),
   );
 });
