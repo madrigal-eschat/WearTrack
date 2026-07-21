@@ -146,6 +146,17 @@ class SessionStore {
       .all(categoryId, limit) as { item_id: number }[];
   }
 
+  /** Most recent session (any item, open or closed) in the category that started on/after `dayStart`. Feeds the rotation daily-cap check. */
+  findSessionStartedTodayInCategory(categoryId: number, dayStart: number): { started_at: number } | undefined {
+    return db
+      .prepare(
+        `SELECT s.started_at FROM sessions s JOIN items i ON i.id = s.item_id
+         WHERE i.category_id = ? AND s.started_at >= ?
+         ORDER BY s.started_at DESC LIMIT 1`,
+      )
+      .get(categoryId, dayStart) as { started_at: number } | undefined;
+  }
+
   findOpenInCategory(categoryId: number): { session_id: number; item_id: number; item_name: string } | undefined {
     return db
       .prepare(
