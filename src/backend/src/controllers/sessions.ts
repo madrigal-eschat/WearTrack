@@ -8,14 +8,14 @@ import {
   computeSessionStart,
   computeDecay,
   rotationAvailability,
-  isConsecutiveLockEligible,
   startOfTodayLocal,
   startOfNextLocalMidnight,
   type PreviousSession,
   type Category,
 } from '../db/calculations.js';
-import { NotFoundError, ValidationError, ConflictError } from '../middleware/errors.js';
+import { NotFoundError, ValidationError } from '../middleware/errors.js';
 import { nowSeconds } from '../utils/time.js';
+import { StartSessionCommand } from '../commands/sessions.js';
 
 /** A last-session item row enriched with the expected target/max for the next session. */
 interface ItemWithExpected extends ItemWithLastSession {
@@ -146,43 +146,7 @@ router.get('/:id', (c) => {
 // POST /api/sessions/start — begin a new session for an item
 router.post('/start', async (c) => {
   const body = await c.req.json();
-  const { item_id, started_at } = body;
-
-  if (typeof item_id !== 'number') throw new ValidationError('item_id must be a number');
-  if (started_at !== undefined && typeof started_at !== 'number') {
-    throw new ValidationError('started_at must be a Unix timestamp (number)');
-  }
-
-  const item = itemStore.find(item_id);
-  if (!item) throw new NotFoundError(`Item ${item_id} not found`);
-
-  const conflict = sessionStore.findOpenInCategory(item.category_id);
-  if (conflict) {
-    throw new ConflictError(
-      `Category already has an open session on item "${conflict.item_name}" (id ${conflict.item_id})`,
-      { conflicting_item: { id: conflict.item_id, name: conflict.item_name } },
-    );
-  }
-
-  const category = categoryStore.findRaw(item.category_id)!;
-
-  if (category.type === 'rotation') {
-    const dayStart = startOfTodayLocal(nowSeconds());
-    if (sessionStore.findSessionStartedTodayInCategory(item.category_id, dayStart)) {
-      throw new ValidationError('Category has already had a session today');
-    }
-
-    const activeItemIds = itemStore.findAll(item.category_id).map((i) => i.id);
-    const recent = sessionStore.findRecentInCategory(item.category_id, 100);
-    const available = rotationAvailability(activeItemIds, recent);
-    const consecutiveLockEligible = isConsecutiveLockEligible(recent, item_id, category.consecutive_wear_days);
-    if (!available.has(item_id) && !consecutiveLockEligible) {
-      throw new ValidationError(`Item ${item_id} is not available yet — it's another item's turn in the rotation`);
-    }
-  }
-
-  const startTs = typeof started_at === 'number' ? started_at : nowSeconds();
-  const session = sessionStore.start(item_id, category, item, startTs);
+  const session = new StartSessionCommand(body).run();
   return c.json(session, 201);
 });
 
