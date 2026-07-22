@@ -26,7 +26,11 @@
             <template #after>
               <div class="flex gap-1">
                 <k-button small outline type="button" @click="onToggleEdit(cat.id)">Edit</k-button>
-                <k-button small outline type="button" @click="onDeleteCategory(cat.id)">Delete</k-button>
+                <DeleteButton title="Delete this category and all its items?" message="This cannot be undone." @confirm="onConfirmDeleteCategory(cat.id)">
+                  <template #trigger="{ open }">
+                    <k-button small outline type="button" @click="open">Delete</k-button>
+                  </template>
+                </DeleteButton>
               </div>
             </template>
           </k-list-item>
@@ -57,6 +61,7 @@ import { categoryToFormState, formStateToApiPayload } from '../utils/categoryFor
 import type { CategoryFormState } from './CategoryForm.vue';
 import FormSectionHeader from './FormSectionHeader.vue';
 import CategoryForm from './CategoryForm.vue';
+import DeleteButton from './DeleteButton.vue';
 
 const { categories, loadCategories, createCategory, updateCategory, deleteCategory } = useCategories();
 const { loadItems } = useItems();
@@ -107,8 +112,7 @@ async function onSaveCategory(id: number, data: CategoryFormState) {
   }
 }
 
-async function onDeleteCategory(id: number) {
-  if (!confirm('Delete this category and all its items?')) return;
+async function onConfirmDeleteCategory(id: number) {
   try {
     await deleteCategory(id);
   } catch (e) {
