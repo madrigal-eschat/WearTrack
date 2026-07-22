@@ -1,12 +1,12 @@
 <template>
-  <DurationTrigger
-    label="Minimum rest period"
-    :displayValue="minimumRestDisplay"
-    :disabled="!hasMaxWear"
-    testid="min-rest"
-    @click="$emit('open-duration-picker', 'minRest')"
-  />
   <div class="flex gap-4 flex-wrap items-end">
+    <DurationTrigger
+      label="Minimum rest period"
+      :displayValue="minimumRestDisplay"
+      :disabled="!hasMaxWear"
+      testid="min-rest"
+      @click="$emit('open-duration-picker', 'minRest')"
+    />
     <DurationTrigger
       label="Break grace time"
       :displayValue="breakGraceDisplay"
