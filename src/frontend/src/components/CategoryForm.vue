@@ -50,39 +50,18 @@
     </div>
 
     <template v-if="catForm.type === 'duration'">
-      <div class="flex gap-4 flex-wrap items-end">
-        <DurationTrigger
-          label="Minimum rest period"
-          :displayValue="shortDuration(catForm.minimumRestSeconds)"
-          :disabled="catForm.initialWearMaxSeconds === null"
-          testid="min-rest"
-          @click="openDurationPicker('minRest')"
-        />
-        <DurationTrigger
-          label="Break grace time"
-          :displayValue="shortDuration(catForm.breakGraceSeconds)"
-          @click="openDurationPicker('grace')"
-        />
-        <NumberField
-          id="cat-decay"
-          label="Break half-life (days)"
-          v-model="catForm.breakDecayHalfLifeDays"
-          :min="0.1"
-          :default="DEFAULT_HALF_LIFE_DAYS"
-          :step="0.1"
-        />
-      </div>
-      <p class="text-xs text-gray-400 -mt-1">
-        <strong>Target</strong> is the goal duration; <strong>Maximum</strong> (optional) is the hard ceiling.
-        Minimum rest only applies when a maximum is set.
-      </p>
-
-      <RiskBands
+      <DurationCategoryFields
+        :has-max-wear="catForm.initialWearMaxSeconds !== null"
+        :minimum-rest-display="shortDuration(catForm.minimumRestSeconds)"
+        :break-grace-display="shortDuration(catForm.breakGraceSeconds)"
+        :break-decay-half-life-days="catForm.breakDecayHalfLifeDays"
+        @update:break-decay-half-life-days="catForm.breakDecayHalfLifeDays = $event"
+        :default-half-life-days="DEFAULT_HALF_LIFE_DAYS"
         :band-count="catForm.bandCount"
         :crossover-points="catForm.crossoverPoints"
+        @open-duration-picker="openDurationPicker"
         @add-band="addBand"
         @remove-band="removeBand"
-        @edit-crossover="openDurationPicker"
       />
     </template>
 
@@ -131,7 +110,7 @@ import NumberField from './NumberField.vue';
 import DurationTrigger from './DurationTrigger.vue';
 import { multiplierToHalfLifeDays } from '../utils/categoryForm.js';
 import SegmentedControl from './SegmentedControl.vue';
-import RiskBands from './RiskBands.vue';
+import DurationCategoryFields from './DurationCategoryFields.vue';
 
 export interface CategoryFormState {
   name: string;
