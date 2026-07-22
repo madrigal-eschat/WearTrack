@@ -19,49 +19,7 @@
 
 ---
 
-### Task 1: Add complexity lint gate for controllers
-
-**Files:**
-- Modify: `src/backend/eslint.config.js`
-
-**Interfaces:** None (pure config change).
-
-- [ ] **Step 1: Add the scoped `complexity` rule**
-
-Replace the contents of `src/backend/eslint.config.js` with:
-
-```js
-import tseslint from 'typescript-eslint';
-
-export default tseslint.config(
-  ...tseslint.configs.recommended,
-  { ignores: ['node_modules/'] },
-  {
-    files: ['src/controllers/**/*.ts'],
-    rules: {
-      complexity: ['error', 10],
-    },
-  },
-);
-```
-
-- [ ] **Step 2: Run lint to confirm it currently fails on the known offenders**
-
-Run: `cd src/backend && npm run lint`
-Expected: Errors on `categories.ts` (POST, PATCH), `sessions.ts` (`/current` GET handler, `/start` POST handler), and `items.ts` (PATCH) — each reporting "Function has a complexity of N. Maximum allowed is 10." Everything else in `controllers/` passes.
-
-If any other handler unexpectedly fails, stop and report it before continuing — this plan only accounts for the five above.
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add src/backend/eslint.config.js
-git commit -m "chore(lint): gate backend controllers on cyclomatic complexity"
-```
-
----
-
-### Task 2: Extract Category Commands
+### Task 1: Extract Category Commands
 
 **Files:**
 - Create: `src/backend/src/commands/categories.ts`
@@ -346,21 +304,18 @@ Leave every other handler (`GET /`, `GET /:id/stats`, `GET /:id`, `DELETE /:id`)
 Run: `cd src/backend && npx vitest run tests/categories`
 Expected: PASS, same test count as before this task (behavior-preserving refactor)
 
-- [ ] **Step 7: Run lint**
-
-Run: `cd src/backend && npm run lint`
-Expected: `categories.ts` no longer reports a complexity error.
-
-- [ ] **Step 8: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add src/backend/src/commands/categories.ts src/backend/tests/commands/categories.test.ts src/backend/src/controllers/categories.ts
 git commit -m "refactor(backend): extract Category Commands from controller"
 ```
 
+Note: the complexity lint rule doesn't exist yet (it's added in Task 5, after every offending handler is already fixed) — there is no lint-based check to run here.
+
 ---
 
-### Task 3: Extract StartSessionCommand
+### Task 2: Extract StartSessionCommand
 
 **Files:**
 - Create: `src/backend/src/commands/sessions.ts`
@@ -552,7 +507,7 @@ git commit -m "refactor(backend): extract StartSessionCommand from sessions cont
 
 ---
 
-### Task 4: Extract CurrentSessionsQuery
+### Task 3: Extract CurrentSessionsQuery
 
 **Files:**
 - Create: `src/backend/src/queries/sessions.ts`
@@ -819,21 +774,18 @@ router.get('/current', (c) => {
 Run: `cd src/backend && npx vitest run tests/sessions`
 Expected: PASS, same test count as before this task
 
-- [ ] **Step 7: Run lint**
-
-Run: `cd src/backend && npm run lint`
-Expected: `sessions.ts` no longer reports any complexity error.
-
-- [ ] **Step 8: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add src/backend/src/queries/sessions.ts src/backend/tests/queries/sessions.test.ts src/backend/src/controllers/sessions.ts
 git commit -m "refactor(backend): extract CurrentSessionsQuery from sessions controller"
 ```
 
+Note: the complexity lint rule doesn't exist yet (it's added in Task 5, after every offending handler is already fixed) — there is no lint-based check to run here.
+
 ---
 
-### Task 5: Extract validate/buildUpdates helpers for items.ts PATCH
+### Task 4: Extract validate/buildUpdates helpers for items.ts PATCH
 
 **Files:**
 - Modify: `src/backend/src/controllers/items.ts`
@@ -907,16 +859,55 @@ router.patch('/:id', async (c) => {
 Run: `cd src/backend && npx vitest run tests/items`
 Expected: PASS, same or greater test count than before this task
 
-- [ ] **Step 4: Run lint**
-
-Run: `cd src/backend && npm run lint`
-Expected: `items.ts` no longer reports a complexity error.
-
-- [ ] **Step 5: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add src/backend/src/controllers/items.ts src/backend/tests/items/controller.test.ts
 git commit -m "refactor(backend): extract validate/buildUpdates helpers in items PATCH"
+```
+
+Note: the complexity lint rule doesn't exist yet (it's added in Task 5, after every offending handler is already fixed) — there is no lint-based check to run here.
+
+---
+
+### Task 5: Add complexity lint gate for controllers
+
+**Files:**
+- Modify: `src/backend/eslint.config.js`
+
+**Interfaces:** None (pure config change).
+
+- [ ] **Step 1: Add the scoped `complexity` rule**
+
+Replace the contents of `src/backend/eslint.config.js` with:
+
+```js
+import tseslint from 'typescript-eslint';
+
+export default tseslint.config(
+  ...tseslint.configs.recommended,
+  { ignores: ['node_modules/'] },
+  {
+    files: ['src/controllers/**/*.ts'],
+    rules: {
+      complexity: ['error', 10],
+    },
+  },
+);
+```
+
+- [ ] **Step 2: Run lint to confirm the whole controllers directory is already clean**
+
+Run: `cd src/backend && npm run lint`
+Expected: zero errors. Tasks 1-4 already extracted Commands/Query/helpers from every handler that used to exceed complexity 10 (`categories.ts` POST/PATCH, `sessions.ts` `/current` and `/start`, `items.ts` PATCH), so this rule has nothing left to flag.
+
+If anything unexpectedly fails, stop and report it before continuing — Tasks 1-4 should have already brought every controller handler under the threshold.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add src/backend/eslint.config.js
+git commit -m "chore(lint): gate backend controllers on cyclomatic complexity"
 ```
 
 ---
