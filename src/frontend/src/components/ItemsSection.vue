@@ -7,46 +7,14 @@
       @toggle="showItemForm = !showItemForm; if (showItemForm) editingItemId = null"
     />
 
-    <FormCard v-if="showItemForm && categories.length > 0">
-      <TextField id="item-name" label="Name" v-model="itemForm.name" />
-      <div class="flex gap-2 items-end">
-        <ColorPicker v-model="itemForm.color" />
-        <template v-if="selectedCat?.icon">
-          <Icon v-if="selectedCat.icon.includes(':')" :icon="selectedCat.icon" class="w-6 h-6 self-center shrink-0" :style="{ color: itemForm.color }" />
-          <span v-else class="text-xl self-center shrink-0">{{ selectedCat.icon }}</span>
-        </template>
-        <div class="flex-1 min-w-[10ch]">
-          <SelectField
-            id="item-category"
-            label=""
-            :modelValue="itemForm.category_id"
-            @update:modelValue="itemForm.category_id = $event"
-          >
-            <option value="" disabled>Select…</option>
-            <option v-for="cat in categories" :key="cat.id" :value="String(cat.id)">{{ cat.name }}</option>
-          </SelectField>
-        </div>
-      </div>
-      <div class="flex gap-4 items-end">
-        <NumberField
-          id="item-difficulty"
-          label="Difficulty"
-          v-model="itemForm.difficulty_multiplier"
-          :min="0.1"
-          :default="1.0"
-          :step="0.1"
-        />
-        <div class="ml-auto">
-          <k-button
-            type="button"
-            @click="onAddItem"
-            :disabled="!itemForm.name || !itemForm.category_id"
-          >
-            Add
-          </k-button>
-        </div>
-      </div>
-    </FormCard>
+    <ItemForm
+      v-if="showItemForm && categories.length > 0"
+      id-prefix="item"
+      :categories="categories"
+      submit-label="Add"
+      show-placeholder-option
+      @submit="onAddItem"
+    />
 
     <template v-if="!loading">
       <div v-for="cat in categories" :key="cat.id">
@@ -73,40 +41,16 @@
                 </div>
               </template>
             </k-list-item>
-            <FormCard v-if="editingItemId === item.id">
-              <TextField id="edit-item-name" label="Name" v-model="editForm.name" />
-              <div class="flex gap-2 items-end">
-                <ColorPicker v-model="editForm.color" />
-                <template v-if="editSelectedCat?.icon">
-                  <Icon v-if="editSelectedCat.icon.includes(':')" :icon="editSelectedCat.icon" class="w-6 h-6 self-center shrink-0" :style="{ color: editForm.color }" />
-                  <span v-else class="text-xl self-center shrink-0">{{ editSelectedCat.icon }}</span>
-                </template>
-                <div class="flex-1 min-w-[10ch]">
-                  <SelectField
-                    id="edit-item-category"
-                    label=""
-                    :modelValue="editForm.category_id"
-                    @update:modelValue="editForm.category_id = $event"
-                  >
-                    <option v-for="c in categories" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
-                  </SelectField>
-                </div>
-              </div>
-              <div class="flex gap-4 items-end">
-                <NumberField
-                  id="edit-item-difficulty"
-                  label="Difficulty"
-                  v-model="editForm.difficulty_multiplier"
-                  :min="0.1"
-                  :default="1.0"
-                  :step="0.1"
-                />
-                <div class="flex gap-2 ml-auto">
-                  <k-button small outline type="button" @click="editingItemId = null">Cancel</k-button>
-                  <k-button small type="button" @click="onSaveItem(item.id)" :disabled="!editForm.name">Save</k-button>
-                </div>
-              </div>
-            </FormCard>
+            <ItemForm
+              v-if="editingItemId === item.id"
+              id-prefix="edit-item"
+              :categories="categories"
+              :initial-values="{ name: item.name, color: item.color, category_id: String(item.category_id), difficulty_multiplier: item.difficulty_multiplier }"
+              submit-label="Save"
+              show-cancel
+              @submit="onSaveItem(item.id, $event)"
+              @cancel="editingItemId = null"
+            />
           </template>
           <k-list-item
             v-if="itemsForCategory(cat.id).length === 0"
@@ -120,22 +64,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { Icon } from '@iconify/vue';
 import { kList, kListItem, kButton } from 'konsta/vue';
 import { useItems } from '../composables/useItems.js';
 import type { Item } from '../composables/useWear.js';
 import { useCategories } from '../composables/useCategories.js';
 import { useToast } from '../composables/useToast.js';
-import { randomSwatchColor } from '../utils/colors.js';
-import TextField from './TextField.vue';
-import SelectField from './SelectField.vue';
-import ColorPicker from './ColorPicker.vue';
 import ColorCircle from './ColorCircle.vue';
-import FormCard from './FormCard.vue';
 import FormSectionHeader from './FormSectionHeader.vue';
 import SectionTitle from './SectionTitle.vue';
-import NumberField from './NumberField.vue';
+import ItemForm from './ItemForm.vue';
 
 const { loadItems, createItem, updateItem, deleteItem, itemsForCategory } = useItems();
 const { categories } = useCategories();
@@ -145,16 +84,6 @@ const loading = ref(true);
 const showItemForm = ref(false);
 const editingItemId = ref<number | null>(null);
 
-const itemForm = reactive({ name: '', color: randomSwatchColor(), category_id: '', difficulty_multiplier: 1.0 });
-const editForm = reactive({ name: '', color: '', category_id: '', difficulty_multiplier: 1.0 });
-
-const selectedCat = computed(() =>
-  categories.value.find((c) => String(c.id) === itemForm.category_id) ?? null
-);
-const editSelectedCat = computed(() =>
-  categories.value.find((c) => String(c.id) === editForm.category_id) ?? null
-);
-
 onMounted(async () => {
   try {
     await loadItems();
@@ -163,60 +92,23 @@ onMounted(async () => {
   }
 });
 
-// categories is populated by CategoriesSection via the shared useCategories ref;
-// this component intentionally does not call loadCategories() itself.
-// Keep default category selection in sync when categories change.
-// deep: true is needed because createCategory pushes to the array rather than replacing it.
-watch(categories, (cats) => {
-  const validIds = cats.map((c) => String(c.id));
-  if (itemForm.category_id && !validIds.includes(itemForm.category_id)) {
-    // Selected category was deleted — reset to last available or empty.
-    itemForm.category_id = cats.length > 0 ? String(cats[cats.length - 1].id) : '';
-  } else if (!itemForm.category_id && cats.length > 0) {
-    itemForm.category_id = String(cats[cats.length - 1].id);
-  }
-}, { immediate: true, deep: true });
-
 function onToggleEdit(item: Item) {
-  if (editingItemId.value === item.id) {
-    editingItemId.value = null;
-    return;
-  }
-  editForm.name = item.name;
-  editForm.color = item.color;
-  editForm.category_id = String(item.category_id);
-  editForm.difficulty_multiplier = item.difficulty_multiplier;
-  editingItemId.value = item.id;
-  showItemForm.value = false;
+  editingItemId.value = editingItemId.value === item.id ? null : item.id;
+  if (editingItemId.value !== null) showItemForm.value = false;
 }
 
-async function onAddItem() {
-  if (!itemForm.name || !itemForm.color || !itemForm.category_id) return;
+async function onAddItem(data: { name: string; color: string; category_id: number; difficulty_multiplier: number }) {
   try {
-    await createItem({
-      name: itemForm.name,
-      color: itemForm.color,
-      category_id: Number(itemForm.category_id),
-      difficulty_multiplier: itemForm.difficulty_multiplier,
-    });
-    itemForm.name = '';
-    itemForm.color = randomSwatchColor();
-    itemForm.difficulty_multiplier = 1.0;
+    await createItem(data);
     showItemForm.value = false;
   } catch (e) {
     showError(String(e));
   }
 }
 
-async function onSaveItem(id: number) {
-  if (!editForm.name) return;
+async function onSaveItem(id: number, data: { name: string; color: string; category_id: number; difficulty_multiplier: number }) {
   try {
-    await updateItem(id, {
-      name: editForm.name,
-      color: editForm.color,
-      category_id: Number(editForm.category_id),
-      difficulty_multiplier: editForm.difficulty_multiplier,
-    });
+    await updateItem(id, data);
     editingItemId.value = null;
   } catch (e) {
     showError(String(e));
