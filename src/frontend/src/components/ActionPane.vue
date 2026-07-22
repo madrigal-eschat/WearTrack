@@ -90,51 +90,20 @@
           </template>
         </template>
         <template #after>
-          <div class="flex gap-2 items-center">
-            <!-- Active session: show elapsed + Stop -->
-            <template v-if="entry.session !== null">
-              <k-button
-                small
-                outline
-                @click="onStop(entry)"
-              >Stop</k-button>
-            </template>
-            <!-- No session: show item picker + Wear button (unless resting from the rotation daily cap) -->
-            <template v-else>
-              <div v-if="entry.category.type !== 'rotation' || effectiveRestRemainingSeconds(entry) === 0" class="flex gap-2 items-center">
-                <template v-if="isLocked(entry)">
-                  <span class="text-sm font-medium" data-testid="forced-item-label">{{ forcedItemName(entry) }}</span>
-                  <k-button small inline outline data-testid="wear-something-else" @click="chooseSomethingElse(entry)">Choose Something Else</k-button>
-                  <k-button
-                    small
-                    inline
-                    @click="restRemainingSeconds(entry, forcedItemId(entry)) > 0 ? showRestWarning(entry) : onWear(entry, forcedItemId(entry) ?? undefined)"
-                  >Wear</k-button>
-                </template>
-                <template v-else>
-                  <select
-                    v-if="itemsForCategory(entry.category.id).length > 0"
-                    v-model="selectedItem[entry.category.id]"
-                    class="text-sm border rounded px-1 py-0.5"
-                  >
-                    <option
-                      v-for="item in itemsForCategory(entry.category.id)"
-                      :key="item.id"
-                      :value="item.id"
-                      :disabled="entry.category.type === 'rotation' && !itemRotationAvailable(entry, item.id)"
-                    >{{ item.name }}</option>
-                  </select>
-                  <span v-else class="text-sm text-gray-400 italic">No items</span>
-                  <k-button
-                    small
-                    :disabled="!selectedItem[entry.category.id]"
-                    :class="{ 'opacity-60': restRemainingSeconds(entry) > 0 }"
-                    @click="restRemainingSeconds(entry) > 0 ? showRestWarning(entry) : onWear(entry)"
-                  >Wear</k-button>
-                </template>
-              </div>
-            </template>
-          </div>
+          <CurrentSessionActions
+            :entry="entry"
+            :items="itemsForCategory(entry.category.id)"
+            :selected-item-id="selectedItem[entry.category.id] ?? null"
+            @update:selected-item-id="selectedItem[entry.category.id] = $event"
+            :locked="isLocked(entry)"
+            :forced-item-name="forcedItemName(entry)"
+            :rest-remaining="effectiveRestRemainingSeconds(entry)"
+            :item-rest-remaining="restRemainingSeconds(entry)"
+            :item-rotation-available="(id: number) => itemRotationAvailable(entry, id)"
+            @stop="onStop(entry)"
+            @choose-something-else="chooseSomethingElse(entry)"
+            @wear="onWearClick(entry)"
+          />
         </template>
       </k-list-item>
     </k-list>
@@ -163,8 +132,9 @@
 <script setup lang="ts">
 import { reactive, onMounted } from 'vue';
 import { Icon } from '@iconify/vue';
-import { kBlockTitle, kList, kListItem, kButton, kDialog, kDialogButton } from 'konsta/vue';
+import { kBlockTitle, kList, kListItem, kDialog, kDialogButton } from 'konsta/vue';
 import WearProgressBar from './WearProgressBar.vue';
+import CurrentSessionActions from './CurrentSessionActions.vue';
 import { useWear, type CurrentEntry, type Session, type ItemWithLastSession } from '../composables/useWear.js';
 import { useItems } from '../composables/useItems.js';
 import { useNow } from '../composables/useNow.js';
@@ -259,6 +229,16 @@ function dialogItemIdOverride(entry: CurrentEntry): number | undefined {
 async function onWearConfirmed() {
   restWarning.visible = false;
   if (restWarning.entry) await onWear(restWarning.entry, dialogItemIdOverride(restWarning.entry));
+}
+
+function onWearClick(entry: CurrentEntry) {
+  if (isLocked(entry)) {
+    if (restRemainingSeconds(entry, forcedItemId(entry)) > 0) showRestWarning(entry);
+    else onWear(entry, forcedItemId(entry) ?? undefined);
+    return;
+  }
+  if (restRemainingSeconds(entry) > 0) showRestWarning(entry);
+  else onWear(entry);
 }
 
 onMounted(async () => {
