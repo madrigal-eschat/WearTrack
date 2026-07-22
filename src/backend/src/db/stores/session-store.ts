@@ -6,6 +6,7 @@ import {
   riskLevelFor,
   type Category,
   type PreviousSession,
+  type RiskLevel,
 } from '../calculations.js';
 import { statsStore } from './stats-store.js';
 import { injuryStore } from './injury-store.js';
@@ -189,12 +190,13 @@ class SessionStore {
   start(itemId: number, category: Category, item: { difficulty_multiplier: number }, startedAt: number): Session {
     let target: number;
     let max: number | null;
+    let previous: PreviousSession | null = null;
 
     if (category.type === 'rotation') {
       target = category.initial_target_wear_duration_seconds;
       max = null;
     } else {
-      const previous = this.findLastEndedInCategory(category.id) ?? null;
+      previous = this.findLastEndedInCategory(category.id) ?? null;
       const injuryActive = injuryStore.hasActiveInCategory(category.id);
       ({ target, max } = computeSessionStart(category, item, previous, startedAt, injuryActive));
     }
@@ -202,7 +204,8 @@ class SessionStore {
     // A new session in this category synchronously resolves any rest/decay period the
     // previous session left owing — otherwise it would silently linger until the next
     // poller tick, and the poller itself now skips a category's previous-session block
-    // entirely while a session is open (see events/poller.ts).
+    // entirely while a session is open (see events/poller.ts). Rotation categories have
+    // no rest/decay concept, so `previous` stays null for them and this block is a no-op.
     if (previous) {
       const restEnd = previous.ended_at + previous.rest_seconds;
       if (startedAt < restEnd) {
@@ -261,13 +264,14 @@ class SessionStore {
   /** End a session: derive elapsed, compute rest, persist; target/max stay as set at start. */
   end(session: Session, category: Category, endedAt: number): Session {
     return db.transaction(() => {
+      const elapsed = endedAt - session.started_at;
       let rest: number | null;
+      let riskLevel: RiskLevel | null = null;
       if (category.type === 'rotation') {
         rest = null;
       } else {
-        const elapsed = endedAt - session.started_at;
         const injuryActive = injuryStore.hasActiveInCategory(category.id);
-        const riskLevel = riskLevelFor(elapsed, category);
+        riskLevel = riskLevelFor(elapsed, category);
         rest = computeRest(elapsed, session.max_wear_seconds, category, riskLevel, injuryActive);
       }
 
@@ -288,7 +292,7 @@ class SessionStore {
         target_wear_seconds: session.target_wear_seconds,
         max_wear_seconds: session.max_wear_seconds,
         actual_duration_seconds: elapsed,
-        rest_seconds: rest,
+        rest_seconds: rest ?? 0,
         risk_level: riskLevel?.text ?? null,
       });
 
