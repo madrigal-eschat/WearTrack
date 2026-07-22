@@ -161,6 +161,52 @@ describe('PATCH /api/items/:id', () => {
     });
     expect(res.status).toBe(400);
   });
+
+  it('returns 400 when category_id type is invalid', async () => {
+    const created = await (await createItemLocal({ name: 'Cat Type Fail' })).json();
+    const res = await app.request(`${BASE}/${created.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category_id: 'not_a_number' }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when color type is invalid', async () => {
+    const created = await (await createItemLocal({ name: 'Color Type Fail' })).json();
+    const res = await app.request(`${BASE}/${created.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ color: 123 }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when difficulty_multiplier type is invalid', async () => {
+    const created = await (await createItemLocal({ name: 'Difficulty Type Fail' })).json();
+    const res = await app.request(`${BASE}/${created.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ difficulty_multiplier: 'not_a_number' }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns unchanged item when body is empty', async () => {
+    const created = await (await createItemLocal({ name: 'Empty Patch' })).json();
+    const res = await app.request(`${BASE}/${created.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.id).toBe(created.id);
+    expect(body.name).toBe('Empty Patch');
+    expect(body.category_id).toBe(created.category_id);
+    expect(body.color).toBe(created.color);
+    expect(body.difficulty_multiplier).toBe(created.difficulty_multiplier);
+  });
 });
 
 describe('DELETE /api/items/:id', () => {
