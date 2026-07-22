@@ -1,3 +1,36 @@
+# [1.4.0](https://github.com/madrigal-eschat/WearTrack/compare/v1.3.0...v1.4.0) (2026-07-22)
+
+
+### Bug Fixes
+
+* **action-pane:** confirm rest dialog against the actual chosen item ([37e2bd5](https://github.com/madrigal-eschat/WearTrack/commit/37e2bd5c9c290f27795c4e4477265a472a528b10))
+* **action-pane:** pre-select first available item and fix button clipping ([d745530](https://github.com/madrigal-eschat/WearTrack/commit/d745530c51eec968e35be01da2de99e055bccc6b))
+* **db:** correct rotationAvailability to track current-cycle usage via forward simulation ([1210668](https://github.com/madrigal-eschat/WearTrack/commit/12106688e9788e6d0acac03d84fd6e4c4d731ab2))
+* **db:** resolve rebase fallout in session-store start()/end() scoping ([52d9a81](https://github.com/madrigal-eschat/WearTrack/commit/52d9a81b214a9494d134b467462ed3d67c041d0e))
+* **sessions:** allow consecutive-wear-days re-wear past rotation lock ([e4b62c6](https://github.com/madrigal-eschat/WearTrack/commit/e4b62c6d5d4f939a21aba861e541ad5c5e16baea))
+* **sessions:** stop computing decay for rotation categories ([877d09e](https://github.com/madrigal-eschat/WearTrack/commit/877d09ee75af4e0aa97aa9091115f260af8a6ebd))
+
+
+### Features
+
+* **api:** accept type + consecutive_wear_days on category create/update ([7950f2d](https://github.com/madrigal-eschat/WearTrack/commit/7950f2d41f9d1b1c3466a17ed7137299a363747e))
+* **api:** expose resting_until on GET /api/sessions/current for rotation categories ([aed8f3b](https://github.com/madrigal-eschat/WearTrack/commit/aed8f3b17acd0c6a36f0c35d4c93bd040b9c4b61))
+* **api:** expose rotation_available on GET /api/sessions/current ([dac3f0a](https://github.com/madrigal-eschat/WearTrack/commit/dac3f0a9e02cf9bf2ca83f320a049d86364375ee))
+* **api:** reject a second same-day session for rotation categories ([37c4ade](https://github.com/madrigal-eschat/WearTrack/commit/37c4ade8e4b846b078cc787563ec8f449798bb52))
+* **api:** reject injuries for rotation categories ([82435ec](https://github.com/madrigal-eschat/WearTrack/commit/82435ec5307def71fc837f354af8174945615549))
+* **api:** reject session start for unavailable rotation-category items ([35191bb](https://github.com/madrigal-eschat/WearTrack/commit/35191bbabbfd990a224c5f1b17eec3dcd20b66f2))
+* **db:** add findSessionStartedTodayInCategory for the rotation daily cap ([563634d](https://github.com/madrigal-eschat/WearTrack/commit/563634d40a697f6b443610b31aa40ba390bfb4f4))
+* **db:** add local-midnight date boundary helpers ([c91faee](https://github.com/madrigal-eschat/WearTrack/commit/c91faee11b784a873dfffc646d35f21df84aff06))
+* **db:** add rotation category type and consecutive_wear_days columns ([d7389cd](https://github.com/madrigal-eschat/WearTrack/commit/d7389cda0474ece7a598de64ea7dbd0abe3f4028))
+* **db:** add rotationAvailability derived-rotation algorithm ([49fc831](https://github.com/madrigal-eschat/WearTrack/commit/49fc8310be196890e34b84196d69f110c9694ae9))
+* **db:** add type + consecutive_wear_days to category store ([ab0fdbf](https://github.com/madrigal-eschat/WearTrack/commit/ab0fdbf76aa13af5d4d1bfa205205f9434ea7160))
+* **db:** skip duration formula for rotation-category sessions ([b1a011f](https://github.com/madrigal-eschat/WearTrack/commit/b1a011f1e5570a61761210642a4dc85428996a2c))
+* **frontend:** add category type selector and rotation-only fields ([dd5cd31](https://github.com/madrigal-eschat/WearTrack/commit/dd5cd317d73d20aeaba954f83b5d45131c461d3a))
+* **frontend:** add rotation fields to Category and ItemWithLastSession types ([7dc4011](https://github.com/madrigal-eschat/WearTrack/commit/7dc40114cb501287e4c3adb727f7b9aa6760a595))
+* **frontend:** map rotation type + consecutive_wear_days in category form ([219f783](https://github.com/madrigal-eschat/WearTrack/commit/219f7833111c38660db28224626c2b771aad3752))
+* **frontend:** rotation category picker with consecutive-day lock UI ([a76a20f](https://github.com/madrigal-eschat/WearTrack/commit/a76a20f5ccc4ec3a4b1204dd4c36c5caabaf760e))
+* **frontend:** show rest-until-midnight for rotation categories with a same-day session ([946f731](https://github.com/madrigal-eschat/WearTrack/commit/946f731af7ccdbe81083da5cd08ea8a797b7407a))
+
 # [1.3.0](https://github.com/madrigal-eschat/WearTrack/compare/v1.2.0...v1.3.0) (2026-07-21)
 
 
