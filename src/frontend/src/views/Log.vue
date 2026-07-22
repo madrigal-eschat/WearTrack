@@ -74,7 +74,11 @@
     <Actions :opened="actionsOpen" @backdropclick="actionsOpen = false">
       <ActionsGroup>
         <ActionsButton @click="startEdit()">Edit</ActionsButton>
-        <ActionsButton @click="confirmDelete()" class="text-red-600">Delete</ActionsButton>
+        <DeleteButton title="Delete session?" message="This cannot be undone." @confirm="performDelete">
+          <template #trigger="{ open }">
+            <ActionsButton class="text-red-600" @click="actionsOpen = false; open()">Delete</ActionsButton>
+          </template>
+        </DeleteButton>
       </ActionsGroup>
       <ActionsGroup>
         <ActionsButton bold @click="actionsOpen = false">Cancel</ActionsButton>
@@ -106,16 +110,6 @@
         <k-dialog-button strong @click="saveEdit">Save</k-dialog-button>
       </template>
     </k-dialog>
-
-    <!-- Delete confirmation -->
-    <k-dialog :opened="deleteOpen" @backdropclick="deleteOpen = false">
-      <template #title>Delete session?</template>
-      <template #content>This cannot be undone.</template>
-      <template #buttons>
-        <k-dialog-button @click="deleteOpen = false">Cancel</k-dialog-button>
-        <k-dialog-button strong @click="performDelete">Delete</k-dialog-button>
-      </template>
-    </k-dialog>
   </k-page>
 </template>
 
@@ -125,6 +119,7 @@ import { kPage, kBlock, kList, kListItem, kDialog, kDialogButton, Actions, Actio
 import { Icon } from '@iconify/vue';
 import { EllipsisHorizontalIcon } from '@heroicons/vue/24/solid';
 import PageHeader from '../components/PageHeader.vue';
+import DeleteButton from '../components/DeleteButton.vue';
 import { useSessionLog, type SessionLogEntry } from '../composables/useSessionLog.js';
 import { useCategories } from '../composables/useCategories.js';
 import { useItems } from '../composables/useItems.js';
@@ -214,16 +209,8 @@ async function saveEdit(): Promise<void> {
   editOpen.value = false;
 }
 
-const deleteOpen = ref(false);
-
-function confirmDelete(): void {
-  actionsOpen.value = false;
-  deleteOpen.value = true;
-}
-
 async function performDelete(): Promise<void> {
   if (activeEntry.value) await deleteSession(activeEntry.value);
-  deleteOpen.value = false;
 }
 
 const sentinel = ref<HTMLElement | null>(null);

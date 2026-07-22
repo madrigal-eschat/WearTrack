@@ -37,7 +37,11 @@
               <template #after>
                 <div class="flex gap-1">
                   <k-button small outline type="button" @click="onToggleEdit(item)">Edit</k-button>
-                  <k-button small outline type="button" @click="onDeleteItem(item.id)">Delete</k-button>
+                  <DeleteButton title="Delete item?" message="This cannot be undone." @confirm="onConfirmDeleteItem(item.id)">
+                    <template #trigger="{ open }">
+                      <k-button small outline type="button" @click="open">Delete</k-button>
+                    </template>
+                  </DeleteButton>
                 </div>
               </template>
             </k-list-item>
@@ -75,6 +79,7 @@ import ColorCircle from './ColorCircle.vue';
 import FormSectionHeader from './FormSectionHeader.vue';
 import SectionTitle from './SectionTitle.vue';
 import ItemForm from './ItemForm.vue';
+import DeleteButton from './DeleteButton.vue';
 
 const { loadItems, createItem, updateItem, deleteItem, itemsForCategory } = useItems();
 const { categories } = useCategories();
@@ -115,8 +120,7 @@ async function onSaveItem(id: number, data: { name: string; color: string; categ
   }
 }
 
-async function onDeleteItem(id: number) {
-  if (!confirm('Delete this item?')) return;
+async function onConfirmDeleteItem(id: number) {
   try {
     await deleteItem(id);
   } catch (e) {

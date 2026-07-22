@@ -8,16 +8,18 @@ test.describe('Category management', () => {
   test.beforeEach(async ({ page }) => {
     createdName = null;
     await page.goto('/items');
-    page.on('dialog', (d) => d.accept());
   });
 
   test.afterEach(async ({ page }) => {
     if (!createdName) return;
     // Clean up any category this test created.
-    // The dialog handler from beforeEach is still active — don't re-register it.
     await page.goto('/items');
     const row = page.locator('li').filter({ hasText: createdName }).first();
-    await row.getByRole('button', { name: 'Delete' }).click().catch(() => {});
+    await row.getByRole('button', { name: 'Delete' }).first().click().catch(() => {});
+    // force: true — every row mounts its own (fixed, viewport-centered) confirm dialog,
+    // so an unrelated row's closed dialog can sit in the hit-test path even though only
+    // this row's dialog is visually open.
+    await row.getByTestId('delete-confirm').click({ force: true }).catch(() => {});
   });
 
   test('shows empty state when no categories exist', async ({ page }) => {
@@ -84,7 +86,8 @@ test.describe('Category management', () => {
 
     // Delete it
     const row = page.locator('li').filter({ hasText: name }).first();
-    await row.getByRole('button', { name: 'Delete' }).click();
+    await row.getByRole('button', { name: 'Delete' }).first().click();
+    await row.getByTestId('delete-confirm').click({ force: true });
 
     await expect(page.getByText(name).first()).not.toBeVisible();
   });
