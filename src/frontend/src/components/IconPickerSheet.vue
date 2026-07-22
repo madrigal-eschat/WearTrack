@@ -58,19 +58,7 @@
         <p v-if="searchResults.length === 0" class="text-center py-8 text-gray-400 text-sm">
           No icons found
         </p>
-        <div v-else class="grid gap-1" style="grid-template-columns: repeat(8, minmax(0, 1fr))">
-          <button
-            v-for="entry in searchResults"
-            :key="entry.id"
-            type="button"
-            class="flex items-center justify-center w-10 h-10 rounded-lg"
-            :class="entry.id === modelValue ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:bg-gray-100'"
-            :title="entry.id.slice(3)"
-            @click="select(entry.id)"
-          >
-            <Icon :icon="entry.id" class="text-2xl" />
-          </button>
-        </div>
+        <IconGrid v-else :entries="searchResults" :selected-id="modelValue" @select="select" />
       </template>
 
       <!-- Categorised mode: sections with headings -->
@@ -83,19 +71,7 @@
           >
             <SectionTitle variant="group">{{ cat }}</SectionTitle>
           </h3>
-          <div class="grid gap-1" style="grid-template-columns: repeat(8, minmax(0, 1fr))">
-            <button
-              v-for="entry in (categoriesData as PhCategories)[cat]"
-              :key="entry.id"
-              type="button"
-              class="flex items-center justify-center w-10 h-10 rounded-lg"
-              :class="entry.id === modelValue ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:bg-gray-100'"
-              :title="entry.id.slice(3)"
-              @click="select(entry.id)"
-            >
-              <Icon :icon="entry.id" class="text-2xl" />
-            </button>
-          </div>
+          <IconGrid :entries="(categoriesData as PhCategories)[cat]" :selected-id="modelValue" @select="select" />
         </div>
       </template>
 
@@ -105,9 +81,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onUnmounted } from 'vue';
-import { Icon } from '@iconify/vue';
 import { kSheet, kToolbar } from 'konsta/vue';
 import SectionTitle from './SectionTitle.vue';
+import IconGrid from './IconGrid.vue';
 import type { PhCategories } from '../utils/phCategories.js';
 import { filterIcons } from '../utils/phCategories.js';
 import categoriesData from '../generated/ph-categories.json';
