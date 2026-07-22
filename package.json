@@ -1,6 +1,6 @@
 {
   "name": "weartrack",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "type": "module",
   "scripts": {
     "postinstall": "bash scripts/npm-postinstall.sh",
