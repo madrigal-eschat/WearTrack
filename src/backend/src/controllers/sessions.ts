@@ -1,53 +1,11 @@
 import { Hono } from 'hono';
-import { sessionStore, type ItemWithLastSession } from '../db/stores/session-store.js';
+import { sessionStore } from '../db/stores/session-store.js';
 import { itemStore } from '../db/stores/item-store.js';
 import { categoryStore } from '../db/stores/category-store.js';
-import { injuryStore } from '../db/stores/injury-store.js';
-import { statsStore } from '../db/stores/stats-store.js';
-import {
-  computeSessionStart,
-  computeDecay,
-  rotationAvailability,
-  startOfTodayLocal,
-  startOfNextLocalMidnight,
-  type PreviousSession,
-  type Category,
-} from '../db/calculations.js';
 import { NotFoundError, ValidationError } from '../middleware/errors.js';
 import { nowSeconds } from '../utils/time.js';
 import { StartSessionCommand } from '../commands/sessions.js';
-
-/** A last-session item row enriched with the expected target/max for the next session. */
-interface ItemWithExpected extends ItemWithLastSession {
-  expected_target: number;
-  expected_max: number | null;
-  rotation_available: boolean;
-}
-
-function enrichItemsWithExpected(
-  items: ItemWithLastSession[],
-  category: Category,
-  previous: PreviousSession | null,
-  now: number,
-  injuryActive: boolean,
-  rotationAvailableIds: Set<number>,
-): ItemWithExpected[] {
-  return items.map((it) => {
-    const { target, max } = computeSessionStart(
-      category,
-      { difficulty_multiplier: it.difficulty_multiplier },
-      previous,
-      now,
-      injuryActive,
-    );
-    return {
-      ...it,
-      expected_target: target,
-      expected_max: max,
-      rotation_available: rotationAvailableIds.has(it.item_id),
-    };
-  });
-}
+import { CurrentSessionsQuery } from '../queries/sessions.js';
 
 export const router = new Hono();
 
@@ -69,58 +27,7 @@ router.get('/', (c) => {
 
 // GET /api/sessions/current — one entry per category with active session or nulls
 router.get('/current', (c) => {
-  const categories = categoryStore.findAll();
-  const openSessions = sessionStore.findOpenWithItemData();
-  const allItems = sessionStore.findAllLastSessions();
-  const now = nowSeconds();
-
-  const sessionByCategory = new Map(openSessions.map((s) => [s.category_id, s]));
-  const itemsByCategory = new Map<number, ItemWithLastSession[]>();
-  for (const item of allItems) {
-    if (!itemsByCategory.has(item.category_id)) itemsByCategory.set(item.category_id, []);
-    itemsByCategory.get(item.category_id)!.push(item);
-  }
-
-  return c.json(
-    categories.map((cat) => {
-      const previous = sessionStore.findLastEndedInCategory(cat.id) ?? null;
-      const injuryActive = injuryStore.hasActiveInCategory(cat.id);
-      const { decay_start_time, decay_state, decay_full_time } =
-        cat.type === 'duration'
-          ? computeDecay(previous, cat, now)
-          : { decay_start_time: null, decay_state: 'none' as const, decay_full_time: null };
-      const streak_count = statsStore.findForCategory(cat.id)?.streak_count ?? 0;
-
-      const rotationAvailableIds =
-        cat.type === 'rotation'
-          ? rotationAvailability(
-              itemStore.findAll(cat.id).map((i) => i.id),
-              sessionStore.findRecentInCategory(cat.id, 100),
-            )
-          : new Set((itemsByCategory.get(cat.id) ?? []).map((i) => i.item_id));
-
-      const restingUntil =
-        cat.type === 'rotation' && sessionStore.findSessionStartedTodayInCategory(cat.id, startOfTodayLocal(now))
-          ? startOfNextLocalMidnight(now)
-          : null;
-
-      const items = enrichItemsWithExpected(itemsByCategory.get(cat.id) ?? [], cat, previous, now, injuryActive, rotationAvailableIds);
-
-      const s = sessionByCategory.get(cat.id);
-      if (!s) return { category: cat, item: null, session: null, items, decay_start_time, decay_state, decay_full_time, streak_count, resting_until: restingUntil };
-
-      const item = {
-        id: s.item_id, category_id: s.category_id, name: s.item_name,
-        color: s.item_color, difficulty_multiplier: s.item_difficulty_multiplier,
-      };
-      const session = {
-        id: s.id, item_id: s.item_id, started_at: s.started_at, ended_at: s.ended_at,
-        target_wear_seconds: s.target_wear_seconds, max_wear_seconds: s.max_wear_seconds,
-        rest_seconds: s.rest_seconds, ended_in_injury: s.ended_in_injury,
-      };
-      return { category: cat, item, session, items, decay_start_time, decay_state, decay_full_time, streak_count, resting_until: restingUntil };
-    }),
-  );
+  return c.json(new CurrentSessionsQuery().run());
 });
 
 // GET /api/sessions/dates?item_id=&category_id= — distinct days with completed sessions, for the Log jump index
