@@ -77,50 +77,13 @@
         Minimum rest only applies when a maximum is set.
       </p>
 
-      <!-- Risk bands -->
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Risk bands</label>
-        <p class="text-xs text-gray-400 mb-2">
-          Bands are triggered by cumulative wear time. Tap a threshold (▾) to change where one band ends and the next begins.
-        </p>
-        <div class="space-y-1">
-          <template v-for="(bandName, i) in bandNames" :key="i">
-            <!-- Band row -->
-            <div
-              class="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium"
-              :class="bandColors[i]"
-            >
-              <span>{{ bandName }}</span>
-              <!-- +/- controls sit on the last band row -->
-              <div v-if="i === catForm.bandCount - 1" class="flex gap-1">
-                <button
-                  type="button"
-                  class="w-7 h-7 rounded-full border border-gray-400 flex items-center justify-center text-gray-600 disabled:opacity-30"
-                  :disabled="catForm.bandCount <= 1"
-                  @click="removeBand"
-                >−</button>
-                <button
-                  type="button"
-                  data-testid="add-band"
-                  class="w-7 h-7 rounded-full border border-gray-400 flex items-center justify-center text-gray-600 disabled:opacity-30"
-                  :disabled="catForm.bandCount >= 5"
-                  @click="addBand"
-                >+</button>
-              </div>
-            </div>
-            <!-- Crossover point (between bands) -->
-            <button
-              v-if="i < catForm.bandCount - 1"
-              type="button"
-              class="flex items-center gap-1 px-3 text-sm text-gray-500"
-              @click="openDurationPicker(i)"
-            >
-              <span>{{ shortDuration(catForm.crossoverPoints[i]) }}</span>
-              <span>▾</span>
-            </button>
-          </template>
-        </div>
-      </div>
+      <RiskBands
+        :band-count="catForm.bandCount"
+        :crossover-points="catForm.crossoverPoints"
+        @add-band="addBand"
+        @remove-band="removeBand"
+        @edit-crossover="openDurationPicker"
+      />
     </template>
 
     <!-- Save / Cancel -->
@@ -157,8 +120,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue';
-import { bandNamesForCount, bandColorsForCount } from '../utils/riskLevels.js';
+import { ref, reactive } from 'vue';
 import { shortDuration } from '../utils/formatDuration.js';
 import FormCard from './FormCard.vue';
 import TextField from './TextField.vue';
@@ -169,6 +131,7 @@ import NumberField from './NumberField.vue';
 import DurationTrigger from './DurationTrigger.vue';
 import { multiplierToHalfLifeDays } from '../utils/categoryForm.js';
 import SegmentedControl from './SegmentedControl.vue';
+import RiskBands from './RiskBands.vue';
 
 export interface CategoryFormState {
   name: string;
@@ -224,9 +187,6 @@ const showIconPicker = ref(false);
 const showDurationPicker = ref(false);
 const durationPickerTarget = ref<'target' | 'max' | 'minRest' | 'grace' | number>('target');
 const durationPickerValue = ref(0);
-
-const bandNames = computed(() => bandNamesForCount(catForm.bandCount));
-const bandColors = computed(() => bandColorsForCount(catForm.bandCount));
 
 function openDurationPicker(target: 'target' | 'max' | 'minRest' | 'grace' | number) {
   durationPickerTarget.value = target;
