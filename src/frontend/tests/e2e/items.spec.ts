@@ -6,7 +6,6 @@ test.describe('Item management', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/items');
-    page.on('dialog', (d) => d.accept());
 
     // Ensure a category exists for item tests
     categoryName = `Cat-${uid()}`;
@@ -22,7 +21,11 @@ test.describe('Item management', () => {
   test.afterEach(async ({ page }) => {
     // Clean up the category (cascades to items)
     const row = page.locator('li').filter({ hasText: categoryName }).first();
-    await row.getByRole('button', { name: 'Delete' }).click().catch(() => {});
+    await row.getByRole('button', { name: 'Delete' }).first().click().catch(() => {});
+    // force: true — every row mounts its own (fixed, viewport-centered) confirm dialog,
+    // so an unrelated row's closed dialog can sit in the hit-test path even though only
+    // this row's dialog is visually open.
+    await row.getByTestId('delete-confirm').click({ force: true }).catch(() => {});
   });
 
   test('shows Items section', async ({ page }) => {
@@ -55,7 +58,8 @@ test.describe('Item management', () => {
     await expect(page.getByText(name).first()).toBeVisible();
 
     const row = page.locator('li').filter({ hasText: name }).first();
-    await row.getByRole('button', { name: 'Delete' }).click();
+    await row.getByRole('button', { name: 'Delete' }).first().click();
+    await row.getByTestId('delete-confirm').click({ force: true });
 
     await expect(page.getByText(name)).not.toBeVisible();
   });
@@ -154,7 +158,6 @@ test.describe('Item editing', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/items');
-    page.on('dialog', (d) => d.accept());
 
     // Create a fresh category via the UI form
     categoryName = `EditItemCat-${uid()}`;
@@ -177,7 +180,11 @@ test.describe('Item editing', () => {
   test.afterEach(async ({ page }) => {
     // Delete the category (cascades to items)
     const row = page.locator('li').filter({ hasText: categoryName }).first();
-    await row.getByRole('button', { name: 'Delete' }).click().catch(() => {});
+    await row.getByRole('button', { name: 'Delete' }).first().click().catch(() => {});
+    // force: true — every row mounts its own (fixed, viewport-centered) confirm dialog,
+    // so an unrelated row's closed dialog can sit in the hit-test path even though only
+    // this row's dialog is visually open.
+    await row.getByTestId('delete-confirm').click({ force: true }).catch(() => {});
   });
 
   test('Edit button opens an inline edit form below the item row', async ({ page }) => {
@@ -243,7 +250,9 @@ test.describe('Item editing', () => {
     await row.getByRole('button', { name: 'Edit' }).click();
 
     await page.locator('#edit-item-name').fill('should-not-save');
-    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+    // Scope to the plain form Cancel button — DeleteButton's own hidden confirm-dialog
+    // Cancel buttons (data-testid="delete-cancel") also match by accessible name.
+    await page.getByRole('button', { name: 'Cancel', exact: true }).and(page.locator(':not([data-testid])')).click();
 
     // Form closes; original name still in list
     await expect(page.getByRole('button', { name: 'Save', exact: true })).not.toBeVisible();
