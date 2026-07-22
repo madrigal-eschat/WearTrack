@@ -56,11 +56,11 @@
           </template>
           <template v-else>
             <!-- Row2: resting > decaying > default -->
-            <template v-if="restRemainingSeconds(entry) > 0">
+            <template v-if="effectiveRestRemainingSeconds(entry) > 0">
               <div class="flex items-center gap-1.5 text-xs text-gray-500 mb-1">
                 <Icon icon="ph:bed" class="w-3.5 h-3.5" />Rest
               </div>
-              <WearProgressBar mode="rest" :fill-fraction="restFillFraction(entry)" />
+              <WearProgressBar mode="rest" :fill-fraction="effectiveRestFillFraction(entry)" />
             </template>
             <template v-else-if="entry.decay_state !== 'none'">
               <div class="flex items-center gap-1.5 text-xs text-gray-500 mb-1">
@@ -79,9 +79,9 @@
             </template>
 
             <!-- Row3: rest stats replace Target/Max while resting -->
-            <div v-if="restRemainingSeconds(entry) > 0" class="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-sm tabular-nums">
-              <span class="text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Remaining</span>{{ shortDuration(restRemainingSeconds(entry)) }}</span>
-              <span class="text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Total</span>{{ shortDuration(restTotalSeconds(entry)) }}</span>
+            <div v-if="effectiveRestRemainingSeconds(entry) > 0" class="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-sm tabular-nums">
+              <span class="text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Remaining</span>{{ shortDuration(effectiveRestRemainingSeconds(entry)) }}</span>
+              <span class="text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Total</span>{{ shortDuration(effectiveRestTotalSeconds(entry)) }}</span>
             </div>
             <div v-else-if="selectedItemData(entry)" class="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-sm tabular-nums">
               <span class="text-gray-600"><span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Target</span>{{ idleTarget(entry) }}</span>
@@ -99,9 +99,9 @@
                 @click="onStop(entry)"
               >Stop</k-button>
             </template>
-            <!-- No session: show item picker + Wear button -->
+            <!-- No session: show item picker + Wear button (unless resting from the rotation daily cap) -->
             <template v-else>
-              <div class="flex gap-2 items-center">
+              <div v-if="entry.category.type !== 'rotation' || effectiveRestRemainingSeconds(entry) === 0" class="flex gap-2 items-center">
                 <template v-if="isLocked(entry)">
                   <span class="text-sm font-medium" data-testid="forced-item-label">{{ forcedItemName(entry) }}</span>
                   <k-button small inline outline data-testid="wear-something-else" @click="chooseSomethingElse(entry)">Choose Something Else</k-button>
@@ -386,8 +386,30 @@ function restTotalSeconds(entry: CurrentEntry): number {
   return item?.rest_seconds ?? 0;
 }
 
-function restFillFraction(entry: CurrentEntry): number {
-  return fillUpFraction(restRemainingSeconds(entry), restTotalSeconds(entry));
+function dailyRestRemainingSeconds(entry: CurrentEntry): number {
+  if (entry.resting_until === null) return 0;
+  return Math.max(0, entry.resting_until - Math.floor(now.value / 1000));
+}
+
+function dailyRestTotalSeconds(entry: CurrentEntry): number {
+  if (entry.resting_until === null) return 0;
+  const sessionStart = entry.items[0]?.started_at;
+  if (sessionStart === null || sessionStart === undefined) return 0;
+  return Math.max(0, entry.resting_until - sessionStart);
+}
+
+/** Rest-remaining for whichever rest mechanic applies to this category: the duration formula's rest period, or the rotation daily cap. */
+function effectiveRestRemainingSeconds(entry: CurrentEntry): number {
+  return entry.category.type === 'rotation' ? dailyRestRemainingSeconds(entry) : restRemainingSeconds(entry);
+}
+
+/** Rest-total counterpart to `effectiveRestRemainingSeconds`. */
+function effectiveRestTotalSeconds(entry: CurrentEntry): number {
+  return entry.category.type === 'rotation' ? dailyRestTotalSeconds(entry) : restTotalSeconds(entry);
+}
+
+function effectiveRestFillFraction(entry: CurrentEntry): number {
+  return fillUpFraction(effectiveRestRemainingSeconds(entry), effectiveRestTotalSeconds(entry));
 }
 
 function decayFillFractionFor(entry: CurrentEntry): number {

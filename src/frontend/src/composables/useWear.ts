@@ -61,6 +61,7 @@ export interface CurrentEntry {
   decay_state: 'none' | 'decaying' | 'fully_decayed';
   decay_full_time: number | null;
   streak_count: number;
+  resting_until: number | null;
 }
 
 // Module-level state shared across all component instances
