@@ -21,7 +21,7 @@ function validateMaxDuration(value: unknown): number | null {
   if (value !== null && typeof value !== 'number') {
     throw new ValidationError('initial_max_wear_duration_seconds must be a number or null');
   }
-  return value === undefined ? null : value;
+  return value;
 }
 
 function validateRestMultiplier(value: unknown): number {
