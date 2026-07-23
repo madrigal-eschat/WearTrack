@@ -5,7 +5,8 @@ import { uid } from './helpers.js';
  * Injury recording and healing tests.
  *
  * These tests use the API directly for setup (category, item) and for recording
- * injuries and healing them, since there is currently no injury UI in ActionPane
+ * injuries and healing them, since there is currently no injury UI in
+ * ActionPane
  * or anywhere else in the frontend (confirmed by reading ActionPane.vue — no
  * injury button exists). The tests therefore exercise the API flows and verify
  * the state the UI would reflect (session ended, item blocked from re-wear).
@@ -38,7 +39,11 @@ test.describe('Injury recording and healing (API)', () => {
     categoryId = cat.id;
 
     const itemRes = await request.post('/api/items', {
-      data: { name: `InjuryItem-${uid()}`, color: '#e53e3e', category_id: categoryId },
+      data: {
+        name: `InjuryItem-${uid()}`,
+        color: '#e53e3e',
+        category_id: categoryId,
+      },
     });
     const item = await itemRes.json();
     itemId = item.id;
@@ -50,17 +55,21 @@ test.describe('Injury recording and healing (API)', () => {
 
   test.beforeEach(async ({ request }) => {
     // Heal any active injuries so each test starts clean
-    const injuries = await request.get(`/api/injuries?item_id=${itemId}`).then((r) => r.json());
+    const injuries = await request
+      .get(`/api/injuries?item_id=${itemId}`)
+      .then((r) => r.json());
     for (const inj of injuries) {
       if (inj.healed_at === null) {
         await request.post(`/api/injuries/${inj.id}/heal`);
       }
     }
     // End any open sessions
-    const sessions: Array<{ id: number; ended_at: number | null }> = await request
+    type Session = { id: number; ended_at: number | null };
+    type SessionEntry = { session: Session | null };
+    const sessions: Array<Session> = await request
       .get('/api/sessions/current')
       .then((r) => r.json())
-      .then((entries: Array<{ session: { id: number; ended_at: number | null } | null }>) =>
+      .then((entries: Array<SessionEntry>) =>
         entries.flatMap((e) => (e.session ? [e.session] : [])),
       );
     for (const s of sessions) {
@@ -70,9 +79,9 @@ test.describe('Injury recording and healing (API)', () => {
     }
   });
 
-  test('recording an injury via API ends any open session and blocks re-wear', async ({
-    request,
-  }) => {
+  test(
+    'recording an injury via API ends any open session and blocks re-wear',
+    async ({ request }) => {
     // Start a session
     const startRes = await request.post('/api/sessions/start', {
       data: { item_id: itemId },
@@ -90,7 +99,9 @@ test.describe('Injury recording and healing (API)', () => {
     expect(injury.healed_at).toBeNull();
 
     // The session should now be ended (ended_in_injury = 1)
-    const sessRes = await request.get(`/api/sessions/${session.id}`).catch(() => null);
+    const sessRes = await request
+      .get(`/api/sessions/${session.id}`)
+      .catch(() => null);
     if (sessRes && sessRes.ok()) {
       const updatedSession = await sessRes.json();
       expect(updatedSession.ended_at).not.toBeNull();
@@ -100,15 +111,22 @@ test.describe('Injury recording and healing (API)', () => {
     await request.post('/api/sessions/start', {
       data: { item_id: itemId },
     });
-    // The server rejects a second injury, but a new session can still be started
-    // (injury blocks the item only at the UI level via expected_target of 0 or similar —
-    // the API itself does not block new sessions for injured items in the current codebase).
-    // Record this as an observation so future tests can be updated when UI support lands.
-    // For now just verify the injury exists and is unhealed.
-    const injuries = await request.get(`/api/injuries?item_id=${itemId}`).then((r) => r.json());
-    const active = injuries.filter((i: { healed_at: null | number }) => i.healed_at === null);
+    // The server rejects a second injury, but a new session can
+    // still be started (injury blocks the item only at the UI level
+    // via expected_target of 0 or similar — the API itself does not
+    // block new sessions for injured items in the current codebase).
+    // Record this as an observation so future tests can be updated
+    // when UI support lands. For now just verify the injury exists
+    // and is unhealed.
+    const injuries = await request
+      .get(`/api/injuries?item_id=${itemId}`)
+      .then((r) => r.json());
+    const active = injuries.filter(
+      (i: { healed_at: null | number }) => i.healed_at === null,
+    );
     expect(active).toHaveLength(1);
-  });
+    },
+  );
 
   test('healing an injury via API marks it healed', async ({ request }) => {
     // Record an injury (no open session needed)
@@ -126,7 +144,9 @@ test.describe('Injury recording and healing (API)', () => {
     expect(healed.healed_at).not.toBeNull();
   });
 
-  test('can start a new session after an injury is healed', async ({ request }) => {
+  test(
+    'can start a new session after an injury is healed',
+    async ({ request }) => {
     // Record and immediately heal an injury
     const injuryRes = await request.post('/api/injuries', {
       data: { item_id: itemId, wear_seconds: 30 },
@@ -144,9 +164,12 @@ test.describe('Injury recording and healing (API)', () => {
 
     // Clean up
     await request.post(`/api/sessions/${session.id}/end`, { data: {} });
-  });
+    },
+  );
 
-  test('recording a second injury while one is active returns an error', async ({ request }) => {
+  test(
+    'recording a second injury while one is active returns an error',
+    async ({ request }) => {
     // Record first injury
     const first = await request.post('/api/injuries', {
       data: { item_id: itemId, wear_seconds: 60 },
@@ -158,9 +181,12 @@ test.describe('Injury recording and healing (API)', () => {
       data: { item_id: itemId, wear_seconds: 90 },
     });
     expect(second.status()).toBe(400);
-  });
+    },
+  );
 
-  test('injury severity reflects risk level from wear duration', async ({ request }) => {
+  test(
+    'injury severity reflects risk level from wear duration',
+    async ({ request }) => {
     // low severity: wear_seconds < 3600 → severity 1
     const lowRes = await request.post('/api/injuries', {
       data: { item_id: itemId, wear_seconds: 1800 },
@@ -182,7 +208,8 @@ test.describe('Injury recording and healing (API)', () => {
 
     // Heal
     await request.post(`/api/injuries/${med.id}/heal`);
-  });
+    },
+  );
 });
 
 /**

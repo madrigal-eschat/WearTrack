@@ -36,7 +36,10 @@ const weekDays = computed<DayEntry[]>(() => {
     const dayEnd = dayStart + 86400;
 
     const daySessions = sessions.value.filter(
-      (s) => s.started_at >= dayStart && s.started_at < dayEnd && s.ended_at !== null,
+      (s) =>
+        s.started_at >= dayStart &&
+        s.started_at < dayEnd &&
+        s.ended_at !== null,
     );
 
     return {
@@ -44,7 +47,10 @@ const weekDays = computed<DayEntry[]>(() => {
       label,
       dayNum: date.getDate(),
       isToday: date.toDateString() === today.toDateString(),
-      totalWearSeconds: daySessions.reduce((sum, s) => sum + ((s.ended_at ?? s.started_at) - s.started_at), 0),
+      totalWearSeconds: daySessions.reduce(
+        (sum, s) => sum + ((s.ended_at ?? s.started_at) - s.started_at),
+        0,
+      ),
       sessionCount: daySessions.length,
       sessions: daySessions,
     };

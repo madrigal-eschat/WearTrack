@@ -5,7 +5,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
-const props = defineProps<{ variant: 'page' | 'section' | 'sheet' | 'group' }>();
+const props = defineProps<{
+  variant: 'page' | 'section' | 'sheet' | 'group';
+}>();
 
 const classes = computed(() => ({
   page: 'text-title-page font-semibold',

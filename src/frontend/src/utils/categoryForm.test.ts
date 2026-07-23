@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { categoryToFormState, formStateToApiPayload, multiplierToHalfLifeDays, halfLifeDaysToMultiplier } from './categoryForm.js';
+import {
+  categoryToFormState,
+  formStateToApiPayload,
+  multiplierToHalfLifeDays,
+  halfLifeDaysToMultiplier,
+} from './categoryForm.js';
 import type { CategoryApiShape } from './categoryForm.js';
 
 const BASE_CATEGORY: CategoryApiShape = {
@@ -44,7 +49,10 @@ describe('categoryToFormState', () => {
   });
 
   it('preserves a null maximum', () => {
-    const s = categoryToFormState({ ...BASE_CATEGORY, initial_max_wear_duration_seconds: null });
+    const s = categoryToFormState({
+      ...BASE_CATEGORY,
+      initial_max_wear_duration_seconds: null,
+    });
     expect(s.initialWearMaxSeconds).toBeNull();
   });
 
@@ -61,7 +69,8 @@ describe('formStateToApiPayload', () => {
       name: 'Test', icon: '🎯',
       initialWearTargetSeconds: 1800, initialWearMaxSeconds: null,
       restMultiplier: 1.5, minimumRestSeconds: 1200,
-      breakGraceSeconds: 3600, breakDecayHalfLifeDays: multiplierToHalfLifeDays(0.8),
+      breakGraceSeconds: 3600,
+      breakDecayHalfLifeDays: multiplierToHalfLifeDays(0.8),
       bandCount: 2, crossoverPoints: [3600],
       type: 'duration', consecutiveWearDays: 1,
     });
@@ -106,7 +115,9 @@ describe('rotation category mapping', () => {
     const payload = formStateToApiPayload({
       name: 'Socks', icon: 'sock',
       initialWearTargetSeconds: 57600, initialWearMaxSeconds: null,
-      minimumRestSeconds: 0, breakGraceSeconds: 86400, breakDecayMultiplier: 0.91,
+      minimumRestSeconds: 0,
+      breakGraceSeconds: 86400,
+      breakDecayMultiplier: 0.91,
       restMultiplier: 2, bandCount: 1, crossoverPoints: [],
       type: 'rotation', consecutiveWearDays: 2,
     });

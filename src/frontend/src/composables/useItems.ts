@@ -15,14 +15,22 @@ export interface HistoryEntry {
   session_count: number;
 }
 
-export type ItemCreate = { name: string; category_id: number; color: string; difficulty_multiplier?: number };
+export type ItemCreate = {
+  name: string;
+  category_id: number;
+  color: string;
+  difficulty_multiplier?: number;
+};
 export type ItemUpdate = Partial<ItemCreate>;
 
 // Module-level state shared across all component instances
 const items = ref<Item[]>([]);
 
 async function loadItems(categoryId?: number): Promise<void> {
-  const url = categoryId !== undefined ? `/api/items?category_id=${categoryId}` : '/api/items';
+  const url =
+    categoryId !== undefined
+      ? `/api/items?category_id=${categoryId}`
+      : '/api/items';
   const res = await apiFetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   items.value = await res.json();
@@ -34,7 +42,10 @@ async function loadItemStats(id: number): Promise<ItemStats> {
   return res.json();
 }
 
-async function loadHistory(id: number, unit: 'month' | 'week' = 'month'): Promise<HistoryEntry[]> {
+async function loadHistory(
+  id: number,
+  unit: 'month' | 'week' = 'month',
+): Promise<HistoryEntry[]> {
   const res = await apiFetch(`/api/items/${id}/stats/history?unit=${unit}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();

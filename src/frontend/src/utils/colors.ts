@@ -5,7 +5,8 @@ export const SWATCHES: readonly string[] = Array.from({ length: 12 }, (_, i) =>
 );
 
 export function randomSwatchColor(): string {
-  return SWATCHES[Math.floor(Math.random() * SWATCHES.length)]; // nosemgrep: gitlab.eslint.detect-object-injection
+  const index = Math.floor(Math.random() * SWATCHES.length);
+  return SWATCHES[index]; // nosemgrep: gitlab.eslint.detect-object-injection
 }
 
 export function buildOklch(chroma: number, hue: number): string {

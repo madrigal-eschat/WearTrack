@@ -21,15 +21,24 @@ test.describe('Item management', () => {
   test.afterEach(async ({ page }) => {
     // Clean up the category (cascades to items)
     const row = page.locator('li').filter({ hasText: categoryName }).first();
-    await row.getByRole('button', { name: 'Delete' }).first().click().catch(() => {});
-    // force: true — every row mounts its own (fixed, viewport-centered) confirm dialog,
-    // so an unrelated row's closed dialog can sit in the hit-test path even though only
-    // this row's dialog is visually open.
-    await row.getByTestId('delete-confirm').click({ force: true }).catch(() => {});
+    await row
+      .getByRole('button', { name: 'Delete' })
+      .first()
+      .click()
+      .catch(() => {});
+    // force: true — every row mounts its own (fixed, viewport-centered) confirm
+    // dialog, so an unrelated row's closed dialog can sit in the hit-test path
+    // even though only this row's dialog is visually open.
+    await row
+      .getByTestId('delete-confirm')
+      .click({ force: true })
+      .catch(() => {});
   });
 
   test('shows Items section', async ({ page }) => {
-    await expect(page.getByText('Items', { exact: true }).first()).toBeVisible();
+    await expect(
+      page.getByText('Items', { exact: true }).first(),
+    ).toBeVisible();
   });
 
   test('can add an item', async ({ page }) => {
@@ -46,7 +55,9 @@ test.describe('Item management', () => {
 
   test('Add Item button is disabled when name is empty', async ({ page }) => {
     await page.getByRole('button', { name: '+ Add' }).nth(1).click();
-    await expect(page.getByRole('button', { name: 'Add', exact: true })).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: 'Add', exact: true }),
+    ).toBeDisabled();
   });
 
   test('can delete an item', async ({ page }) => {
@@ -122,7 +133,9 @@ test.describe('Item management', () => {
     expect(unique.size).toBeGreaterThan(1);
   });
 
-  test('can set color via advanced hue and chroma sliders', async ({ page }) => {
+  test('can set color via advanced hue and chroma sliders', async ({
+    page,
+  }) => {
     const name = `Item-${uid()}`;
 
     await page.getByRole('button', { name: '+ Add' }).nth(1).click();
@@ -180,20 +193,32 @@ test.describe('Item editing', () => {
   test.afterEach(async ({ page }) => {
     // Delete the category (cascades to items)
     const row = page.locator('li').filter({ hasText: categoryName }).first();
-    await row.getByRole('button', { name: 'Delete' }).first().click().catch(() => {});
-    // force: true — every row mounts its own (fixed, viewport-centered) confirm dialog,
-    // so an unrelated row's closed dialog can sit in the hit-test path even though only
-    // this row's dialog is visually open.
-    await row.getByTestId('delete-confirm').click({ force: true }).catch(() => {});
+    await row
+      .getByRole('button', { name: 'Delete' })
+      .first()
+      .click()
+      .catch(() => {});
+    // force: true — every row mounts its own (fixed, viewport-centered) confirm
+    // dialog, so an unrelated row's closed dialog can sit in the hit-test path
+    // even though only this row's dialog is visually open.
+    await row
+      .getByTestId('delete-confirm')
+      .click({ force: true })
+      .catch(() => {});
   });
 
-  test('Edit button opens an inline edit form below the item row', async ({ page }) => {
+  test('Edit button opens an inline edit form below the item row', async ({
+    page,
+  }) => {
     const row = page.locator('li').filter({ hasText: itemName }).first();
     await row.getByRole('button', { name: 'Edit' }).click();
 
-    // The edit form contains a Name field (id="edit-item-name") and a Save button
+    // The edit form contains a Name field (id="edit-item-name") and a Save
+    // button
     await expect(page.getByLabel('Name').last()).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Save', exact: true }),
+    ).toBeVisible();
   });
 
   test('edit form is pre-filled with the item name', async ({ page }) => {
@@ -204,7 +229,9 @@ test.describe('Item editing', () => {
     await expect(page.locator('#edit-item-name')).toHaveValue(itemName);
   });
 
-  test('can rename an item and the new name appears in the list', async ({ page }) => {
+  test('can rename an item and the new name appears in the list', async ({
+    page,
+  }) => {
     const newName = `${itemName}-renamed`;
 
     const row = page.locator('li').filter({ hasText: itemName }).first();
@@ -214,7 +241,9 @@ test.describe('Item editing', () => {
     await page.getByRole('button', { name: 'Save', exact: true }).click();
 
     // Form closes and updated name appears
-    await expect(page.getByRole('button', { name: 'Save', exact: true })).not.toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Save', exact: true }),
+    ).not.toBeVisible();
     await expect(page.getByText(newName).first()).toBeVisible();
 
     // Verify persisted via API
@@ -227,7 +256,9 @@ test.describe('Item editing', () => {
     itemName = newName;
   });
 
-  test('can change difficulty multiplier and the change persists', async ({ page }) => {
+  test('can change difficulty multiplier and the change persists', async ({
+    page,
+  }) => {
     const row = page.locator('li').filter({ hasText: itemName }).first();
     await row.getByRole('button', { name: 'Edit' }).click();
 
@@ -235,27 +266,36 @@ test.describe('Item editing', () => {
     await page.locator('#edit-item-difficulty').fill('1.5');
     await page.getByRole('button', { name: 'Save', exact: true }).click();
 
-    await expect(page.getByRole('button', { name: 'Save', exact: true })).not.toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Save', exact: true }),
+    ).not.toBeVisible();
 
     // Verify via API
-    const items: Array<{ name: string; difficulty_multiplier: number }> = await page.request
-      .get('/api/items')
-      .then((r) => r.json());
+    const items: Array<{ name: string; difficulty_multiplier: number }> =
+      await page.request.get('/api/items').then((r) => r.json());
     const saved = items.find((i) => i.name === itemName);
     expect(saved?.difficulty_multiplier).toBe(1.5);
   });
 
-  test('Cancel button closes the edit form without saving changes', async ({ page }) => {
+  test('Cancel button closes the edit form without saving changes', async ({
+    page,
+  }) => {
     const row = page.locator('li').filter({ hasText: itemName }).first();
     await row.getByRole('button', { name: 'Edit' }).click();
 
     await page.locator('#edit-item-name').fill('should-not-save');
-    // Scope to the plain form Cancel button — DeleteButton's own hidden confirm-dialog
-    // Cancel buttons (data-testid="delete-cancel") also match by accessible name.
-    await page.getByRole('button', { name: 'Cancel', exact: true }).and(page.locator(':not([data-testid])')).click();
+    // Scope to the plain form Cancel button — DeleteButton's own hidden
+    // confirm-dialog Cancel buttons (data-testid="delete-cancel") also match
+    // by accessible name.
+    await page
+      .getByRole('button', { name: 'Cancel', exact: true })
+      .and(page.locator(':not([data-testid])'))
+      .click();
 
     // Form closes; original name still in list
-    await expect(page.getByRole('button', { name: 'Save', exact: true })).not.toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Save', exact: true }),
+    ).not.toBeVisible();
     await expect(page.getByText(itemName).first()).toBeVisible();
 
     // Verify API unchanged
@@ -266,7 +306,9 @@ test.describe('Item editing', () => {
     expect(items.some((i) => i.name === 'should-not-save')).toBe(false);
   });
 
-  test('clicking Edit a second time closes the form (toggle)', async ({ page }) => {
+  test('clicking Edit a second time closes the form (toggle)', async ({
+    page,
+  }) => {
     const row = page.locator('li').filter({ hasText: itemName }).first();
     await row.getByRole('button', { name: 'Edit' }).click();
     await expect(page.locator('#edit-item-name')).toBeVisible();

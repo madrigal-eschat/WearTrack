@@ -11,7 +11,10 @@ export function formatDuration(seconds: number): string {
   return `${s}s`;
 }
 
-/** Compact for calendar cells / picker triggers: "Xd Yh", "Xh Ym", "Ym", or "0m". */
+/**
+ * Compact for calendar cells / picker triggers:
+ * "Xd Yh", "Xh Ym", "Ym", or "0m".
+ */
 export function shortDuration(seconds: number): string {
   if (seconds <= 0) return '0m';
   const d = Math.floor(seconds / 86400);

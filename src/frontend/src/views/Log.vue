@@ -3,19 +3,36 @@
   <k-page class="flex flex-col" style="padding-bottom: 56px">
     <PageHeader title="Log" />
     <k-block class="flex gap-2 pb-2">
-      <select v-model.number="categoryFilter" class="text-sm border rounded px-2 py-1 flex-1">
+      <select
+        v-model.number="categoryFilter"
+        class="text-sm border rounded px-2 py-1 flex-1"
+      >
         <option :value="null">All categories</option>
-        <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+        <option
+          v-for="cat in categories"
+          :key="cat.id"
+          :value="cat.id"
+        >{{ cat.name }}</option>
       </select>
-      <select v-model.number="itemFilter" class="text-sm border rounded px-2 py-1 flex-1">
+      <select
+        v-model.number="itemFilter"
+        class="text-sm border rounded px-2 py-1 flex-1"
+      >
         <option :value="null">All items</option>
-        <option v-for="item in filterableItems" :key="item.id" :value="item.id">{{ item.name }}</option>
+        <option
+          v-for="item in filterableItems"
+          :key="item.id"
+          :value="item.id"
+        >{{ item.name }}</option>
       </select>
     </k-block>
 
     <div class="flex flex-1 overflow-hidden">
       <div class="flex-1 overflow-y-auto">
-        <div v-if="sessions.length === 0 && !loading" class="px-4 py-8 text-center text-gray-400">
+        <div
+          v-if="sessions.length === 0 && !loading"
+          class="px-4 py-8 text-center text-gray-400"
+        >
           No sessions
         </div>
         <k-list v-else>
@@ -29,7 +46,12 @@
         <div ref="sentinel" class="h-4"></div>
       </div>
 
-      <div class="w-6 flex flex-col items-center justify-center gap-0.5 overflow-y-auto shrink-0">
+      <div
+        class="
+          w-6 flex flex-col items-center justify-center gap-0.5
+          overflow-y-auto shrink-0
+        "
+      >
         <button
           v-for="entry in dateIndex"
           :key="entry.label"
@@ -44,9 +66,16 @@
     <Actions :opened="actionsOpen" @backdropclick="actionsOpen = false">
       <ActionsGroup>
         <ActionsButton @click="startEdit()">Edit</ActionsButton>
-        <DeleteButton title="Delete session?" message="This cannot be undone." @confirm="performDelete">
+        <DeleteButton
+          title="Delete session?"
+          message="This cannot be undone."
+          @confirm="performDelete"
+        >
           <template #trigger="{ open }">
-            <ActionsButton class="text-red-600" @click="actionsOpen = false; open()">Delete</ActionsButton>
+            <ActionsButton
+              class="text-red-600"
+              @click="actionsOpen = false; open()"
+            >Delete</ActionsButton>
           </template>
         </DeleteButton>
       </ActionsGroup>
@@ -69,15 +98,21 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import { kPage, kBlock, kList, Actions, ActionsGroup, ActionsButton } from 'konsta/vue';
+import {
+  kPage, kBlock, kList, Actions, ActionsGroup, ActionsButton,
+} from 'konsta/vue';
 import PageHeader from '../components/PageHeader.vue';
 import DeleteButton from '../components/DeleteButton.vue';
 import LogItem from '../components/LogItem.vue';
 import EditSessionDialog from '../components/EditSessionDialog.vue';
-import { useSessionLog, type SessionLogEntry } from '../composables/useSessionLog.js';
+import {
+  useSessionLog, type SessionLogEntry,
+} from '../composables/useSessionLog.js';
 import { useCategories } from '../composables/useCategories.js';
 import { useItems } from '../composables/useItems.js';
-import { buildDateIndex, type DateIndexEntry } from '../utils/sessionDateIndex.js';
+import {
+  buildDateIndex, type DateIndexEntry,
+} from '../utils/sessionDateIndex.js';
 import { apiFetch } from '../utils/apiFetch.js';
 
 const {
@@ -91,12 +126,17 @@ const { items, loadItems, itemsForCategory } = useItems();
 
 const dateIndex = ref<DateIndexEntry[]>([]);
 
-const filterableItems = computed(() =>
-  categoryFilter.value !== null ? itemsForCategory(categoryFilter.value) : items.value,
-);
+const filterableItems = computed(() => (
+  categoryFilter.value !== null
+    ? itemsForCategory(categoryFilter.value)
+    : items.value
+));
 
 watch(categoryFilter, async (id) => {
-  if (itemFilter.value !== null && !filterableItems.value.some((i) => i.id === itemFilter.value)) {
+  const stillValid = filterableItems.value.some(
+    (i) => i.id === itemFilter.value,
+  );
+  if (itemFilter.value !== null && !stillValid) {
     itemFilter.value = null;
   }
   await setCategoryFilter(id);
@@ -110,8 +150,12 @@ watch(itemFilter, async (id) => {
 
 async function refreshDateIndex(): Promise<void> {
   const params = new URLSearchParams();
-  if (categoryFilter.value !== null) params.set('category_id', String(categoryFilter.value));
-  if (itemFilter.value !== null) params.set('item_id', String(itemFilter.value));
+  if (categoryFilter.value !== null) {
+    params.set('category_id', String(categoryFilter.value));
+  }
+  if (itemFilter.value !== null) {
+    params.set('item_id', String(itemFilter.value));
+  }
   const res = await apiFetch(`/api/sessions/dates?${params.toString()}`);
   const days: string[] = res.ok ? await res.json() : [];
   dateIndex.value = buildDateIndex(days);
@@ -135,19 +179,29 @@ function openActions(entry: SessionLogEntry): void {
 const editOpen = ref(false);
 const editDurationMinutes = ref(0);
 const editTarget = computed(() => activeEntry.value);
-const editRange = computed(() => (editTarget.value ? editableRangeFor(editTarget.value) : { min: 0, max: 0 }));
+const editRange = computed(() => (
+  editTarget.value
+    ? editableRangeFor(editTarget.value)
+    : { min: 0, max: 0 }
+));
 
 function startEdit(): void {
   actionsOpen.value = false;
   if (!editTarget.value || editTarget.value.ended_at === null) return;
-  editDurationMinutes.value = Math.round((editTarget.value.ended_at - editTarget.value.started_at) / 60);
+  editDurationMinutes.value = Math.round(
+    (editTarget.value.ended_at - editTarget.value.started_at) / 60,
+  );
   editOpen.value = true;
 }
 
 async function saveEdit(): Promise<void> {
   if (!editTarget.value) return;
-  const newEndedAt = editTarget.value.started_at + editDurationMinutes.value * 60;
-  const clamped = Math.min(Math.max(newEndedAt, editRange.value.min + 1), editRange.value.max);
+  const newEndedAt = editTarget.value.started_at
+    + editDurationMinutes.value * 60;
+  const clamped = Math.min(
+    Math.max(newEndedAt, editRange.value.min + 1),
+    editRange.value.max,
+  );
   await editSession(editTarget.value, clamped);
   editOpen.value = false;
 }

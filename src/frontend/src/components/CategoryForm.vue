@@ -2,7 +2,11 @@
   <FormCard>
     <!-- Icon (left) + Name (right) on same row -->
     <div class="flex gap-2 items-end">
-      <IconPickerTrigger label="Icon" :modelValue="catForm.icon" @click="showIconPicker = true" />
+      <IconPickerTrigger
+        label="Icon"
+        :modelValue="catForm.icon"
+        @click="showIconPicker = true"
+      />
       <div class="flex-1">
         <TextField id="cat-name" label="Name" v-model="catForm.name" />
       </div>
@@ -10,7 +14,10 @@
 
     <SegmentedControl
       :modelValue="catForm.type"
-      :options="[{ value: 'duration', label: 'Duration' }, { value: 'rotation', label: 'Rotation' }]"
+      :options="[
+        { value: 'duration', label: 'Duration' },
+        { value: 'rotation', label: 'Rotation' },
+      ]"
       @update:modelValue="catForm.type = $event"
     />
 
@@ -32,7 +39,11 @@
       <template v-if="catForm.type === 'duration'">
         <DurationTrigger
           label="Maximum wear"
-          :displayValue="catForm.initialWearMaxSeconds === null ? 'None' : shortDuration(catForm.initialWearMaxSeconds)"
+          :displayValue="
+            catForm.initialWearMaxSeconds === null
+              ? 'None'
+              : shortDuration(catForm.initialWearMaxSeconds)
+          "
           :clearable="catForm.initialWearMaxSeconds !== null"
           clearTestid="clear-max"
           @click="openDurationPicker('max')"
@@ -55,7 +66,9 @@
         :minimum-rest-display="shortDuration(catForm.minimumRestSeconds)"
         :break-grace-display="shortDuration(catForm.breakGraceSeconds)"
         :break-decay-half-life-days="catForm.breakDecayHalfLifeDays"
-        @update:break-decay-half-life-days="catForm.breakDecayHalfLifeDays = $event"
+        @update:break-decay-half-life-days="
+          catForm.breakDecayHalfLifeDays = $event
+        "
         :default-half-life-days="DEFAULT_HALF_LIFE_DAYS"
         :band-count="catForm.bandCount"
         :crossover-points="catForm.crossoverPoints"
@@ -70,14 +83,20 @@
       <button
         type="button"
         data-testid="category-form-submit"
-        class="px-4 py-2 rounded-lg text-sm font-medium bg-blue-500 text-white disabled:opacity-40"
+        class="
+          px-4 py-2 rounded-lg text-sm font-medium bg-blue-500 text-white
+          disabled:opacity-40
+        "
         :disabled="!catForm.name || !catForm.icon"
         @click="onSubmit"
       >{{ submitLabel ?? 'Save' }}</button>
       <button
         type="button"
         data-testid="category-form-cancel"
-        class="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 bg-white"
+        class="
+          px-4 py-2 rounded-lg text-sm font-medium border border-gray-300
+          text-gray-700 bg-white
+        "
         @click="$emit('cancel')"
       >Cancel</button>
     </div>
@@ -162,36 +181,64 @@ const catForm = reactive<CategoryFormState>({
     : [...DEFAULT_STATE.crossoverPoints],
 });
 
+type DurationTarget = 'target' | 'max' | 'minRest' | 'grace' | number;
+
 const showIconPicker = ref(false);
 const showDurationPicker = ref(false);
-const durationPickerTarget = ref<'target' | 'max' | 'minRest' | 'grace' | number>('target');
+const durationPickerTarget = ref<DurationTarget>('target');
 const durationPickerValue = ref(0);
 
-function openDurationPicker(target: 'target' | 'max' | 'minRest' | 'grace' | number) {
+function openDurationPicker(target: DurationTarget) {
   durationPickerTarget.value = target;
-  if (target === 'target') durationPickerValue.value = catForm.initialWearTargetSeconds;
-  else if (target === 'max') durationPickerValue.value = catForm.initialWearMaxSeconds ?? catForm.initialWearTargetSeconds;
-  else if (target === 'minRest') durationPickerValue.value = catForm.minimumRestSeconds;
-  else if (target === 'grace') durationPickerValue.value = catForm.breakGraceSeconds;
-  else durationPickerValue.value = catForm.crossoverPoints[target as number];
+  if (target === 'target') {
+    durationPickerValue.value = catForm.initialWearTargetSeconds;
+  } else if (target === 'max') {
+    durationPickerValue.value =
+      catForm.initialWearMaxSeconds ?? catForm.initialWearTargetSeconds;
+  } else if (target === 'minRest') {
+    durationPickerValue.value = catForm.minimumRestSeconds;
+  } else if (target === 'grace') {
+    durationPickerValue.value = catForm.breakGraceSeconds;
+  } else {
+    durationPickerValue.value = catForm.crossoverPoints[target as number];
+  }
   showDurationPicker.value = true;
 }
 
 function onDurationPicked(seconds: number) {
   const target = durationPickerTarget.value;
-  if (target === 'target') { catForm.initialWearTargetSeconds = seconds; return; }
-  if (target === 'max') { catForm.initialWearMaxSeconds = seconds; return; }
-  if (target === 'minRest') { catForm.minimumRestSeconds = seconds; return; }
-  if (target === 'grace') { catForm.breakGraceSeconds = seconds; return; }
+  if (target === 'target') {
+    catForm.initialWearTargetSeconds = seconds;
+    return;
+  }
+  if (target === 'max') {
+    catForm.initialWearMaxSeconds = seconds;
+    return;
+  }
+  if (target === 'minRest') {
+    catForm.minimumRestSeconds = seconds;
+    return;
+  }
+  if (target === 'grace') {
+    catForm.breakGraceSeconds = seconds;
+    return;
+  }
   const idx = target as number;
   const prev = idx > 0 ? catForm.crossoverPoints[idx - 1] : 0;
-  const next = idx < catForm.crossoverPoints.length - 1 ? catForm.crossoverPoints[idx + 1] : Infinity;
-  catForm.crossoverPoints[idx] = Math.max(prev + 60, Math.min(next - 60, seconds));
+  const next =
+    idx < catForm.crossoverPoints.length - 1
+      ? catForm.crossoverPoints[idx + 1]
+      : Infinity;
+  catForm.crossoverPoints[idx] = Math.max(
+    prev + 60,
+    Math.min(next - 60, seconds),
+  );
 }
 
 function addBand() {
   if (catForm.bandCount >= 5) return;
-  const last = catForm.crossoverPoints[catForm.crossoverPoints.length - 1] ?? 0;
+  const last =
+    catForm.crossoverPoints[catForm.crossoverPoints.length - 1] ?? 0;
   catForm.crossoverPoints.push(last + 3600);
   catForm.bandCount++;
 }

@@ -1,7 +1,10 @@
 import { ref } from 'vue';
 import { apiFetch } from '../utils/apiFetch.js';
 import type { Session } from './useWear.js';
-import { computeEditableRange, type LastEdited } from '../utils/sessionEditPolicy.js';
+import {
+  computeEditableRange,
+  type LastEdited,
+} from '../utils/sessionEditPolicy.js';
 
 export interface SessionLogEntry extends Session {
   category_id: number;
@@ -23,8 +26,12 @@ const lastEdited = ref<LastEdited | null>(null);
 
 function buildQuery(before?: number): string {
   const params = new URLSearchParams();
-  if (categoryFilter.value !== null) params.set('category_id', String(categoryFilter.value));
-  if (itemFilter.value !== null) params.set('item_id', String(itemFilter.value));
+  if (categoryFilter.value !== null) {
+    params.set('category_id', String(categoryFilter.value));
+  }
+  if (itemFilter.value !== null) {
+    params.set('item_id', String(itemFilter.value));
+  }
   if (before !== undefined) params.set('before', String(before));
   params.set('limit', String(LIMIT));
   return params.toString();
@@ -74,12 +81,26 @@ async function jumpTo(cursor: number): Promise<void> {
   await loadInitial(cursor);
 }
 
-function editableRangeFor(session: SessionLogEntry): { min: number; max: number } {
-  if (session.ended_at === null) return { min: session.started_at, max: session.started_at };
-  return computeEditableRange({ id: session.id, started_at: session.started_at, ended_at: session.ended_at }, lastEdited.value);
+function editableRangeFor(
+  session: SessionLogEntry,
+): { min: number; max: number } {
+  if (session.ended_at === null) {
+    return { min: session.started_at, max: session.started_at };
+  }
+  return computeEditableRange(
+    {
+      id: session.id,
+      started_at: session.started_at,
+      ended_at: session.ended_at,
+    },
+    lastEdited.value,
+  );
 }
 
-async function editSession(session: SessionLogEntry, newEndedAt: number): Promise<void> {
+async function editSession(
+  session: SessionLogEntry,
+  newEndedAt: number,
+): Promise<void> {
   const res = await apiFetch(`/api/sessions/${session.id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -91,16 +112,26 @@ async function editSession(session: SessionLogEntry, newEndedAt: number): Promis
   }
   const updated: SessionLogEntry = await res.json();
 
-  if (lastEdited.value?.sessionId !== session.id && session.ended_at !== null) {
-    lastEdited.value = { sessionId: session.id, originalEndedAt: session.ended_at };
+  if (
+    lastEdited.value?.sessionId !== session.id &&
+    session.ended_at !== null
+  ) {
+    lastEdited.value = {
+      sessionId: session.id,
+      originalEndedAt: session.ended_at,
+    };
   }
 
   const idx = sessions.value.findIndex((s) => s.id === session.id);
-  if (idx !== -1) sessions.value[idx] = { ...sessions.value[idx], ...updated };
+  if (idx !== -1) {
+    sessions.value[idx] = { ...sessions.value[idx], ...updated };
+  }
 }
 
 async function deleteSession(session: SessionLogEntry): Promise<void> {
-  const res = await apiFetch(`/api/sessions/${session.id}`, { method: 'DELETE' });
+  const res = await apiFetch(`/api/sessions/${session.id}`, {
+    method: 'DELETE',
+  });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   sessions.value = sessions.value.filter((s) => s.id !== session.id);
   if (lastEdited.value?.sessionId === session.id) lastEdited.value = null;

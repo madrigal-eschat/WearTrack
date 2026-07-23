@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { bandNamesForCount, bandColorsForCount, buildRiskLevels } from './riskLevels';
+import {
+  bandNamesForCount,
+  bandColorsForCount,
+  buildRiskLevels,
+} from './riskLevels';
 
 describe('bandNamesForCount', () => {
   it('returns ["Medium"] for 1 band', () => {
@@ -15,7 +19,13 @@ describe('bandNamesForCount', () => {
     expect(bandNamesForCount(4)).toEqual(['Lower', 'Low', 'High', 'Higher']);
   });
   it('returns ["Lowest","Low","Medium","High","Highest"] for 5 bands', () => {
-    expect(bandNamesForCount(5)).toEqual(['Lowest', 'Low', 'Medium', 'High', 'Highest']);
+    expect(bandNamesForCount(5)).toEqual([
+      'Lowest',
+      'Low',
+      'Medium',
+      'High',
+      'Highest',
+    ]);
   });
 });
 

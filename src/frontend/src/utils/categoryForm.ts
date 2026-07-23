@@ -35,7 +35,9 @@ export function categoryToFormState(cat: CategoryApiShape): CategoryFormState {
     initialWearMaxSeconds: cat.initial_max_wear_duration_seconds,
     minimumRestSeconds: cat.minimum_rest,
     breakGraceSeconds: cat.break_grace_time,
-    breakDecayHalfLifeDays: multiplierToHalfLifeDays(cat.break_decay_multiplier),
+    breakDecayHalfLifeDays: multiplierToHalfLifeDays(
+      cat.break_decay_multiplier,
+    ),
     restMultiplier: cat.rest_multiplier,
     bandCount: cat.risk_levels.length,
     crossoverPoints: cat.risk_levels.slice(0, -1).map((l) => l.upper as number),
@@ -64,7 +66,9 @@ export function formStateToApiPayload(data: CategoryFormState): {
     initial_max_wear_duration_seconds: data.initialWearMaxSeconds,
     rest_multiplier: data.restMultiplier,
     minimum_rest: data.minimumRestSeconds,
-    break_decay_multiplier: halfLifeDaysToMultiplier(data.breakDecayHalfLifeDays),
+    break_decay_multiplier: halfLifeDaysToMultiplier(
+      data.breakDecayHalfLifeDays,
+    ),
     break_grace_time: data.breakGraceSeconds,
     risk_levels: buildRiskLevels(data.bandCount, data.crossoverPoints),
     type: data.type,

@@ -23,10 +23,17 @@
       </div>
     </k-toolbar>
 
-    <div class="relative flex h-[220px] items-stretch justify-center overflow-hidden">
+    <div
+      class="
+        relative flex h-[220px] items-stretch justify-center overflow-hidden
+      "
+    >
       <!-- Selection highlight bar sits at the vertical centre -->
       <div
-        class="pointer-events-none absolute inset-x-0 h-[44px] border-y border-gray-200 bg-gray-100"
+        class="
+          pointer-events-none absolute inset-x-0 h-[44px] border-y
+          border-gray-200 bg-gray-100
+        "
         style="top: calc(50% - 22px)"
       />
 
@@ -34,7 +41,10 @@
       <div
         ref="daysEl"
         data-testid="days-col"
-        class="relative w-24 overflow-y-scroll overscroll-none cursor-grab active:cursor-grabbing"
+        class="
+          relative w-24 overflow-y-scroll overscroll-none cursor-grab
+          active:cursor-grabbing
+        "
         style="scrollbar-width: none; -webkit-overflow-scrolling: touch;"
         @scroll="onScroll('days')"
         @mousedown="(e) => onColumnMouseDown('days', e)"
@@ -53,7 +63,10 @@
       <div
         ref="hoursEl"
         data-testid="hours-col"
-        class="relative w-24 overflow-y-scroll overscroll-none cursor-grab active:cursor-grabbing"
+        class="
+          relative w-24 overflow-y-scroll overscroll-none cursor-grab
+          active:cursor-grabbing
+        "
         style="scrollbar-width: none; -webkit-overflow-scrolling: touch;"
         @scroll="onScroll('hours')"
         @mousedown="(e) => onColumnMouseDown('hours', e)"
@@ -72,7 +85,10 @@
       <div
         ref="minutesEl"
         data-testid="minutes-col"
-        class="relative w-24 overflow-y-scroll overscroll-none cursor-grab active:cursor-grabbing"
+        class="
+          relative w-24 overflow-y-scroll overscroll-none cursor-grab
+          active:cursor-grabbing
+        "
         style="scrollbar-width: none; -webkit-overflow-scrolling: touch;"
         @scroll="onScroll('minutes')"
         @mousedown="(e) => onColumnMouseDown('minutes', e)"
@@ -116,7 +132,8 @@ const curHours   = ref(0);
 const curMinutes = ref(0);
 const scrollTimers: Record<string, ReturnType<typeof setTimeout>> = {};
 
-// How far a release "flicks": projected scroll distance = velocity (px/ms) × this.
+// How far a release "flicks": projected scroll distance = velocity
+// (px/ms) × this.
 const MOMENTUM_MS = 140;
 
 // Drag state — plain object, not reactive (no need to trigger renders)
@@ -144,13 +161,22 @@ function colCount(col: Col): number {
 }
 
 const tripledDays = computed(() =>
-  Array.from({ length: DAY_COUNT * 3 }, (_, i) => ({ key: i, value: i % DAY_COUNT }))
+  Array.from({ length: DAY_COUNT * 3 }, (_, i) => ({
+    key: i,
+    value: i % DAY_COUNT,
+  })),
 );
 const tripledHours = computed(() =>
-  Array.from({ length: HOUR_COUNT * 3 }, (_, i) => ({ key: i, value: i % HOUR_COUNT }))
+  Array.from({ length: HOUR_COUNT * 3 }, (_, i) => ({
+    key: i,
+    value: i % HOUR_COUNT,
+  })),
 );
 const tripledMinutes = computed(() =>
-  Array.from({ length: MIN_COUNT * 3 }, (_, i) => ({ key: i, value: i % MIN_COUNT }))
+  Array.from({ length: MIN_COUNT * 3 }, (_, i) => ({
+    key: i,
+    value: i % MIN_COUNT,
+  })),
 );
 
 function clearScrollTimers() {
@@ -190,7 +216,8 @@ function doWrap(col: Col) {
     el.scrollTop = (count + value) * ITEM_H;
   } else {
     // In range: smoothly settle onto the centre of the nearest item. (CSS
-    // scroll-snap no longer does this, so free-scroll glides and then eases in.)
+    // scroll-snap no longer does this, so free-scroll glides and then
+    // eases in.)
     const centered = index * ITEM_H;
     if (Math.abs(el.scrollTop - centered) > 0.5) {
       el.scrollTo({ top: centered, behavior: 'smooth' });
@@ -203,7 +230,7 @@ function onScroll(col: Col) {
   scrollTimers[col] = setTimeout(() => doWrap(col), 150);
 }
 
-// ── Mouse drag-to-scroll ──────────────────────────────────────────────────────
+// ── Mouse drag-to-scroll ───────────────────────────────────────────────
 
 function onDragMove(e: MouseEvent) {
   if (!drag.active) return;
@@ -249,11 +276,15 @@ function onColumnMouseDown(col: Col, e: MouseEvent) {
   drag.lastY = e.clientY;
   drag.lastT = performance.now();
   drag.velocity = 0;
-  document.addEventListener('mousemove', onDragMove, { passive: false } as AddEventListenerOptions);
+  document.addEventListener(
+    'mousemove',
+    onDragMove,
+    { passive: false } as AddEventListenerOptions,
+  );
   document.addEventListener('mouseup', onDragEnd);
 }
 
-// ── Click-to-select ───────────────────────────────────────────────────────────
+// ── Click-to-select ────────────────────────────────────────────────────
 
 function onItemClick(col: Col, e: MouseEvent) {
   if (drag.moved) return;
@@ -263,11 +294,12 @@ function onItemClick(col: Col, e: MouseEvent) {
   const containerRect = el.getBoundingClientRect();
   const itemRect = item.getBoundingClientRect();
   const targetScrollTop =
-    el.scrollTop + (itemRect.top + ITEM_H / 2 - (containerRect.top + el.clientHeight / 2));
+    el.scrollTop +
+    (itemRect.top + ITEM_H / 2 - (containerRect.top + el.clientHeight / 2));
   el.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
 }
 
-// ── Done ─────────────────────────────────────────────────────────────────────
+// ── Done ───────────────────────────────────────────────────────────────
 
 function onDone() {
   if (daysEl.value) {
@@ -282,7 +314,10 @@ function onDone() {
     const idx = Math.round(minutesEl.value.scrollTop / ITEM_H);
     curMinutes.value = ((idx % MIN_COUNT) + MIN_COUNT) % MIN_COUNT;
   }
-  emit('update:modelValue', curDays.value * 86400 + curHours.value * 3600 + curMinutes.value * 60);
+  emit(
+    'update:modelValue',
+    curDays.value * 86400 + curHours.value * 3600 + curMinutes.value * 60,
+  );
   emit('update:open', false);
 }
 

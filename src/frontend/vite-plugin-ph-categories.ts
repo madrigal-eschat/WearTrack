@@ -13,14 +13,23 @@ export default function phCategoriesPlugin(): Plugin {
     name: 'ph-categories',
     buildStart() {
       const data = buildPhCategories(
-        icons as unknown as Array<{ name: string; categories: string[]; tags: string[] }>,
+        icons as unknown as Array<{
+          name: string;
+          categories: string[];
+          tags: string[];
+        }>,
       );
       // Resolve relative to this file (not process.cwd()), which differs when
       // Vite runs in middleware mode from a different working directory (e.g.
       // the backend dev server importing the frontend app).
-      const outDir = fileURLToPath(new URL('./src/generated', import.meta.url));
+      const outDir = fileURLToPath(
+        new URL('./src/generated', import.meta.url),
+      );
       mkdirSync(outDir, { recursive: true });
-      writeFileSync(fileURLToPath(new URL('./src/generated/ph-categories.json', import.meta.url)), JSON.stringify(data));
+      const outFile = fileURLToPath(
+        new URL('./src/generated/ph-categories.json', import.meta.url),
+      );
+      writeFileSync(outFile, JSON.stringify(data));
     },
   };
 }

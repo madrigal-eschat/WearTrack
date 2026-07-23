@@ -47,7 +47,10 @@ async function createCategory(data: CategoryCreate): Promise<Category> {
   return category;
 }
 
-async function updateCategory(id: number, data: CategoryUpdate): Promise<Category> {
+async function updateCategory(
+  id: number,
+  data: CategoryUpdate,
+): Promise<Category> {
   const res = await apiFetch(`/api/categories/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

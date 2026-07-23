@@ -2,18 +2,29 @@
   <div class="relative inline-block">
     <button
       data-testid="color-trigger"
-      class="w-6 h-6 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      class="
+        w-6 h-6 rounded-full border border-gray-300 focus:outline-none
+        focus:ring-2 focus:ring-blue-500
+      "
       :style="{ background: modelValue }"
       @click.stop="opened = !opened"
     />
 
     <!-- Backdrop -->
-    <div v-if="opened" data-testid="color-backdrop" class="fixed inset-0 z-40" @click="opened = false" />
+    <div
+      v-if="opened"
+      data-testid="color-backdrop"
+      class="fixed inset-0 z-40"
+      @click="opened = false"
+    />
 
     <!-- Dropdown -->
     <div
       v-if="opened"
-      class="absolute left-0 top-8 z-50 bg-white rounded-xl shadow-lg border border-gray-100 p-3 min-w-max"
+      class="
+        absolute left-0 top-8 z-50 bg-white rounded-xl shadow-lg border
+        border-gray-100 p-3 min-w-max
+      "
     >
       <!-- Swatches row -->
       <div class="flex flex-wrap gap-2 mb-3">
@@ -22,7 +33,9 @@
           :key="swatch"
           data-testid="color-swatch"
           class="w-7 h-7 rounded-full border-2 focus:outline-none"
-          :class="swatch === modelValue ? 'border-gray-800' : 'border-transparent'"
+          :class="
+            swatch === modelValue ? 'border-gray-800' : 'border-transparent'
+          "
           :style="{ background: swatch }"
           @click.stop="select(swatch)"
         />
@@ -52,7 +65,9 @@
           />
         </div>
         <div>
-          <label class="text-xs text-gray-600 block mb-1">Chroma: {{ chroma }}</label>
+          <label class="text-xs text-gray-600 block mb-1">
+            Chroma: {{ chroma }}
+          </label>
           <input
             data-testid="chroma-slider"
             type="range"

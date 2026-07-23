@@ -2,7 +2,12 @@
   <k-page class="flex flex-col" style="padding-bottom: 56px">
     <PageHeader title="Home">
       <template #action>
-        <button type="button" class="mr-2 text-gray-500" aria-label="Settings" @click="router.push('/settings')">
+        <button
+          type="button"
+          class="mr-2 text-gray-500"
+          aria-label="Settings"
+          @click="router.push('/settings')"
+        >
           <Cog6ToothIcon class="w-6 h-6" />
         </button>
       </template>

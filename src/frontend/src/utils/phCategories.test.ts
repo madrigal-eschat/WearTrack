@@ -9,8 +9,16 @@ const mockIcons = [
   { name: 'arrow-up-fill', categories: ['arrows'], tags: ['up', 'direction'] },
   { name: 'arrow-up-light', categories: ['arrows'], tags: ['up', 'direction'] },
   { name: 'arrow-up-thin', categories: ['arrows'], tags: ['up', 'direction'] },
-  { name: 'arrow-up-duotone', categories: ['arrows'], tags: ['up', 'direction'] },
-  { name: 'heart', categories: ['health & wellness', 'people'], tags: ['love', 'care'] },
+  {
+    name: 'arrow-up-duotone',
+    categories: ['arrows'],
+    tags: ['up', 'direction'],
+  },
+  {
+    name: 'heart',
+    categories: ['health & wellness', 'people'],
+    tags: ['love', 'care'],
+  },
   { name: 'sneaker', categories: ['objects'], tags: ['shoe', 'footwear'] },
 ];
 

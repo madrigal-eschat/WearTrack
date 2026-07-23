@@ -26,7 +26,8 @@ export async function goToStats(page: Page) {
  * Returns the category name used.
  */
 export async function createCategory(page: Page, name: string) {
-  await page.getByRole('button', { name: '+ Add', exact: false }).first().click();
+  const addBtn = page.getByRole('button', { name: '+ Add', exact: false });
+  await addBtn.first().click();
   await page.getByLabel('Name').first().fill(name);
   // Open icon picker and select first available icon
   await page.getByRole('button', { name: /choose icon/i }).first().click();
@@ -42,7 +43,11 @@ export async function createCategory(page: Page, name: string) {
  * Create a category via the API directly (faster setup for non-add-form tests).
  * Returns the created category (with id).
  */
-export async function createCategoryViaApi(page: Page, name: string, icon = '🧪') {
+export async function createCategoryViaApi(
+  page: Page,
+  name: string,
+  icon = '🧪',
+) {
   const res = await page.request.post('/api/categories', {
     data: {
       name,
@@ -77,6 +82,7 @@ export async function deleteCategory(page: Page, name: string) {
   const row = page.locator('li').filter({ hasText: name }).first();
   await row.getByRole('button', { name: 'Delete' }).click();
   await page.getByRole('button', { name: 'OK' }).click().catch(() => {
-    // confirm() dialogs are handled automatically by Playwright (accepted by default)
+    // confirm() dialogs are handled automatically by Playwright
+    // (accepted by default)
   });
 }
