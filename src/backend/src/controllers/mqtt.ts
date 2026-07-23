@@ -32,7 +32,10 @@ router.put('/config', async (c) => {
   if (body.port !== undefined && (body.port < 1 || body.port > 65535)) {
     throw new ValidationError('port must be between 1 and 65535');
   }
-  if (body.topic_prefix !== undefined && (typeof body.topic_prefix !== 'string' || body.topic_prefix.trim() === '')) {
+  if (
+    body.topic_prefix !== undefined &&
+    (typeof body.topic_prefix !== 'string' || body.topic_prefix.trim() === '')
+  ) {
     throw new ValidationError('topic_prefix must be a non-empty string');
   }
   mqttConfigStore.update({

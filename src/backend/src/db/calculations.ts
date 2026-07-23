@@ -29,7 +29,10 @@ export interface PreviousSession {
   rest_seconds: number;
 }
 
-/** Normalised rest contribution for a 0-indexed band among `count` bands: 0 (lowest) .. 2 (highest). */
+/**
+ * Normalised rest contribution for a 0-indexed band among `count` bands: 0
+ * (lowest) .. 2 (highest).
+ */
 export function restWeight(index: number, count: number): number {
   return count > 1 ? 2 * (index / (count - 1)) : 0;
 }
@@ -40,11 +43,20 @@ export function parseRiskLevels(category: Category): RiskLevel[] {
     typeof category.risk_levels === 'string'
       ? (JSON.parse(category.risk_levels) as RiskLevel[])
       : category.risk_levels;
-  return levels.map((l, i) => ({ ...l, rest_weight: restWeight(i, levels.length) }));
+  return levels.map((l, i) => ({
+    ...l,
+    rest_weight: restWeight(i, levels.length),
+  }));
 }
 
-/** Risk band whose [lower, upper) range contains `elapsed`, or null below the first threshold. */
-export function riskLevelFor(elapsed: number, category: Category): RiskLevel | null {
+/**
+ * Risk band whose [lower, upper) range contains `elapsed`, or null below
+ * the first threshold.
+ */
+export function riskLevelFor(
+  elapsed: number,
+  category: Category,
+): RiskLevel | null {
   const levels = parseRiskLevels(category);
   for (const level of levels) {
     const aboveLower = level.lower === null || elapsed > level.lower;
@@ -54,7 +66,10 @@ export function riskLevelFor(elapsed: number, category: Category): RiskLevel | n
   return null;
 }
 
-/** Completed laps in a previous session: floor(elapsed / target). Only meaningful for null-max categories. */
+/**
+ * Completed laps in a previous session: floor(elapsed / target). Only
+ * meaningful for null-max categories.
+ */
 export function lapCount(previous: PreviousSession): number {
   const elapsed = previous.ended_at - previous.started_at;
   return Math.floor(elapsed / previous.target_wear_seconds);
@@ -89,11 +104,12 @@ export function rotationAvailability(
 }
 
 /**
- * Whether starting `itemId` is a legitimate consecutive-wear-days re-wear: it must be
- * the most-recently-worn item in the category, and the trailing run of consecutive
- * sessions for that same item (scanning `recentSessions`, newest-first, counting how
- * many in a row are that same item before hitting a different item) must be strictly
- * less than `consecutiveWearDays`. Mirrors `trailingRunLength`/`forcedItemId` in
+ * Whether starting `itemId` is a legitimate consecutive-wear-days re-wear:
+ * it must be the most-recently-worn item in the category, and the
+ * trailing run of consecutive sessions for that same item (scanning
+ * `recentSessions`, newest-first, counting how many in a row are that
+ * same item before hitting a different item) must be strictly less than
+ * `consecutiveWearDays`. Mirrors `trailingRunLength`/`forcedItemId` in
  * ActionPane.vue.
  */
 export function isConsecutiveLockEligible(
@@ -125,41 +141,71 @@ export function startOfTodayLocal(now: number): number {
   return localMidnight(now, 0);
 }
 
-/** Unix timestamp of the next local midnight strictly after `now`'s calendar day starts. */
+/**
+ * Unix timestamp of the next local midnight strictly after `now`'s
+ * calendar day starts.
+ */
 export function startOfNextLocalMidnight(now: number): number {
   return localMidnight(now, 1);
 }
 
-/** Previous durations grown by one category increment, scaled by difficulty modifier. */
+/**
+ * Previous durations grown by one category increment, scaled by
+ * difficulty modifier.
+ */
 function growDurations(
   previous: PreviousSession,
   category: Category,
   dm: number,
 ): { target: number; max: number | null } {
   const maxIsSet = category.initial_max_wear_duration_seconds !== null;
-  const lapBonus = maxIsSet ? 0 : Math.floor(lapCount(previous) / 2) * previous.target_wear_seconds;
+  const lapBonus = maxIsSet
+    ? 0
+    : Math.floor(lapCount(previous) / 2) * previous.target_wear_seconds;
   return {
-    target: dm * (previous.target_wear_seconds + category.initial_target_wear_duration_seconds + lapBonus),
+    target:
+      dm *
+      (previous.target_wear_seconds +
+        category.initial_target_wear_duration_seconds +
+        lapBonus),
     max: maxIsSet
-      ? dm * ((previous.max_wear_seconds ?? 0) + category.initial_max_wear_duration_seconds!)
+      ? dm *
+        ((previous.max_wear_seconds ?? 0) +
+          category.initial_max_wear_duration_seconds!)
       : null,
   };
 }
 
-/** One day's floored decay step: loses at least `floor` even if the percentage loss would be smaller. */
-function decayOneDay(value: number, floor: number, lossFraction: number): number {
+/**
+ * One day's floored decay step: loses at least `floor` even if the
+ * percentage loss would be smaller.
+ */
+function decayOneDay(
+  value: number,
+  floor: number,
+  lossFraction: number,
+): number {
   const loss = Math.max(lossFraction * value, floor);
   return Math.max(value - loss, floor);
 }
 
 /** `value` decayed by `days` floored daily steps (see `decayOneDay`). */
-function decayValue(value: number, floor: number, lossFraction: number, days: number): number {
+function decayValue(
+  value: number,
+  floor: number,
+  lossFraction: number,
+  days: number,
+): number {
   let v = value;
   for (let day = 0; day < days; day++) v = decayOneDay(v, floor, lossFraction);
   return v;
 }
 
-/** Day-by-day decay past grace: each day's loss is at least `floorTarget`/`floorMax`, so the value reaches the floor in a bounded number of days instead of trailing off asymptotically. */
+/**
+ * Day-by-day decay past grace: each day's loss is at least
+ * `floorTarget`/`floorMax`, so the value reaches the floor in a bounded
+ * number of days instead of trailing off asymptotically.
+ */
 function applyBreakDecay(
   target: number,
   max: number | null,
@@ -171,11 +217,17 @@ function applyBreakDecay(
   const lossFraction = 1 - decayMultiplier;
   return {
     target: decayValue(target, floorTarget, lossFraction, daysSinceGrace),
-    max: max === null || floorMax === null ? max : decayValue(max, floorMax, lossFraction, daysSinceGrace),
+    max:
+      max === null || floorMax === null
+        ? max
+        : decayValue(max, floorMax, lossFraction, daysSinceGrace),
   };
 }
 
-/** Raw durations for the three start situations: first session, inside rest (halve), or post-rest (grow + optional decay). */
+/**
+ * Raw durations for the three start situations: first session, inside
+ * rest (halve), or post-rest (grow + optional decay).
+ */
 function rawDurations(
   previous: PreviousSession | null,
   category: Category,
@@ -198,7 +250,9 @@ function rawDurations(
   let max: number | null;
 
   if (startTime < earliestStart) {
-    const lapBonus = maxIsSet ? 0 : Math.floor(lapCount(previous) / 2) * previous.target_wear_seconds;
+    const lapBonus = maxIsSet
+      ? 0
+      : Math.floor(lapCount(previous) / 2) * previous.target_wear_seconds;
     target = (dm / 2) * (previous.target_wear_seconds + lapBonus);
     max = maxIsSet ? (previous.max_wear_seconds ?? 0) / 2 : null;
   } else {
@@ -240,56 +294,114 @@ export function computeSessionStart(
 
   let { target, max } = rawDurations(previous, category, dm, startTime);
 
-  // Never go below what the first session would give (with the same difficulty modifier).
+  // Never go below what the first session would give (with the same
+  // difficulty modifier).
   target = Math.max(target, dm * category.initial_target_wear_duration_seconds);
-  if (max !== null) max = Math.max(max, dm * category.initial_max_wear_duration_seconds!);
+  if (max !== null)
+    max = Math.max(max, dm * category.initial_max_wear_duration_seconds!);
 
   if (injuryActive) ({ target, max } = applyInjury(target, max));
 
-  return { target: Math.floor(target), max: max === null ? null : Math.floor(max) };
+  return {
+    target: Math.floor(target),
+    max: max === null ? null : Math.floor(max),
+  };
 }
 
-/** Base rest before any penalty or floor: elapsed scaled by risk level and category multiplier. */
-function baseRestSeconds(elapsed: number, riskLevel: RiskLevel | null, category: Category): number {
+/**
+ * Base rest before any penalty or floor: elapsed scaled by risk level and
+ * category multiplier.
+ */
+function baseRestSeconds(
+  elapsed: number,
+  riskLevel: RiskLevel | null,
+  category: Category,
+): number {
   const weight = riskLevel?.rest_weight ?? 0;
   return elapsed * (1 + weight) * category.rest_multiplier;
 }
 
-/** Extra rest added when elapsed exceeds the session max: 2 seconds per second over. */
+/**
+ * Extra rest added when elapsed exceeds the session max: 2 seconds per
+ * second over.
+ */
 function overMaxPenaltySeconds(elapsed: number, sessionMax: number): number {
   return (elapsed - sessionMax) * 2;
 }
 
-// ─── Decay ────────────────────────────────────────────────────────────────────
+// ─── Decay ───────────────────────────────────────────────────────────────────
 
 export type DecayState = 'none' | 'decaying' | 'fully_decayed';
 
 export function computeDecay(
-  previous: { ended_at: number; rest_seconds: number; target_wear_seconds: number } | null,
-  category: { break_grace_time: number; break_decay_multiplier: number; initial_target_wear_duration_seconds: number },
+  previous: {
+    ended_at: number;
+    rest_seconds: number;
+    target_wear_seconds: number;
+  } | null,
+  category: {
+    break_grace_time: number;
+    break_decay_multiplier: number;
+    initial_target_wear_duration_seconds: number;
+  },
   now: number,
-): { decay_start_time: number | null; decay_state: DecayState; decay_full_time: number | null } {
-  if (!previous) return { decay_start_time: null, decay_state: 'none', decay_full_time: null };
+): {
+  decay_start_time: number | null;
+  decay_state: DecayState;
+  decay_full_time: number | null;
+} {
+  if (!previous)
+    return {
+      decay_start_time: null,
+      decay_state: 'none',
+      decay_full_time: null,
+    };
 
-  const decayStartTime = previous.ended_at + previous.rest_seconds + category.break_grace_time;
+  const decayStartTime =
+    previous.ended_at + previous.rest_seconds + category.break_grace_time;
   const initial = category.initial_target_wear_duration_seconds;
-  const daysToFull = daysUntilFullyDecayed(previous.target_wear_seconds, initial, category.break_decay_multiplier);
+  const daysToFull = daysUntilFullyDecayed(
+    previous.target_wear_seconds,
+    initial,
+    category.break_decay_multiplier,
+  );
   const decayFullTime = decayStartTime + daysToFull * 86400;
 
   if (now <= decayStartTime) {
-    return { decay_start_time: decayStartTime, decay_state: 'none', decay_full_time: decayFullTime };
+    return {
+      decay_start_time: decayStartTime,
+      decay_state: 'none',
+      decay_full_time: decayFullTime,
+    };
   }
 
   const daysSinceGrace = Math.floor((now - decayStartTime) / 86400);
   const lossFraction = 1 - category.break_decay_multiplier;
-  const decayed = decayValue(previous.target_wear_seconds + initial, initial, lossFraction, daysSinceGrace);
+  const decayed = decayValue(
+    previous.target_wear_seconds + initial,
+    initial,
+    lossFraction,
+    daysSinceGrace,
+  );
 
-  const decay_state: DecayState = decayed <= initial ? 'fully_decayed' : 'decaying';
-  return { decay_start_time: decayStartTime, decay_state, decay_full_time: decayFullTime };
+  const decay_state: DecayState =
+    decayed <= initial ? 'fully_decayed' : 'decaying';
+  return {
+    decay_start_time: decayStartTime,
+    decay_state,
+    decay_full_time: decayFullTime,
+  };
 }
 
-/** Full days of floored decay (see `decayOneDay`) until (previousTarget + initial) reaches initial. */
-function daysUntilFullyDecayed(previousTarget: number, initial: number, multiplier: number): number {
+/**
+ * Full days of floored decay (see `decayOneDay`) until (previousTarget +
+ * initial) reaches initial.
+ */
+function daysUntilFullyDecayed(
+  previousTarget: number,
+  initial: number,
+  multiplier: number,
+): number {
   if (previousTarget <= 0 || multiplier <= 0 || multiplier >= 1) return 0;
   const lossFraction = 1 - multiplier;
   let target = previousTarget + initial;

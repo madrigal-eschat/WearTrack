@@ -80,12 +80,18 @@ class TypedEventBus {
       try {
         (listener as (payload: EventPayloads[E]) => void)(payload);
       } catch (error) {
-        console.error(`[eventBus] listener for event "${event}" threw an error:`, error);
+        console.error(
+          `[eventBus] listener for event "${event}" threw an error:`,
+          error,
+        );
       }
     }
   }
 
-  on<E extends EventName>(event: E, listener: (payload: EventPayloads[E]) => void): void {
+  on<E extends EventName>(
+    event: E,
+    listener: (payload: EventPayloads[E]) => void,
+  ): void {
     this.emitter.on(event, listener);
   }
 }

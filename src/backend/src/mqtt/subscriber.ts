@@ -13,11 +13,17 @@ import {
   slugify,
 } from './events.js';
 
-function publishEvent(categoryName: string, event: string, payload: unknown): void {
+function publishEvent(
+  categoryName: string,
+  event: string,
+  payload: unknown,
+): void {
   const config = mqttConfigStore.get();
   if (!config.enabled) return;
   const slug = slugify(categoryName);
-  publish(`${config.topic_prefix}/${slug}/${event}`, payload, { retain: false });
+  publish(`${config.topic_prefix}/${slug}/${event}`, payload, {
+    retain: false,
+  });
   publish(`${config.topic_prefix}/${slug}/state`, payload, { retain: true });
 }
 

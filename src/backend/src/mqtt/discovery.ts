@@ -25,7 +25,10 @@ function publishDiscovery(): void {
   }
 }
 
-/** Republishes HA discovery configs immediately, e.g. right after the MQTT config is saved. */
+/**
+ * Republishes HA discovery configs immediately, e.g. right after the
+ * MQTT config is saved.
+ */
 export function publishDiscoveryNow(): void {
   publishDiscovery();
 }

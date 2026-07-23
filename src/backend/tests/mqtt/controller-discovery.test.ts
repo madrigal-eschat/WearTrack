@@ -28,7 +28,9 @@ beforeEach(() => {
 });
 
 describe('PUT /api/mqtt/config discovery republish', () => {
-  it('republishes HA discovery immediately after the config is saved', async () => {
+  it(
+    'republishes HA discovery immediately after the config is saved',
+    async () => {
     const category = categoryStore.create({
       name: 'Winter Gloves',
       icon: 'icon',
@@ -61,7 +63,9 @@ describe('PUT /api/mqtt/config discovery republish', () => {
     );
   });
 
-  it('does not republish discovery when the saved config disables it', async () => {
+  it(
+    'does not republish discovery when the saved config disables it',
+    async () => {
     categoryStore.create({
       name: 'Boots',
       icon: 'icon',

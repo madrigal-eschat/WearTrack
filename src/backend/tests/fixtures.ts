@@ -27,10 +27,18 @@ export async function createCategory(overrides: Record<string, unknown> = {}) {
   });
 }
 
-export async function createItem(categoryId: number, overrides: Record<string, unknown> = {}) {
+export async function createItem(
+  categoryId: number,
+  overrides: Record<string, unknown> = {},
+) {
   return app.request(ITEMS, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: 'Test Shoe', category_id: categoryId, color: '#ff0000', ...overrides }),
+    body: JSON.stringify({
+      name: 'Test Shoe',
+      category_id: categoryId,
+      color: '#ff0000',
+      ...overrides,
+    }),
   });
 }

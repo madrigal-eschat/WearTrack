@@ -15,8 +15,14 @@ describe('mqttConfigStore', () => {
   it('creates and returns a default disabled row on first get()', () => {
     const config = mqttConfigStore.get();
     expect(config).toMatchObject({
-      id: 1, enabled: 0, host: null, port: 1883, username: null, password: null,
-      topic_prefix: 'weartrack', ha_discovery_enabled: 0,
+      id: 1,
+      enabled: 0,
+      host: null,
+      port: 1883,
+      username: null,
+      password: null,
+      topic_prefix: 'weartrack',
+      ha_discovery_enabled: 0,
     });
   });
 
@@ -30,25 +36,36 @@ describe('mqttConfigStore', () => {
     expect(config.topic_prefix).toBe('weartrack');
   });
 
-  it('update() with an empty-string password leaves the stored password unchanged', () => {
-    mqttConfigStore.get();
-    mqttConfigStore.update({ password: 'secret' });
-    mqttConfigStore.update({ password: '' });
-    expect(mqttConfigStore.get().password).toBe('secret');
-  });
+  it(
+    'update() with an empty-string password leaves the stored ' +
+      'password unchanged',
+    () => {
+      mqttConfigStore.get();
+      mqttConfigStore.update({ password: 'secret' });
+      mqttConfigStore.update({ password: '' });
+      expect(mqttConfigStore.get().password).toBe('secret');
+    },
+  );
 
-  it('update() with a non-empty password overwrites the stored password', () => {
+  it(
+    'update() with a non-empty password overwrites the stored password',
+    () => {
     mqttConfigStore.get();
     mqttConfigStore.update({ password: 'secret' });
     mqttConfigStore.update({ password: 'new-secret' });
     expect(mqttConfigStore.get().password).toBe('new-secret');
-  });
+    },
+  );
 
-  it('update() with a null password leaves the stored password unchanged', () => {
+  it(
+    'update() with a null password leaves the stored password unchanged',
+    () => {
     mqttConfigStore.get();
     mqttConfigStore.update({ password: 'secret' });
-    // @ts-expect-error -- exercising a runtime guard against a value the HTTP boundary isn't statically typed against
+    // @ts-expect-error -- exercising a runtime guard against a value the HTTP
+    // boundary isn't statically typed against
     mqttConfigStore.update({ password: null });
     expect(mqttConfigStore.get().password).toBe('secret');
-  });
+    },
+  );
 });

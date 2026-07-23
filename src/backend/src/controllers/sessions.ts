@@ -25,12 +25,14 @@ router.get('/', (c) => {
   );
 });
 
-// GET /api/sessions/current — one entry per category with active session or nulls
+// GET /api/sessions/current — one entry per category with active session
+// or nulls
 router.get('/current', (c) => {
   return c.json(new CurrentSessionsQuery().run());
 });
 
-// GET /api/sessions/dates?item_id=&category_id= — distinct days with completed sessions, for the Log jump index
+// GET /api/sessions/dates?item_id=&category_id= — distinct days with
+// completed sessions, for the Log jump index
 router.get('/dates', (c) => {
   const categoryId = c.req.query('category_id');
   const itemId = c.req.query('item_id');
@@ -62,9 +64,10 @@ router.post('/:id/end', async (c) => {
   const id = Number(c.req.param('id'));
   const session = sessionStore.find(id);
   if (!session) throw new NotFoundError(`Session ${id} not found`);
-  if (session.ended_at !== null) throw new ValidationError(`Session ${id} is already ended`);
+  if (session.ended_at !== null)
+    throw new ValidationError(`Session ${id} is already ended`);
 
-  const body = await c.req.json().catch(() => ({})) as { ended_at?: number };
+  const body = (await c.req.json().catch(() => ({}))) as { ended_at?: number };
   if (body.ended_at !== undefined && typeof body.ended_at !== 'number') {
     throw new ValidationError('ended_at must be a Unix timestamp (number)');
   }
@@ -73,7 +76,8 @@ router.post('/:id/end', async (c) => {
   if (!item) throw new NotFoundError(`Item ${session.item_id} not found`);
 
   const category = categoryStore.findRaw(item.category_id)!;
-  const endTs = typeof body.ended_at === 'number' ? body.ended_at : nowSeconds();
+  const endTs =
+    typeof body.ended_at === 'number' ? body.ended_at : nowSeconds();
 
   const updated = sessionStore.end(session, category, endTs);
   return c.json(updated);
@@ -84,9 +88,13 @@ router.patch('/:id', async (c) => {
   const id = Number(c.req.param('id'));
   const session = sessionStore.find(id);
   if (!session) throw new NotFoundError(`Session ${id} not found`);
-  if (session.ended_at === null) throw new ValidationError(`Session ${id} has not ended yet`);
+  if (session.ended_at === null)
+    throw new ValidationError(`Session ${id} has not ended yet`);
 
-  const body = (await c.req.json().catch(() => ({}))) as { ended_at?: number; duration_seconds?: number };
+  const body = (await c.req.json().catch(() => ({}))) as {
+    ended_at?: number;
+    duration_seconds?: number;
+  };
 
   let newEndedAt: number;
   if (typeof body.ended_at === 'number') {
@@ -94,9 +102,12 @@ router.patch('/:id', async (c) => {
   } else if (typeof body.duration_seconds === 'number') {
     newEndedAt = session.started_at + body.duration_seconds;
   } else {
-    throw new ValidationError('ended_at or duration_seconds (number) is required');
+    throw new ValidationError(
+      'ended_at or duration_seconds (number) is required',
+    );
   }
-  if (newEndedAt <= session.started_at) throw new ValidationError('ended_at must be after started_at');
+  if (newEndedAt <= session.started_at)
+    throw new ValidationError('ended_at must be after started_at');
 
   const item = itemStore.find(session.item_id);
   if (!item) throw new NotFoundError(`Item ${session.item_id} not found`);
