@@ -1,7 +1,11 @@
 import { dbExport } from '../index.js';
 
 type CategoryRow = { id: number; break_grace_time: number };
-type SessionRow = { started_at: number; ended_at: number; rest_seconds: number | null };
+type SessionRow = {
+  started_at: number;
+  ended_at: number;
+  rest_seconds: number | null;
+};
 
 export default function runMigration006() {
   const categories = dbExport

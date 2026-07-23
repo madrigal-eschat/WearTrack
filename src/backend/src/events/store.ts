@@ -16,19 +16,21 @@ export interface EventPollerRow {
 
 class EventPollerStore {
   get(categoryId: number): EventPollerRow | undefined {
-    return db.prepare('SELECT * FROM event_poller_state WHERE category_id = ?').get(categoryId) as
-      | EventPollerRow
-      | undefined;
+    return db
+      .prepare('SELECT * FROM event_poller_state WHERE category_id = ?')
+      .get(categoryId) as EventPollerRow | undefined;
   }
 
   upsert(row: EventPollerRow): void {
     db.prepare(
       `INSERT INTO event_poller_state
-         (category_id, decay_state, resting, halfway_notified, decay_soon_notified,
-          last_session_id, target_met_notified, overtime_warning_30_notified,
-          overtime_warning_5_notified, overtime_notified)
-       VALUES (@category_id, @decay_state, @resting, @halfway_notified, @decay_soon_notified,
-               @last_session_id, @target_met_notified, @overtime_warning_30_notified,
+         (category_id, decay_state, resting, halfway_notified,
+          decay_soon_notified, last_session_id, target_met_notified,
+          overtime_warning_30_notified, overtime_warning_5_notified,
+          overtime_notified)
+       VALUES (@category_id, @decay_state, @resting, @halfway_notified,
+               @decay_soon_notified, @last_session_id,
+               @target_met_notified, @overtime_warning_30_notified,
                @overtime_warning_5_notified, @overtime_notified)
        ON CONFLICT (category_id) DO UPDATE SET
          decay_state = excluded.decay_state,

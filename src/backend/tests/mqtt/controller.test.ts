@@ -19,8 +19,13 @@ describe('GET /api/mqtt/config', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toMatchObject({
-      enabled: false, host: null, port: 1883, username: null,
-      hasPassword: false, topic_prefix: 'weartrack', ha_discovery_enabled: false,
+      enabled: false,
+      host: null,
+      port: 1883,
+      username: null,
+      hasPassword: false,
+      topic_prefix: 'weartrack',
+      ha_discovery_enabled: false,
     });
     expect(body).not.toHaveProperty('password');
   });
@@ -31,14 +36,25 @@ describe('PUT /api/mqtt/config', () => {
     const res = await app.request(`${MQTT}/config`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ enabled: true, host: 'broker.local', port: 1884, topic_prefix: 'home' }),
+      body: JSON.stringify({
+        enabled: true,
+        host: 'broker.local',
+        port: 1884,
+        topic_prefix: 'home',
+      }),
     });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toMatchObject({ enabled: true, host: 'broker.local', port: 1884, topic_prefix: 'home' });
+    expect(body).toMatchObject({
+      enabled: true,
+      host: 'broker.local',
+      port: 1884,
+      topic_prefix: 'home',
+    });
   });
 
-  it('reports hasPassword true after a password is saved, without echoing it', async () => {
+  it('reports hasPassword true after a password is saved, ' +
+    'without echoing it', async () => {
     await app.request(`${MQTT}/config`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -84,7 +100,8 @@ describe('PUT /api/mqtt/config', () => {
     expect(res.status).toBe(400);
   });
 
-  it('leaves the stored password unchanged when password is explicitly null', async () => {
+  it('leaves the stored password unchanged when password is explicitly null',
+    async () => {
     await app.request(`${MQTT}/config`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },

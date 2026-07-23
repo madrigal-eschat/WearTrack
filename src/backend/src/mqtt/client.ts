@@ -1,7 +1,8 @@
 import mqtt, { type MqttClient } from 'mqtt';
 import { mqttConfigStore } from './config-store.js';
 
-export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+export type ConnectionStatus =
+  'disconnected' | 'connecting' | 'connected' | 'error';
 
 export interface ConnectConfig {
   host: string;
@@ -44,15 +45,27 @@ export function connect(config: ConnectConfig): void {
   });
 }
 
-export function publish(topic: string, payload: unknown, opts: { retain?: boolean } = {}): void {
+export function publish(
+  topic: string,
+  payload: unknown,
+  opts: { retain?: boolean } = {},
+): void {
   if (!client) return;
-  client.publish(topic, JSON.stringify(payload), { qos: 0, retain: opts.retain ?? false });
+  client.publish(topic, JSON.stringify(payload), {
+    qos: 0,
+    retain: opts.retain ?? false,
+  });
 }
 
 export function reloadFromConfig(): void {
   const config = mqttConfigStore.get();
   if (config.enabled && config.host) {
-    connect({ host: config.host, port: config.port, username: config.username, password: config.password });
+    connect({
+      host: config.host,
+      port: config.port,
+      username: config.username,
+      password: config.password,
+    });
   } else {
     disconnect();
   }

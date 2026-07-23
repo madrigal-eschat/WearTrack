@@ -78,7 +78,9 @@ describe('GET /api/items', () => {
 
 describe('GET /api/items/:id', () => {
   it('returns a single item', async () => {
-    const created = await (await createItemLocal({ name: 'Single Item' })).json();
+    const created = await (
+      await createItemLocal({ name: 'Single Item' })
+    ).json();
     const res = await app.request(`${BASE}/${created.id}`);
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -115,7 +117,9 @@ describe('PATCH /api/items/:id', () => {
   });
 
   it('patches color', async () => {
-    const created = await (await createItemLocal({ name: 'Color Patch' })).json();
+    const created = await (
+      await createItemLocal({ name: 'Color Patch' })
+    ).json();
     const res = await app.request(`${BASE}/${created.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -128,7 +132,9 @@ describe('PATCH /api/items/:id', () => {
   });
 
   it('patches difficulty_multiplier', async () => {
-    const created = await (await createItemLocal({ name: 'Difficulty Patch' })).json();
+    const created = await (
+      await createItemLocal({ name: 'Difficulty Patch' })
+    ).json();
     const res = await app.request(`${BASE}/${created.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -153,7 +159,9 @@ describe('PATCH /api/items/:id', () => {
   });
 
   it('patches category_id to a nonexistent category returns 400', async () => {
-    const created = await (await createItemLocal({ name: 'Cat Move Fail' })).json();
+    const created = await (
+      await createItemLocal({ name: 'Cat Move Fail' })
+    ).json();
     const res = await app.request(`${BASE}/${created.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -163,7 +171,9 @@ describe('PATCH /api/items/:id', () => {
   });
 
   it('returns 400 when category_id type is invalid', async () => {
-    const created = await (await createItemLocal({ name: 'Cat Type Fail' })).json();
+    const created = await (
+      await createItemLocal({ name: 'Cat Type Fail' })
+    ).json();
     const res = await app.request(`${BASE}/${created.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -173,7 +183,9 @@ describe('PATCH /api/items/:id', () => {
   });
 
   it('returns 400 when color type is invalid', async () => {
-    const created = await (await createItemLocal({ name: 'Color Type Fail' })).json();
+    const created = await (
+      await createItemLocal({ name: 'Color Type Fail' })
+    ).json();
     const res = await app.request(`${BASE}/${created.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -183,7 +195,9 @@ describe('PATCH /api/items/:id', () => {
   });
 
   it('returns 400 when difficulty_multiplier type is invalid', async () => {
-    const created = await (await createItemLocal({ name: 'Difficulty Type Fail' })).json();
+    const created = await (
+      await createItemLocal({ name: 'Difficulty Type Fail' })
+    ).json();
     const res = await app.request(`${BASE}/${created.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -193,7 +207,9 @@ describe('PATCH /api/items/:id', () => {
   });
 
   it('returns unchanged item when body is empty', async () => {
-    const created = await (await createItemLocal({ name: 'Empty Patch' })).json();
+    const created = await (
+      await createItemLocal({ name: 'Empty Patch' })
+    ).json();
     const res = await app.request(`${BASE}/${created.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -212,7 +228,9 @@ describe('PATCH /api/items/:id', () => {
 describe('DELETE /api/items/:id', () => {
   it('deletes an item and returns 204', async () => {
     const created = await (await createItemLocal({ name: 'Delete Me' })).json();
-    const res = await app.request(`${BASE}/${created.id}`, { method: 'DELETE' });
+    const res = await app.request(`${BASE}/${created.id}`, {
+      method: 'DELETE',
+    });
     expect(res.status).toBe(204);
     const check = await app.request(`${BASE}/${created.id}`);
     expect(check.status).toBe(404);
@@ -235,17 +253,21 @@ describe('GET /api/items/:id/stats', () => {
     expect(body.session_count).toBe(0);
     expect(body.max_single_session_wear_seconds).toBe(0);
     // No streak fields — streaks are per-category
-    expect((body as Record<string, unknown>).streak_wear_seconds).toBeUndefined();
+    expect(
+      (body as Record<string, unknown>).streak_wear_seconds,
+    ).toBeUndefined();
   });
 
   it('reflects stats after a completed session', async () => {
     const item = await (await createItemLocal({ name: 'Stats Item' })).json();
     const startTs = Math.floor(Date.now() / 1000) - 3600;
-    const s = await (await app.request(`${SESSIONS}/start`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ item_id: item.id, started_at: startTs }),
-    })).json();
+    const s = await (
+      await app.request(`${SESSIONS}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: item.id, started_at: startTs }),
+      })
+    ).json();
     await app.request(`${SESSIONS}/${s.id}/end`, { method: 'POST' });
 
     const res = await app.request(`${BASE}/${item.id}/stats`);
@@ -265,14 +287,18 @@ describe('GET /api/items/:id/stats', () => {
 describe('GET /api/items/:id/stats/history', () => {
   it('returns monthly time-series', async () => {
     const item = await (await createItemLocal({ name: 'History Item' })).json();
-    const s = await (await app.request(`${SESSIONS}/start`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ item_id: item.id }),
-    })).json();
+    const s = await (
+      await app.request(`${SESSIONS}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: item.id }),
+      })
+    ).json();
     await app.request(`${SESSIONS}/${s.id}/end`, { method: 'POST' });
 
-    const res = await app.request(`${BASE}/${item.id}/stats/history?unit=month`);
+    const res = await app.request(
+      `${BASE}/${item.id}/stats/history?unit=month`,
+    );
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(Array.isArray(body)).toBe(true);
@@ -284,14 +310,18 @@ describe('GET /api/items/:id/stats/history', () => {
   });
 
   it('returns weekly time-series', async () => {
-    const item = await (await createItemLocal({ name: 'History Item Weekly' })).json();
+    const item = await (
+      await createItemLocal({ name: 'History Item Weekly' })
+    ).json();
     const res = await app.request(`${BASE}/${item.id}/stats/history?unit=week`);
     expect(res.status).toBe(200);
     expect(Array.isArray(await res.json())).toBe(true);
   });
 
   it('returns 400 for invalid unit', async () => {
-    const item = await (await createItemLocal({ name: 'History Bad Unit' })).json();
+    const item = await (
+      await createItemLocal({ name: 'History Bad Unit' })
+    ).json();
     const res = await app.request(`${BASE}/${item.id}/stats/history?unit=day`);
     expect(res.status).toBe(400);
   });

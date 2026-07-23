@@ -13,7 +13,8 @@ async function post(path: string, body: unknown) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`POST ${path} failed: ${res.status} ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(`POST ${path} failed: ${res.status} ${await res.text()}`);
   return res.json();
 }
 
@@ -22,7 +23,10 @@ async function endSession(id: number, endedAt: number) {
 }
 
 async function startSession(itemId: number, startedAt: number) {
-  return post('/api/sessions/start', { item_id: itemId, started_at: startedAt });
+  return post('/api/sessions/start', {
+    item_id: itemId,
+    started_at: startedAt,
+  });
 }
 
 async function main() {
@@ -42,7 +46,9 @@ async function main() {
     break_grace_time: 3 * DAY,
   });
   const trailRunners = await post('/api/items', {
-    name: 'Trail Runners', category_id: footwear.id, color: '#3b82f6',
+    name: 'Trail Runners',
+    category_id: footwear.id,
+    color: '#3b82f6',
   });
   for (const daysAgo of [21, 14, 7]) {
     const start = now - daysAgo * DAY;
@@ -64,14 +70,17 @@ async function main() {
     break_grace_time: 2 * DAY,
   });
   const nightGuard = await post('/api/items', {
-    name: 'Night Guard', category_id: ortho.id, color: '#f97316',
+    name: 'Night Guard',
+    category_id: ortho.id,
+    color: '#f97316',
   });
   for (const daysAgo of [10, 4] as const) {
     const start = now - daysAgo * DAY;
     const s = await startSession(nightGuard.id, start);
     await endSession(s.id, start + 45 * 60);
   }
-  await startSession(nightGuard.id, now - 7 * HOUR); // several laps past a ~30min-ish target (tier 3+)
+  // several laps past a ~30min-ish target (tier 3+)
+  await startSession(nightGuard.id, now - 7 * HOUR);
 
   // --- Retainer: streak of 3, now decaying, idle (no active session) ---
   const retainer = await post('/api/categories', {
@@ -86,21 +95,31 @@ async function main() {
     break_grace_time: 1 * DAY,
   });
   const upperRetainer = await post('/api/items', {
-    name: 'Upper Retainer', category_id: retainer.id, color: '#22c55e',
+    name: 'Upper Retainer',
+    category_id: retainer.id,
+    color: '#22c55e',
   });
   // Three consecutive sessions, each starting well within rest+grace of the
   // previous one ending, most recent ended long enough ago (past rest+grace,
   // within a few decay-multiplier days) to be "decaying" but not fully.
   let prevEnd = now - 4.5 * DAY;
   for (let i = 0; i < 3; i++) {
-    const start = prevEnd + 10 * 60; // 10 min after previous ended — well within rest+grace
-    const s = await startSession(upperRetainer.id, i === 0 ? prevEnd - 8 * HOUR : start);
+    // 10 min after previous ended — well within rest+grace
+    const start = prevEnd + 10 * 60;
+    const s = await startSession(
+      upperRetainer.id,
+      i === 0 ? prevEnd - 8 * HOUR : start,
+    );
     const end = i === 0 ? prevEnd : start + 8 * HOUR;
     await endSession(s.id, end);
     prevEnd = end;
   }
 
-  console.log('Seed complete:', { footwear: footwear.id, ortho: ortho.id, retainer: retainer.id });
+  console.log('Seed complete:', {
+    footwear: footwear.id,
+    ortho: ortho.id,
+    retainer: retainer.id,
+  });
 }
 
 main().catch((err) => {

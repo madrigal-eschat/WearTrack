@@ -36,12 +36,20 @@ const server = http.createServer(async (req, res) => {
 
   // ── Static assets / HMR / Vite internals: let Vite's connect stack run ──
   // Anything with a file extension, or Vite's own /@vite/ /@fs/ paths
-  const isViteAsset = url.startsWith('/@') || url.startsWith('/node_modules') || /\.[a-z0-9]+(\?.*)?$/i.test(url.split('?')[0]);
+  const isViteAsset =
+    url.startsWith('/@') ||
+    url.startsWith('/node_modules') ||
+    /\.[a-z0-9]+(\?.*)?$/i.test(url.split('?')[0]);
 
   if (isViteAsset) {
     vite.middlewares.handle(req, res, (err?: unknown) => {
-      if (err) { res.statusCode = 500; res.end(String(err)); }
-      else     { res.statusCode = 404; res.end('Not found'); }
+      if (err) {
+        res.statusCode = 500;
+        res.end(String(err));
+      } else {
+        res.statusCode = 404;
+        res.end('Not found');
+      }
     });
     return;
   }

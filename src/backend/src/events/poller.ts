@@ -64,7 +64,11 @@ export function tick(now: number = nowSeconds()): void {
       }
       row.resting = resting;
 
-      if (shouldEmit && row.decay_state === 'none' && decay.decay_state !== 'none') {
+      if (
+        shouldEmit &&
+        row.decay_state === 'none' &&
+        decay.decay_state !== 'none'
+      ) {
         eventBus.emit('decay_start', {
           category_id: category.id,
           category_name: category.name,
@@ -73,7 +77,11 @@ export function tick(now: number = nowSeconds()): void {
           decay_full_time: decay.decay_full_time!,
         });
       }
-      if (shouldEmit && row.decay_state !== 'fully_decayed' && decay.decay_state === 'fully_decayed') {
+      if (
+        shouldEmit &&
+        row.decay_state !== 'fully_decayed' &&
+        decay.decay_state === 'fully_decayed'
+      ) {
         eventBus.emit('decay_finish', {
           category_id: category.id,
           category_name: category.name,
@@ -87,7 +95,8 @@ export function tick(now: number = nowSeconds()): void {
       const halfway = Math.floor((restEnd + decayStart) / 2);
       const decaySoonFire = decayStart - 3600;
       const decaySoonSuppressed =
-        decaySoonFire < restEnd + 3600 || Math.abs(decaySoonFire - halfway) < 1800;
+        decaySoonFire < restEnd + 3600 ||
+        Math.abs(decaySoonFire - halfway) < 1800;
 
       if (row.halfway_notified === 0 && now >= halfway) {
         if (shouldEmit) {
@@ -101,9 +110,17 @@ export function tick(now: number = nowSeconds()): void {
         row.halfway_notified = 1;
       }
 
-      if (!decaySoonSuppressed && row.decay_soon_notified === 0 && now >= decaySoonFire) {
+      if (
+        !decaySoonSuppressed &&
+        row.decay_soon_notified === 0 &&
+        now >= decaySoonFire
+      ) {
         if (shouldEmit) {
-          eventBus.emit('decay_soon', { category_id: category.id, category_name: category.name, timestamp: now });
+          eventBus.emit('decay_soon', {
+            category_id: category.id,
+            category_name: category.name,
+            timestamp: now,
+          });
         }
         row.decay_soon_notified = 1;
       }
@@ -118,10 +135,16 @@ export function tick(now: number = nowSeconds()): void {
         row.overtime_notified = 0;
       }
 
-      if (row.target_met_notified === 0 && now >= session.started_at + session.target_wear_seconds) {
+      if (
+        row.target_met_notified === 0 &&
+        now >= session.started_at + session.target_wear_seconds
+      ) {
         if (shouldEmit) {
           eventBus.emit('target_met', {
-            category_id: category.id, category_name: category.name, timestamp: now, session_id: session.id,
+            category_id: category.id,
+            category_name: category.name,
+            timestamp: now,
+            session_id: session.id,
           });
         }
         row.target_met_notified = 1;
@@ -134,18 +157,32 @@ export function tick(now: number = nowSeconds()): void {
         const suppressed30 = fire30 <= session.started_at + 300;
         const suppressed5 = fire5 <= session.started_at + 300;
 
-        if (!suppressed30 && row.overtime_warning_30_notified === 0 && now >= fire30) {
+        if (
+          !suppressed30 &&
+          row.overtime_warning_30_notified === 0 &&
+          now >= fire30
+        ) {
           if (shouldEmit) {
             eventBus.emit('overtime_warning_30', {
-              category_id: category.id, category_name: category.name, timestamp: now, session_id: session.id,
+              category_id: category.id,
+              category_name: category.name,
+              timestamp: now,
+              session_id: session.id,
             });
           }
           row.overtime_warning_30_notified = 1;
         }
-        if (!suppressed5 && row.overtime_warning_5_notified === 0 && now >= fire5) {
+        if (
+          !suppressed5 &&
+          row.overtime_warning_5_notified === 0 &&
+          now >= fire5
+        ) {
           if (shouldEmit) {
             eventBus.emit('overtime_warning_5', {
-              category_id: category.id, category_name: category.name, timestamp: now, session_id: session.id,
+              category_id: category.id,
+              category_name: category.name,
+              timestamp: now,
+              session_id: session.id,
             });
           }
           row.overtime_warning_5_notified = 1;
@@ -153,7 +190,10 @@ export function tick(now: number = nowSeconds()): void {
         if (row.overtime_notified === 0 && now >= fireOvertime) {
           if (shouldEmit) {
             eventBus.emit('overtime', {
-              category_id: category.id, category_name: category.name, timestamp: now, session_id: session.id,
+              category_id: category.id,
+              category_name: category.name,
+              timestamp: now,
+              session_id: session.id,
             });
           }
           row.overtime_notified = 1;

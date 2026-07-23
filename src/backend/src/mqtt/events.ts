@@ -23,7 +23,9 @@ function base(event: string, ctx: EventContext) {
   };
 }
 
-export function buildSessionStartPayload(ctx: EventContext & { session_id: number }) {
+export function buildSessionStartPayload(
+  ctx: EventContext & { session_id: number },
+) {
   return { ...base('session_start', ctx), session_id: ctx.session_id };
 }
 
@@ -44,7 +46,9 @@ export function buildSessionEndPayload(
   };
 }
 
-export function buildRestStartPayload(ctx: EventContext & { rest_seconds: number }) {
+export function buildRestStartPayload(
+  ctx: EventContext & { rest_seconds: number },
+) {
   return { ...base('rest_start', ctx), rest_seconds: ctx.rest_seconds };
 }
 
@@ -59,7 +63,10 @@ export function buildRestEndPayload(
 }
 
 export function buildDecayStartPayload(
-  ctx: EventContext & { decay_state: 'decaying' | 'fully_decayed'; decay_full_time: number },
+  ctx: EventContext & {
+    decay_state: 'decaying' | 'fully_decayed';
+    decay_full_time: number;
+  },
 ) {
   return {
     ...base('decay_start', ctx),
@@ -69,7 +76,11 @@ export function buildDecayStartPayload(
 }
 
 export function buildDecayFinishPayload(ctx: EventContext) {
-  return { ...base('decay_finish', ctx), decay_state: 'fully_decayed' as const, decay_percentage: 100 };
+  return {
+    ...base('decay_finish', ctx),
+    decay_state: 'fully_decayed' as const,
+    decay_percentage: 100,
+  };
 }
 
 export function slugify(name: string): string {

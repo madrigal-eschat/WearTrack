@@ -7,7 +7,14 @@ beforeAll(() => {
 });
 
 describe('001_initial migration', () => {
-  const expectedTables = ['categories', 'items', 'sessions', 'injuries', 'stats', 'category_stats'];
+  const expectedTables = [
+    'categories',
+    'items',
+    'sessions',
+    'injuries',
+    'stats',
+    'category_stats',
+  ];
 
   it.each(expectedTables)('creates table: %s', (table) => {
     const row = dbExport
@@ -17,7 +24,9 @@ describe('001_initial migration', () => {
   });
 
   it('categories has formula fields', () => {
-    const info = dbExport.prepare('PRAGMA table_info(categories)').all() as Array<{ name: string }>;
+    const info = dbExport
+      .prepare('PRAGMA table_info(categories)')
+      .all() as Array<{ name: string }>;
     const cols = info.map((r) => r.name);
     expect(cols).toContain('initial_wear_duration_seconds');
     expect(cols).toContain('rest_multiplier');
@@ -30,7 +39,9 @@ describe('001_initial migration', () => {
   });
 
   it('injuries has occurred_at, healed_at, severity', () => {
-    const info = dbExport.prepare('PRAGMA table_info(injuries)').all() as Array<{ name: string }>;
+    const info = dbExport
+      .prepare('PRAGMA table_info(injuries)')
+      .all() as Array<{ name: string }>;
     const cols = info.map((r) => r.name);
     expect(cols).toContain('occurred_at');
     expect(cols).toContain('healed_at');
@@ -40,7 +51,9 @@ describe('001_initial migration', () => {
   });
 
   it('stats has per-item cumulative fields and no streak fields', () => {
-    const info = dbExport.prepare('PRAGMA table_info(stats)').all() as Array<{ name: string }>;
+    const info = dbExport.prepare('PRAGMA table_info(stats)').all() as Array<{
+      name: string;
+    }>;
     const cols = info.map((r) => r.name);
     expect(cols).toContain('total_wear_seconds');
     expect(cols).toContain('session_count');
@@ -54,7 +67,9 @@ describe('001_initial migration', () => {
   });
 
   it('category_stats has cumulative and streak fields', () => {
-    const info = dbExport.prepare('PRAGMA table_info(category_stats)').all() as Array<{ name: string }>;
+    const info = dbExport
+      .prepare('PRAGMA table_info(category_stats)')
+      .all() as Array<{ name: string }>;
     const cols = info.map((r) => r.name);
     expect(cols).toContain('category_id');
     expect(cols).toContain('total_wear_seconds');

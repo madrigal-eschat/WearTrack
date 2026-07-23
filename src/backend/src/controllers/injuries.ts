@@ -12,7 +12,9 @@ export const router = new Hono();
 // GET /api/injuries?item_id=
 router.get('/', (c) => {
   const itemId = c.req.query('item_id');
-  return c.json(injuryStore.findAll(itemId !== undefined ? Number(itemId) : undefined));
+  return c.json(
+    injuryStore.findAll(itemId !== undefined ? Number(itemId) : undefined),
+  );
 });
 
 // GET /api/injuries/:id
@@ -25,13 +27,15 @@ router.get('/:id', (c) => {
 
 // POST /api/injuries — record a new injury for an item
 // Severity is derived from the item's current wear and category risk levels.
-// The request may optionally supply a wear_seconds override (e.g. from a just-ended session);
-// if omitted we use the latest session's calculated_wear.
+// The request may optionally supply a wear_seconds override (e.g. from a
+// just-ended session); if omitted we use the latest session's
+// calculated_wear.
 router.post('/', async (c) => {
   const body = await c.req.json();
   const { item_id, wear_seconds } = body;
 
-  if (typeof item_id !== 'number') throw new ValidationError('item_id must be a number');
+  if (typeof item_id !== 'number')
+    throw new ValidationError('item_id must be a number');
 
   const item = itemStore.find(item_id);
   if (!item) throw new NotFoundError(`Item ${item_id} not found`);
@@ -42,11 +46,15 @@ router.post('/', async (c) => {
 
   // Resolve wear to derive severity
   const wearSeconds: number =
-    typeof wear_seconds === 'number' ? wear_seconds : injuryStore.lastSessionWear(item_id);
+    typeof wear_seconds === 'number'
+      ? wear_seconds
+      : injuryStore.lastSessionWear(item_id);
 
   const category = categoryStore.findRaw(item.category_id)!;
   if (category.type === 'rotation') {
-    throw new ValidationError('Injuries are not supported for rotation categories');
+    throw new ValidationError(
+      'Injuries are not supported for rotation categories',
+    );
   }
   const riskLevel = riskLevelFor(wearSeconds, category);
   const severity = riskLevel?.severity ?? 1;
@@ -67,7 +75,8 @@ router.post('/:id/heal', (c) => {
   const id = Number(c.req.param('id'));
   const injury = injuryStore.find(id);
   if (!injury) throw new NotFoundError(`Injury ${id} not found`);
-  if (injury.healed_at !== null) throw new ValidationError(`Injury ${id} is already healed`);
+  if (injury.healed_at !== null)
+    throw new ValidationError(`Injury ${id} is already healed`);
 
   injuryStore.heal(injury.item_id);
 

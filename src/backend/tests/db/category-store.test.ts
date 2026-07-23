@@ -93,14 +93,20 @@ describe('categoryStore.update', () => {
   });
 
   it('updates the icon', () => {
-    const cat = categoryStore.create({ ...baseCategory, name: 'IconTest', icon: 'old-icon' });
+    const cat = categoryStore.create({
+      ...baseCategory,
+      name: 'IconTest',
+      icon: 'old-icon',
+    });
     const updated = categoryStore.update(cat.id, { icon: 'new-icon' });
     expect(updated.icon).toBe('new-icon');
   });
 
   it('updates initial_target_wear_duration_seconds', () => {
     const cat = categoryStore.create({ ...baseCategory, name: 'DurationTest' });
-    const updated = categoryStore.update(cat.id, { initial_target_wear_duration_seconds: 1200 });
+    const updated = categoryStore.update(cat.id, {
+      initial_target_wear_duration_seconds: 1200,
+    });
     expect(updated.initial_target_wear_duration_seconds).toBe(1200);
   });
 
@@ -120,7 +126,10 @@ describe('categoryStore.update', () => {
 
 describe('categoryStore.delete', () => {
   it('removes the category from the DB', () => {
-    const cat = categoryStore.create({ ...baseCategory, name: 'Temp Category' });
+    const cat = categoryStore.create({
+      ...baseCategory,
+      name: 'Temp Category',
+    });
     expect(categoryStore.find(cat.id)).toBeDefined();
     categoryStore.delete(cat.id);
     expect(categoryStore.find(cat.id)).toBeUndefined();
@@ -128,11 +137,18 @@ describe('categoryStore.delete', () => {
 });
 
 describe('categoryStore rotation fields', () => {
-  it('defaults type to duration and consecutive_wear_days to 1 when omitted', () => {
-    const cat = categoryStore.create({ ...baseCategory, name: 'Default Type' });
-    expect(cat.type).toBe('duration');
-    expect(cat.consecutive_wear_days).toBe(1);
-  });
+  it(
+    'defaults type to duration and consecutive_wear_days to 1 when ' +
+      'omitted',
+    () => {
+      const cat = categoryStore.create({
+        ...baseCategory,
+        name: 'Default Type',
+      });
+      expect(cat.type).toBe('duration');
+      expect(cat.consecutive_wear_days).toBe(1);
+    },
+  );
 
   it('persists an explicit rotation type and consecutive_wear_days', () => {
     const cat = categoryStore.create({
@@ -151,7 +167,10 @@ describe('categoryStore rotation fields', () => {
 
   it('update() can change type and consecutive_wear_days', () => {
     const cat = categoryStore.create({ ...baseCategory, name: 'Update Type' });
-    const updated = categoryStore.update(cat.id, { type: 'rotation', consecutive_wear_days: 3 });
+    const updated = categoryStore.update(cat.id, {
+      type: 'rotation',
+      consecutive_wear_days: 3,
+    });
     expect(updated.type).toBe('rotation');
     expect(updated.consecutive_wear_days).toBe(3);
   });

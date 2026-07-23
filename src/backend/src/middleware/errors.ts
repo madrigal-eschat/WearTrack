@@ -24,8 +24,8 @@ export class ValidationError extends Error {
 }
 
 /**
- * Registered via app.onError() so Hono routes it through the compose error path,
- * which correctly overrides the default 500 response.
+ * Registered via app.onError() so Hono routes it through the compose
+ * error path, which correctly overrides the default 500 response.
  */
 export const errorHandler = (): ErrorHandler => {
   return (e, c) => {

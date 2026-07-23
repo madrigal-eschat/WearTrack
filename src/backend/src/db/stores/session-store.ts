@@ -57,8 +57,10 @@ class SessionStore {
     return db
       .prepare(
         `SELECT
-           i.id AS item_id, i.category_id, i.name, i.color, i.difficulty_multiplier,
-           s.ended_at, s.started_at, s.target_wear_seconds, s.max_wear_seconds, s.rest_seconds
+           i.id AS item_id, i.category_id, i.name, i.color,
+           i.difficulty_multiplier,
+           s.ended_at, s.started_at, s.target_wear_seconds,
+           s.max_wear_seconds, s.rest_seconds
          FROM items i
          LEFT JOIN sessions s ON s.id = (
            SELECT sess.id FROM sessions sess
@@ -70,7 +72,14 @@ class SessionStore {
       .all() as ItemWithLastSession[];
   }
 
-  findAll(opts: { itemId?: number; categoryId?: number; before?: number; limit?: number } = {}): SessionWithDetails[] {
+  findAll(
+    opts: {
+      itemId?: number;
+      categoryId?: number;
+      before?: number;
+      limit?: number;
+    } = {},
+  ): SessionWithDetails[] {
     const { itemId, categoryId, before, limit = 100 } = opts;
     const clauses: string[] = ['s.ended_at IS NOT NULL'];
     const params: number[] = [];
@@ -115,29 +124,43 @@ class SessionStore {
     }
     const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
     const rows = db
-      .prepare(`SELECT DISTINCT day FROM session_day_index ${where} ORDER BY day`)
+      .prepare(
+        `SELECT DISTINCT day FROM session_day_index ${where} ORDER BY day`,
+      )
       .all(...params) as { day: string }[];
     return rows.map((r) => r.day);
   }
 
   find(id: number): Session | undefined {
-    return db.prepare('SELECT * FROM sessions WHERE id = ?').get(id) as Session | undefined;
+    return db.prepare('SELECT * FROM sessions WHERE id = ?').get(id) as
+      Session | undefined;
   }
 
-  /** Most recently ended session for ANY item in the category (the formula's previous_session). */
+  /**
+   * Most recently ended session for ANY item in the category (the
+   * formula's previous_session).
+   */
   findLastEndedInCategory(categoryId: number): PreviousSession | undefined {
     return db
       .prepare(
-        `SELECT s.target_wear_seconds, s.max_wear_seconds, s.ended_at, s.started_at, s.rest_seconds
+        `SELECT s.target_wear_seconds, s.max_wear_seconds, s.ended_at,
+                s.started_at, s.rest_seconds
          FROM sessions s JOIN items i ON i.id = s.item_id
-         WHERE i.category_id = ? AND s.ended_at IS NOT NULL AND s.ended_in_injury = 0
+         WHERE i.category_id = ? AND s.ended_at IS NOT NULL
+         AND s.ended_in_injury = 0
          ORDER BY s.ended_at DESC LIMIT 1`,
       )
       .get(categoryId) as PreviousSession | undefined;
   }
 
-  /** Last `limit` sessions (any item) in a category, newest first. Feeds rotationAvailability. */
-  findRecentInCategory(categoryId: number, limit: number): { item_id: number }[] {
+  /**
+   * Last `limit` sessions (any item) in a category, newest first. Feeds
+   * rotationAvailability.
+   */
+  findRecentInCategory(
+    categoryId: number,
+    limit: number,
+  ): { item_id: number }[] {
     return db
       .prepare(
         `SELECT s.item_id FROM sessions s JOIN items i ON i.id = s.item_id
@@ -147,8 +170,14 @@ class SessionStore {
       .all(categoryId, limit) as { item_id: number }[];
   }
 
-  /** Most recent session (any item, open or closed) in the category that started on/after `dayStart`. Feeds the rotation daily-cap check. */
-  findSessionStartedTodayInCategory(categoryId: number, dayStart: number): { started_at: number } | undefined {
+  /**
+   * Most recent session (any item, open or closed) in the category that
+   * started on/after `dayStart`. Feeds the rotation daily-cap check.
+   */
+  findSessionStartedTodayInCategory(
+    categoryId: number,
+    dayStart: number,
+  ): { started_at: number } | undefined {
     return db
       .prepare(
         `SELECT s.started_at FROM sessions s JOIN items i ON i.id = s.item_id
@@ -158,21 +187,29 @@ class SessionStore {
       .get(categoryId, dayStart) as { started_at: number } | undefined;
   }
 
-  findOpenInCategory(categoryId: number): { session_id: number; item_id: number; item_name: string } | undefined {
+  findOpenInCategory(
+    categoryId: number,
+  ): { session_id: number; item_id: number; item_name: string } | undefined {
     return db
       .prepare(
         `SELECT s.id AS session_id, i.id AS item_id, i.name AS item_name
          FROM sessions s JOIN items i ON i.id = s.item_id
          WHERE i.category_id = ? AND s.ended_at IS NULL`,
       )
-      .get(categoryId) as { session_id: number; item_id: number; item_name: string } | undefined;
+      .get(categoryId) as
+      { session_id: number; item_id: number; item_name: string } | undefined;
   }
 
-  /** Find the open session for a specific item (used by the injuries controller). */
+  /**
+   * Find the open session for a specific item (used by the injuries
+   * controller).
+   */
   findOpenForItem(itemId: number): { id: number } | undefined {
-    return db.prepare('SELECT id FROM sessions WHERE item_id = ? AND ended_at IS NULL').get(itemId) as
-      | { id: number }
-      | undefined;
+    return db
+      .prepare(
+        'SELECT id FROM sessions WHERE item_id = ? AND ended_at IS NULL',
+      )
+      .get(itemId) as { id: number } | undefined;
   }
 
   findOpenWithItemData(): OpenSessionWithItem[] {
@@ -186,8 +223,16 @@ class SessionStore {
       .all() as OpenSessionWithItem[];
   }
 
-  /** Start a new session. category is the raw DB row; item supplies difficulty. */
-  start(itemId: number, category: Category, item: { difficulty_multiplier: number }, startedAt: number): Session {
+  /**
+   * Start a new session. category is the raw DB row; item supplies
+   * difficulty.
+   */
+  start(
+    itemId: number,
+    category: Category,
+    item: { difficulty_multiplier: number },
+    startedAt: number,
+  ): Session {
     let target: number;
     let max: number | null;
     let previous: PreviousSession | null = null;
@@ -198,14 +243,22 @@ class SessionStore {
     } else {
       previous = this.findLastEndedInCategory(category.id) ?? null;
       const injuryActive = injuryStore.hasActiveInCategory(category.id);
-      ({ target, max } = computeSessionStart(category, item, previous, startedAt, injuryActive));
+      ({ target, max } = computeSessionStart(
+        category,
+        item,
+        previous,
+        startedAt,
+        injuryActive,
+      ));
     }
 
-    // A new session in this category synchronously resolves any rest/decay period the
-    // previous session left owing — otherwise it would silently linger until the next
-    // poller tick, and the poller itself now skips a category's previous-session block
-    // entirely while a session is open (see events/poller.ts). Rotation categories have
-    // no rest/decay concept, so `previous` stays null for them and this block is a no-op.
+    // A new session in this category synchronously resolves any
+    // rest/decay period the previous session left owing — otherwise it
+    // would silently linger until the next poller tick, and the poller
+    // itself now skips a category's previous-session block entirely
+    // while a session is open (see events/poller.ts). Rotation
+    // categories have no rest/decay concept, so `previous` stays null
+    // for them and this block is a no-op.
     if (previous) {
       const restEnd = previous.ended_at + previous.rest_seconds;
       if (startedAt < restEnd) {
@@ -233,7 +286,8 @@ class SessionStore {
 
     const result = db
       .prepare(
-        'INSERT INTO sessions (item_id, started_at, target_wear_seconds, max_wear_seconds) VALUES (?, ?, ?, ?)',
+        'INSERT INTO sessions (item_id, started_at, target_wear_seconds, ' +
+          'max_wear_seconds) VALUES (?, ?, ?, ?)',
       )
       .run(itemId, startedAt, target, max);
     const session = this.find(result.lastInsertRowid as number)!;
@@ -251,7 +305,10 @@ class SessionStore {
     return session;
   }
 
-  /** Write-through derived index: one row per (day, category, item) the first time a session on it completes. */
+  /**
+   * Write-through derived index: one row per (day, category, item) the
+   * first time a session on it completes.
+   */
   recordDayIndex(sessionId: number): void {
     db.prepare(
       `INSERT OR IGNORE INTO session_day_index (day, category_id, item_id)
@@ -261,7 +318,10 @@ class SessionStore {
     ).run(sessionId);
   }
 
-  /** End a session: derive elapsed, compute rest, persist; target/max stay as set at start. */
+  /**
+   * End a session: derive elapsed, compute rest, persist; target/max
+   * stay as set at start.
+   */
   end(session: Session, category: Category, endedAt: number): Session {
     return db.transaction(() => {
       const elapsed = endedAt - session.started_at;
@@ -272,15 +332,27 @@ class SessionStore {
       } else {
         const injuryActive = injuryStore.hasActiveInCategory(category.id);
         riskLevel = riskLevelFor(elapsed, category);
-        rest = computeRest(elapsed, session.max_wear_seconds, category, riskLevel, injuryActive);
+        rest = computeRest(
+          elapsed,
+          session.max_wear_seconds,
+          category,
+          riskLevel,
+          injuryActive,
+        );
       }
 
-      db.prepare('UPDATE sessions SET ended_at = ?, rest_seconds = ? WHERE id = ?').run(endedAt, rest, session.id);
+      db.prepare(
+        'UPDATE sessions SET ended_at = ?, rest_seconds = ? WHERE id = ?',
+      ).run(endedAt, rest, session.id);
 
       const updated = this.find(session.id)!;
       const snapshot = { ...updated, ended_at: endedAt };
       statsStore.recordItemSession(snapshot);
-      statsStore.recordCategorySession(category.id, category.break_grace_time, snapshot);
+      statsStore.recordCategorySession(
+        category.id,
+        category.break_grace_time,
+        snapshot,
+      );
       this.recordDayIndex(session.id);
 
       eventBus.emit('session_end', {
@@ -301,22 +373,33 @@ class SessionStore {
   }
 
   /**
-   * Close an open session as ended-in-injury (no stats update — wear is not credited).
+   * Close an open session as ended-in-injury (no stats update — wear is
+   * not credited).
    */
   endWithInjury(sessionId: number, endedAt: number): void {
-    db.prepare('UPDATE sessions SET ended_at = ?, ended_in_injury = 1 WHERE id = ?').run(endedAt, sessionId);
+    db.prepare(
+      'UPDATE sessions SET ended_at = ?, ended_in_injury = 1 WHERE id = ?',
+    ).run(endedAt, sessionId);
     this.recordDayIndex(sessionId);
   }
 
   /**
-   * Correct a completed session's end time (duration is derived by the caller).
-   * `started_at` never changes. Injury-ended sessions never had rest_seconds/stats
-   * contributions, so they're skipped for both here, matching endWithInjury().
+   * Correct a completed session's end time (duration is derived by the
+   * caller). `started_at` never changes. Injury-ended sessions never had
+   * rest_seconds/stats contributions, so they're skipped for both here,
+   * matching endWithInjury().
    */
-  updateEnd(session: Session, category: Category, newEndedAt: number): Session {
+  updateEnd(
+    session: Session,
+    category: Category,
+    newEndedAt: number,
+  ): Session {
     return db.transaction(() => {
       if (session.ended_in_injury) {
-        db.prepare('UPDATE sessions SET ended_at = ? WHERE id = ?').run(newEndedAt, session.id);
+        db.prepare('UPDATE sessions SET ended_at = ? WHERE id = ?').run(
+          newEndedAt,
+          session.id,
+        );
         return this.find(session.id)!;
       }
 
@@ -327,14 +410,18 @@ class SessionStore {
       } else {
         const injuryActive = injuryStore.hasActiveInCategory(category.id);
         const riskLevel = riskLevelFor(elapsed, category);
-        rest = computeRest(elapsed, session.max_wear_seconds, category, riskLevel, injuryActive);
+        rest = computeRest(
+          elapsed,
+          session.max_wear_seconds,
+          category,
+          riskLevel,
+          injuryActive,
+        );
       }
 
-      db.prepare('UPDATE sessions SET ended_at = ?, rest_seconds = ? WHERE id = ?').run(
-        newEndedAt,
-        rest,
-        session.id,
-      );
+      db.prepare(
+        'UPDATE sessions SET ended_at = ?, rest_seconds = ? WHERE id = ?',
+      ).run(newEndedAt, rest, session.id);
 
       statsStore.recomputeItem(session.item_id);
       statsStore.recomputeCategory(category.id, category.break_grace_time);
@@ -344,24 +431,29 @@ class SessionStore {
   }
 
   /**
-   * Delete a completed session, recompute its item/category stats, and drop its
-   * session_day_index row if no sibling session remains on that (day, category, item).
+   * Delete a completed session, recompute its item/category stats, and
+   * drop its session_day_index row if no sibling session remains on
+   * that (day, category, item).
    */
   remove(session: Session, category: Category): void {
-    const day = new Date(session.started_at * 1000).toISOString().slice(0, 10);
+    const day = new Date(session.started_at * 1000)
+      .toISOString()
+      .slice(0, 10);
 
     db.transaction(() => {
       db.prepare('DELETE FROM sessions WHERE id = ?').run(session.id);
 
       const remaining = db
-        .prepare(`SELECT COUNT(*) AS n FROM sessions WHERE item_id = ? AND date(started_at, 'unixepoch') = ?`)
+        .prepare(
+          `SELECT COUNT(*) AS n FROM sessions
+           WHERE item_id = ? AND date(started_at, 'unixepoch') = ?`,
+        )
         .get(session.item_id, day) as { n: number };
       if (remaining.n === 0) {
-        db.prepare('DELETE FROM session_day_index WHERE day = ? AND category_id = ? AND item_id = ?').run(
-          day,
-          category.id,
-          session.item_id,
-        );
+        db.prepare(
+          'DELETE FROM session_day_index WHERE day = ? ' +
+            'AND category_id = ? AND item_id = ?',
+        ).run(day, category.id, session.item_id);
       }
 
       if (!session.ended_in_injury && session.ended_at !== null) {
