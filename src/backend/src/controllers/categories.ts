@@ -2,7 +2,10 @@ import { Hono } from 'hono';
 import { categoryStore } from '../db/stores/category-store.js';
 import { statsStore } from '../db/stores/stats-store.js';
 import { NotFoundError } from '../middleware/errors.js';
-import { CreateCategoryCommand, UpdateCategoryCommand } from '../commands/categories.js';
+import {
+  CreateCategoryCommand,
+  UpdateCategoryCommand,
+} from '../commands/categories.js';
 
 export const router = new Hono();
 
@@ -14,7 +17,8 @@ router.get('/', (c) => {
 // GET /api/categories/:id/stats — must be before /:id to avoid shadowing
 router.get('/:id/stats', (c) => {
   const id = Number(c.req.param('id'));
-  if (!categoryStore.find(id)) throw new NotFoundError(`Category ${id} not found`);
+  if (!categoryStore.find(id))
+    throw new NotFoundError(`Category ${id} not found`);
 
   const stats = statsStore.findForCategory(id);
   return c.json(

@@ -1,6 +1,10 @@
 import { categoryStore, type Category } from '../db/stores/category-store.js';
 import { itemStore } from '../db/stores/item-store.js';
-import { sessionStore, type ItemWithLastSession, type OpenSessionWithItem } from '../db/stores/session-store.js';
+import {
+  sessionStore,
+  type ItemWithLastSession,
+  type OpenSessionWithItem,
+} from '../db/stores/session-store.js';
 import { injuryStore } from '../db/stores/injury-store.js';
 import { statsStore } from '../db/stores/stats-store.js';
 import {
@@ -21,7 +25,13 @@ interface ItemWithExpected extends ItemWithLastSession {
 
 export interface CurrentSessionEntry {
   category: Category;
-  item: { id: number; category_id: number; name: string; color: string; difficulty_multiplier: number } | null;
+  item: {
+    id: number;
+    category_id: number;
+    name: string;
+    color: string;
+    difficulty_multiplier: number;
+  } | null;
   session: {
     id: number;
     item_id: number;
@@ -72,15 +82,23 @@ export class CurrentSessionsQuery {
     const allItems = sessionStore.findAllLastSessions();
     const now = nowSeconds();
 
-    const sessionByCategory = new Map(openSessions.map((s) => [s.category_id, s]));
+    const sessionByCategory = new Map(
+      openSessions.map((s) => [s.category_id, s]),
+    );
     const itemsByCategory = new Map<number, ItemWithLastSession[]>();
     for (const item of allItems) {
-      if (!itemsByCategory.has(item.category_id)) itemsByCategory.set(item.category_id, []);
+      if (!itemsByCategory.has(item.category_id))
+        itemsByCategory.set(item.category_id, []);
       itemsByCategory.get(item.category_id)!.push(item);
     }
 
     return categories.map((cat) =>
-      this.buildEntry(cat, sessionByCategory.get(cat.id), itemsByCategory.get(cat.id) ?? [], now),
+      this.buildEntry(
+        cat,
+        sessionByCategory.get(cat.id),
+        itemsByCategory.get(cat.id) ?? [],
+        now,
+      ),
     );
   }
 
@@ -95,7 +113,11 @@ export class CurrentSessionsQuery {
     const { decay_start_time, decay_state, decay_full_time } =
       cat.type === 'duration'
         ? computeDecay(previous, cat, now)
-        : { decay_start_time: null, decay_state: 'none' as const, decay_full_time: null };
+        : {
+            decay_start_time: null,
+            decay_state: 'none' as const,
+            decay_full_time: null,
+          };
     const streak_count = statsStore.findForCategory(cat.id)?.streak_count ?? 0;
 
     const rotationAvailableIds =
@@ -107,11 +129,22 @@ export class CurrentSessionsQuery {
         : new Set(categoryItems.map((i) => i.item_id));
 
     const restingUntil =
-      cat.type === 'rotation' && sessionStore.findSessionStartedTodayInCategory(cat.id, startOfTodayLocal(now))
+      cat.type === 'rotation' &&
+      sessionStore.findSessionStartedTodayInCategory(
+        cat.id,
+        startOfTodayLocal(now),
+      )
         ? startOfNextLocalMidnight(now)
         : null;
 
-    const items = enrichItemsWithExpected(categoryItems, cat, previous, now, injuryActive, rotationAvailableIds);
+    const items = enrichItemsWithExpected(
+      categoryItems,
+      cat,
+      previous,
+      now,
+      injuryActive,
+      rotationAvailableIds,
+    );
 
     const entry: CurrentSessionEntry = {
       category: cat,

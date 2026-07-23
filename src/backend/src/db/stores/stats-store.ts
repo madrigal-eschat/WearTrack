@@ -1,6 +1,6 @@
 import db from '../index.js';
 
-// ─── Per-item stats ───────────────────────────────────────────────────────────
+// ─── Per-item stats ──────────────────────────────────────────────────────────
 
 export interface ItemStats {
   item_id: number;
@@ -9,7 +9,7 @@ export interface ItemStats {
   max_single_session_wear_seconds: number;
 }
 
-// ─── Per-category stats (includes streak tracking) ────────────────────────────
+// ─── Per-category stats (includes streak tracking) ───────────────────────────
 
 export interface CategoryStats {
   category_id: number;
@@ -57,10 +57,11 @@ function computeNewStreak(
 }
 
 class StatsStore {
-  // ── Per-item ────────────────────────────────────────────────────────────────
+  // ── Per-item ───────────────────────────────────────────────────────────────
 
   findForItem(itemId: number): ItemStats | undefined {
-    return db.prepare('SELECT * FROM stats WHERE item_id = ?').get(itemId) as ItemStats | undefined;
+    return db.prepare('SELECT * FROM stats WHERE item_id = ?').get(itemId) as
+      ItemStats | undefined;
   }
 
   initItem(itemId: number): void {
@@ -70,25 +71,33 @@ class StatsStore {
   /** Update cumulative per-item stats when a session ends. */
   recordItemSession(session: SessionSnapshot): void {
     const duration = session.ended_at - session.started_at;
-    db.prepare(`
+    db.prepare(
+      `
       UPDATE stats SET
-        total_wear_seconds              = total_wear_seconds + ?,
-        session_count                   = session_count + 1,
-        max_single_session_wear_seconds = MAX(max_single_session_wear_seconds, ?)
+        total_wear_seconds = total_wear_seconds + ?,
+        session_count = session_count + 1,
+        max_single_session_wear_seconds =
+          MAX(max_single_session_wear_seconds, ?)
       WHERE item_id = ?
-    `).run(duration, duration, session.item_id);
+    `,
+    ).run(duration, duration, session.item_id);
   }
 
-  /** Reset then replay every completed, non-injury session for this item through recordItemSession, in order. */
+  /**
+   * Reset then replay every completed, non-injury session for this item
+   * through recordItemSession, in order.
+   */
   recomputeItem(itemId: number): void {
     db.prepare(
-      `UPDATE stats SET total_wear_seconds = 0, session_count = 0, max_single_session_wear_seconds = 0
+      `UPDATE stats SET total_wear_seconds = 0, session_count = 0,
+       max_single_session_wear_seconds = 0
        WHERE item_id = ?`,
     ).run(itemId);
 
     const sessions = db
       .prepare(
-        `SELECT * FROM sessions WHERE item_id = ? AND ended_at IS NOT NULL AND ended_in_injury = 0
+        `SELECT * FROM sessions WHERE item_id = ? AND ended_at IS NOT NULL
+         AND ended_in_injury = 0
          ORDER BY ended_at ASC`,
       )
       .all(itemId) as SessionSnapshot[];
@@ -103,7 +112,8 @@ class StatsStore {
     const format = unit === 'month' ? '%Y-%m' : '%Y-%W';
     return db
       .prepare(
-        `SELECT strftime('${format}', datetime(ended_at, 'unixepoch')) AS period,
+        `SELECT strftime('${format}', datetime(ended_at, 'unixepoch'))
+                  AS period,
                 SUM(ended_at - started_at) AS total_wear_seconds,
                 COUNT(*) AS session_count
          FROM sessions
@@ -113,9 +123,11 @@ class StatsStore {
       .all(itemId);
   }
 
-  // ── Per-category ─────────────────────────────────────────────────────────────
+  // ── Per-category ───────────────────────────────────────────────────────────
 
-  findForCategory(categoryId: number): (CategoryStats & { item_count: number }) | undefined {
+  findForCategory(
+    categoryId: number,
+  ): (CategoryStats & { item_count: number }) | undefined {
     const stats = db
       .prepare('SELECT * FROM category_stats WHERE category_id = ?')
       .get(categoryId) as CategoryStats | undefined;
@@ -127,7 +139,9 @@ class StatsStore {
   }
 
   initCategory(categoryId: number): void {
-    db.prepare('INSERT OR IGNORE INTO category_stats (category_id) VALUES (?)').run(categoryId);
+    db.prepare(
+      'INSERT OR IGNORE INTO category_stats (category_id) VALUES (?)',
+    ).run(categoryId);
   }
 
   /**
@@ -136,7 +150,11 @@ class StatsStore {
    * `previousSession.rest_seconds + breakGraceTime` of the previous
    * category session (any item). Otherwise the streak resets.
    */
-  recordCategorySession(categoryId: number, breakGraceTime: number, session: SessionSnapshot): void {
+  recordCategorySession(
+    categoryId: number,
+    breakGraceTime: number,
+    session: SessionSnapshot,
+  ): void {
     const stats = db
       .prepare('SELECT * FROM category_stats WHERE category_id = ?')
       .get(categoryId) as CategoryStats | undefined;
@@ -155,25 +173,43 @@ class StatsStore {
     const { streak_count: streakCount, streak_wear: streakWear } =
       computeNewStreak(stats, prev ?? null, session, breakGraceTime);
 
-    const newBestStreakWear = Math.max(stats.best_streak_wear_seconds, streakWear);
+    const newBestStreakWear = Math.max(
+      stats.best_streak_wear_seconds,
+      streakWear,
+    );
     const newBestStreakCount = Math.max(stats.best_streak_count, streakCount);
 
-    db.prepare(`
+    db.prepare(
+      `
       UPDATE category_stats SET
-        total_wear_seconds              = total_wear_seconds + ?,
-        session_count                   = session_count + 1,
-        max_single_session_wear_seconds = MAX(max_single_session_wear_seconds, ?),
-        streak_wear_seconds             = ?, streak_count = ?,
-        best_streak_wear_seconds        = ?, best_streak_count = ?
+        total_wear_seconds = total_wear_seconds + ?,
+        session_count = session_count + 1,
+        max_single_session_wear_seconds =
+          MAX(max_single_session_wear_seconds, ?),
+        streak_wear_seconds = ?, streak_count = ?,
+        best_streak_wear_seconds = ?, best_streak_count = ?
       WHERE category_id = ?
-    `).run(duration, duration, streakWear, streakCount, newBestStreakWear, newBestStreakCount, categoryId);
+    `,
+    ).run(
+      duration,
+      duration,
+      streakWear,
+      streakCount,
+      newBestStreakWear,
+      newBestStreakCount,
+      categoryId,
+    );
   }
 
-  /** Reset then replay every completed, non-injury session for this category through recordCategorySession, in order. */
+  /**
+   * Reset then replay every completed, non-injury session for this
+   * category through recordCategorySession, in order.
+   */
   recomputeCategory(categoryId: number, breakGraceTime: number): void {
     db.prepare(
       `UPDATE category_stats SET
-         total_wear_seconds = 0, session_count = 0, max_single_session_wear_seconds = 0,
+         total_wear_seconds = 0, session_count = 0,
+         max_single_session_wear_seconds = 0,
          streak_wear_seconds = 0, streak_count = 0,
          best_streak_wear_seconds = 0, best_streak_count = 0
        WHERE category_id = ?`,
@@ -182,7 +218,8 @@ class StatsStore {
     const sessions = db
       .prepare(
         `SELECT s.* FROM sessions s JOIN items i ON i.id = s.item_id
-         WHERE i.category_id = ? AND s.ended_at IS NOT NULL AND s.ended_in_injury = 0
+         WHERE i.category_id = ? AND s.ended_at IS NOT NULL
+         AND s.ended_in_injury = 0
          ORDER BY s.ended_at ASC`,
       )
       .all(categoryId) as SessionSnapshot[];
@@ -192,7 +229,7 @@ class StatsStore {
     }
   }
 
-  // ── Leaderboards ─────────────────────────────────────────────────────────────
+  // ── Leaderboards ───────────────────────────────────────────────────────────
 
   longestWear(): unknown[] {
     return db

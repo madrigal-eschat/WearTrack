@@ -16,19 +16,27 @@ class InjuryStore {
   findAll(itemId?: number): Injury[] {
     if (itemId !== undefined) {
       return db
-        .prepare('SELECT * FROM injuries WHERE item_id = ? ORDER BY occurred_at DESC')
+        .prepare(
+          'SELECT * FROM injuries WHERE item_id = ? ORDER BY occurred_at DESC',
+        )
         .all(itemId) as Injury[];
     }
-    return db.prepare('SELECT * FROM injuries ORDER BY occurred_at DESC').all() as Injury[];
+    return db
+      .prepare('SELECT * FROM injuries ORDER BY occurred_at DESC')
+      .all() as Injury[];
   }
 
   find(id: number): Injury | undefined {
-    return db.prepare('SELECT * FROM injuries WHERE id = ?').get(id) as Injury | undefined;
+    return db.prepare('SELECT * FROM injuries WHERE id = ?').get(id) as
+      Injury | undefined;
   }
 
   findActive(itemId: number): Injury | undefined {
     return db
-      .prepare('SELECT * FROM injuries WHERE item_id = ? AND healed_at IS NULL ORDER BY occurred_at DESC LIMIT 1')
+      .prepare(
+        'SELECT * FROM injuries WHERE item_id = ? AND healed_at IS NULL ' +
+          'ORDER BY occurred_at DESC LIMIT 1',
+      )
       .get(itemId) as Injury | undefined;
   }
 
@@ -50,24 +58,29 @@ class InjuryStore {
   record(itemId: number, severity: number): Injury {
     return db
       .prepare(
-        'INSERT INTO injuries (item_id, occurred_at, healed_at, severity) VALUES (?, ?, NULL, ?) RETURNING *',
+        'INSERT INTO injuries (item_id, occurred_at, healed_at, severity) ' +
+          'VALUES (?, ?, NULL, ?) RETURNING *',
       )
       .get(itemId, nowSeconds(), severity) as Injury;
   }
 
   heal(itemId: number): void {
-    db.prepare('UPDATE injuries SET healed_at = ? WHERE item_id = ? AND healed_at IS NULL').run(
-      nowSeconds(),
-      itemId,
-    );
+    db.prepare(
+      'UPDATE injuries SET healed_at = ? WHERE item_id = ? ' +
+        'AND healed_at IS NULL',
+    ).run(nowSeconds(), itemId);
   }
 
-  /** Elapsed (ended_at - started_at) of the most recent ended session for an item. */
+  /**
+   * Elapsed (ended_at - started_at) of the most recent ended session for
+   * an item.
+   */
   lastSessionWear(itemId: number): number {
     const row = db
       .prepare(
         `SELECT (ended_at - started_at) AS elapsed FROM sessions
-         WHERE item_id = ? AND ended_at IS NOT NULL ORDER BY ended_at DESC LIMIT 1`,
+         WHERE item_id = ? AND ended_at IS NOT NULL
+         ORDER BY ended_at DESC LIMIT 1`,
       )
       .get(itemId) as { elapsed: number } | undefined;
     return row?.elapsed ?? 0;

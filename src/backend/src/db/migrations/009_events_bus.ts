@@ -5,7 +5,8 @@ export default function runMigration009() {
     DROP TABLE IF EXISTS sent_notifications;
 
     CREATE TABLE event_poller_state (
-      category_id                  INTEGER PRIMARY KEY REFERENCES categories(id) ON DELETE CASCADE,
+      category_id                  INTEGER PRIMARY KEY
+        REFERENCES categories(id) ON DELETE CASCADE,
       decay_state                  TEXT NOT NULL DEFAULT 'none',
       resting                      INTEGER NOT NULL DEFAULT 0,
       halfway_notified             INTEGER NOT NULL DEFAULT 0,

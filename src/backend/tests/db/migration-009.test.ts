@@ -9,7 +9,9 @@ beforeAll(() => {
 describe('migration 009', () => {
   it('creates event_poller_state table with all columns', () => {
     const cols = (
-      dbExport.prepare('PRAGMA table_info(event_poller_state)').all() as Array<{ name: string }>
+      dbExport.prepare('PRAGMA table_info(event_poller_state)').all() as Array<{
+        name: string;
+      }>
     ).map((r) => r.name);
     expect(cols).toEqual(
       expect.arrayContaining([
@@ -29,7 +31,10 @@ describe('migration 009', () => {
 
   it('drops sent_notifications table', () => {
     const row = dbExport
-      .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='sent_notifications'`)
+      .prepare(
+        `SELECT name FROM sqlite_master
+         WHERE type='table' AND name='sent_notifications'`,
+      )
       .get();
     expect(row).toBeUndefined();
   });
@@ -37,16 +42,23 @@ describe('migration 009', () => {
   it('cascades delete from categories to event_poller_state', () => {
     dbExport.exec(`
       INSERT INTO categories
-        (name, icon, initial_target_wear_duration_seconds, initial_max_wear_duration_seconds,
-         rest_multiplier, minimum_rest, risk_levels, break_decay_multiplier, break_grace_time)
+        (name, icon, initial_target_wear_duration_seconds,
+         initial_max_wear_duration_seconds, rest_multiplier, minimum_rest,
+         risk_levels, break_decay_multiplier, break_grace_time)
       VALUES ('Cascade Test', 'icon', 900, 1800, 2, 86400, '[]', 0.91, 86400)
     `);
-    const { id } = dbExport.prepare(`SELECT id FROM categories WHERE name = 'Cascade Test'`).get() as {
+    const { id } = dbExport
+      .prepare(`SELECT id FROM categories WHERE name = 'Cascade Test'`)
+      .get() as {
       id: number;
     };
-    dbExport.prepare('INSERT INTO event_poller_state (category_id) VALUES (?)').run(id);
+    dbExport
+      .prepare('INSERT INTO event_poller_state (category_id) VALUES (?)')
+      .run(id);
     dbExport.prepare('DELETE FROM categories WHERE id = ?').run(id);
-    const row = dbExport.prepare('SELECT * FROM event_poller_state WHERE category_id = ?').get(id);
+    const row = dbExport
+      .prepare('SELECT * FROM event_poller_state WHERE category_id = ?')
+      .get(id);
     expect(row).toBeUndefined();
   });
 });

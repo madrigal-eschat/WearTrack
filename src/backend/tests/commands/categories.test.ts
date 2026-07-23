@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { runMigrations } from '../../src/db/migrations/index.js';
-import { CreateCategoryCommand, UpdateCategoryCommand } from '../../src/commands/categories.js';
+import {
+  CreateCategoryCommand,
+  UpdateCategoryCommand,
+} from '../../src/commands/categories.js';
 import { ValidationError } from '../../src/middleware/errors.js';
 
 const validBody = {
@@ -21,7 +24,10 @@ beforeAll(() => {
 
 describe('CreateCategoryCommand', () => {
   it('creates a category from a valid body', () => {
-    const category = new CreateCategoryCommand({ ...validBody, name: 'Command Test 1' }).run();
+    const category = new CreateCategoryCommand({
+      ...validBody,
+      name: 'Command Test 1',
+    }).run();
     expect(category.id).toBeTypeOf('number');
     expect(category.name).toBe('Command Test 1');
     expect(category.type).toBe('duration');
@@ -29,20 +35,29 @@ describe('CreateCategoryCommand', () => {
   });
 
   it('throws ValidationError when name is missing', () => {
-    expect(() => new CreateCategoryCommand({ ...validBody, name: undefined }).run()).toThrow(ValidationError);
+    expect(() =>
+      new CreateCategoryCommand({ ...validBody, name: undefined }).run(),
+    ).toThrow(ValidationError);
   });
 
   it('throws ValidationError when risk_levels is invalid', () => {
-    expect(() => new CreateCategoryCommand({ ...validBody, risk_levels: 'nope' }).run()).toThrow(ValidationError);
+    expect(() =>
+      new CreateCategoryCommand({ ...validBody, risk_levels: 'nope' }).run(),
+    ).toThrow(ValidationError);
   });
 
   it('throws ValidationError when type is invalid', () => {
-    expect(() => new CreateCategoryCommand({ ...validBody, type: 'bogus' }).run()).toThrow(ValidationError);
+    expect(() =>
+      new CreateCategoryCommand({ ...validBody, type: 'bogus' }).run(),
+    ).toThrow(ValidationError);
   });
 
   it('accepts an explicit rotation type and consecutive_wear_days', () => {
     const category = new CreateCategoryCommand({
-      ...validBody, name: 'Command Test Rotation', type: 'rotation', consecutive_wear_days: 3,
+      ...validBody,
+      name: 'Command Test Rotation',
+      type: 'rotation',
+      consecutive_wear_days: 3,
     }).run();
     expect(category.type).toBe('rotation');
     expect(category.consecutive_wear_days).toBe(3);
@@ -51,20 +66,37 @@ describe('CreateCategoryCommand', () => {
 
 describe('UpdateCategoryCommand', () => {
   it('applies only the fields present in the body', () => {
-    const existing = new CreateCategoryCommand({ ...validBody, name: 'Command Test 2' }).run();
-    const updated = new UpdateCategoryCommand(existing, { name: 'Renamed' }).run();
+    const existing = new CreateCategoryCommand({
+      ...validBody,
+      name: 'Command Test 2',
+    }).run();
+    const updated = new UpdateCategoryCommand(existing, {
+      name: 'Renamed',
+    }).run();
     expect(updated.name).toBe('Renamed');
     expect(updated.icon).toBe(existing.icon);
   });
 
-  it('returns the existing category unchanged when the body has no recognised fields', () => {
-    const existing = new CreateCategoryCommand({ ...validBody, name: 'Command Test 3' }).run();
-    const updated = new UpdateCategoryCommand(existing, {}).run();
-    expect(updated).toEqual(existing);
-  });
+  it(
+    'returns the existing category unchanged when the body has no ' +
+      'recognised fields',
+    () => {
+      const existing = new CreateCategoryCommand({
+        ...validBody,
+        name: 'Command Test 3',
+      }).run();
+      const updated = new UpdateCategoryCommand(existing, {}).run();
+      expect(updated).toEqual(existing);
+    },
+  );
 
   it('throws ValidationError when a present field is the wrong type', () => {
-    const existing = new CreateCategoryCommand({ ...validBody, name: 'Command Test 4' }).run();
-    expect(() => new UpdateCategoryCommand(existing, { rest_multiplier: 'nope' }).run()).toThrow(ValidationError);
+    const existing = new CreateCategoryCommand({
+      ...validBody,
+      name: 'Command Test 4',
+    }).run();
+    expect(() =>
+      new UpdateCategoryCommand(existing, { rest_multiplier: 'nope' }).run(),
+    ).toThrow(ValidationError);
   });
 });

@@ -38,7 +38,11 @@ beforeAll(() => {
 
 describe('itemStore.create', () => {
   it('creates an item with default difficulty_multiplier of 1', () => {
-    const item = itemStore.create({ name: 'Gold Ring', category_id: categoryId, color: '#ffd700' });
+    const item = itemStore.create({
+      name: 'Gold Ring',
+      category_id: categoryId,
+      color: '#ffd700',
+    });
     expect(item.id).toBeTypeOf('number');
     expect(item.name).toBe('Gold Ring');
     expect(item.category_id).toBe(categoryId);
@@ -59,7 +63,11 @@ describe('itemStore.create', () => {
 
 describe('itemStore.find', () => {
   it('returns the item for a valid id', () => {
-    const created = itemStore.create({ name: 'Silver Ring', category_id: categoryId, color: '#c0c0c0' });
+    const created = itemStore.create({
+      name: 'Silver Ring',
+      category_id: categoryId,
+      color: '#c0c0c0',
+    });
     const found = itemStore.find(created.id);
     expect(found).toBeDefined();
     expect(found!.name).toBe('Silver Ring');
@@ -77,7 +85,11 @@ describe('itemStore.findAll', () => {
   });
 
   it('filters by categoryId when provided', () => {
-    const studsInCat2 = itemStore.create({ name: 'Diamond Stud', category_id: category2Id, color: '#fff' });
+    const studsInCat2 = itemStore.create({
+      name: 'Diamond Stud',
+      category_id: category2Id,
+      color: '#fff',
+    });
     const cat2Items = itemStore.findAll(category2Id);
     expect(cat2Items.every((i) => i.category_id === category2Id)).toBe(true);
     expect(cat2Items.find((i) => i.id === studsInCat2.id)).toBeDefined();
@@ -91,20 +103,32 @@ describe('itemStore.findAll', () => {
 
 describe('itemStore.update', () => {
   it('updates the name field', () => {
-    const item = itemStore.create({ name: 'Old Name', category_id: categoryId, color: '#aaa' });
+    const item = itemStore.create({
+      name: 'Old Name',
+      category_id: categoryId,
+      color: '#aaa',
+    });
     const updated = itemStore.update(item.id, { name: 'New Name' });
     expect(updated.name).toBe('New Name');
     expect(updated.color).toBe('#aaa'); // unchanged
   });
 
   it('updates the color field', () => {
-    const item = itemStore.create({ name: 'Color Item', category_id: categoryId, color: '#000' });
+    const item = itemStore.create({
+      name: 'Color Item',
+      category_id: categoryId,
+      color: '#000',
+    });
     const updated = itemStore.update(item.id, { color: '#fff' });
     expect(updated.color).toBe('#fff');
   });
 
   it('updates difficulty_multiplier', () => {
-    const item = itemStore.create({ name: 'DM Item', category_id: categoryId, color: '#abc' });
+    const item = itemStore.create({
+      name: 'DM Item',
+      category_id: categoryId,
+      color: '#abc',
+    });
     const updated = itemStore.update(item.id, { difficulty_multiplier: 3.0 });
     expect(updated.difficulty_multiplier).toBe(3.0);
   });
@@ -112,7 +136,11 @@ describe('itemStore.update', () => {
 
 describe('itemStore.delete', () => {
   it('removes the item from the DB', () => {
-    const item = itemStore.create({ name: 'Temp Item', category_id: categoryId, color: '#fff' });
+    const item = itemStore.create({
+      name: 'Temp Item',
+      category_id: categoryId,
+      color: '#fff',
+    });
     expect(itemStore.find(item.id)).toBeDefined();
     itemStore.delete(item.id);
     expect(itemStore.find(item.id)).toBeUndefined();

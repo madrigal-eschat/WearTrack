@@ -26,16 +26,26 @@ beforeAll(() => {
   runMigrations();
   const cat = categoryStore.create(defaultCategory);
   categoryId = cat.id;
-  const item = itemStore.create({ name: 'Ring', category_id: categoryId, color: '#fff' });
+  const item = itemStore.create({
+    name: 'Ring',
+    category_id: categoryId,
+    color: '#fff',
+  });
   itemId = item.id;
-  const item2 = itemStore.create({ name: 'Stud', category_id: categoryId, color: '#000' });
+  const item2 = itemStore.create({
+    name: 'Stud',
+    category_id: categoryId,
+    color: '#000',
+  });
   item2Id = item2.id;
 });
 
 // Helper: insert a session directly so we can control timestamps
 function insertSession(iid: number, startedAt: number, endedAt: number | null) {
   db.prepare(
-    `INSERT INTO sessions (item_id, started_at, ended_at, target_wear_seconds, max_wear_seconds, rest_seconds)
+    `INSERT INTO sessions
+       (item_id, started_at, ended_at, target_wear_seconds,
+        max_wear_seconds, rest_seconds)
      VALUES (?, ?, ?, 3600, 7200, 3600)`,
   ).run(iid, startedAt, endedAt);
 }
@@ -81,43 +91,50 @@ describe('findActive', () => {
     expect(injuryStore.findActive(itemId)).toBeUndefined();
   });
 
-  it('returns only the unhealed injury when both healed and unhealed exist', () => {
-    // Record first injury then heal it
-    injuryStore.record(itemId, 1);
-    injuryStore.heal(itemId);
+  it(
+    'returns only the unhealed injury when both healed and unhealed ' + 'exist',
+    () => {
+      // Record first injury then heal it
+      injuryStore.record(itemId, 1);
+      injuryStore.heal(itemId);
 
-    // Record a second injury — this stays active
-    const active = injuryStore.record(itemId, 2);
+      // Record a second injury — this stays active
+      const active = injuryStore.record(itemId, 2);
 
-    const found = injuryStore.findActive(itemId);
-    expect(found).toBeDefined();
-    expect(found!.id).toBe(active.id);
-    expect(found!.healed_at).toBeNull();
+      const found = injuryStore.findActive(itemId);
+      expect(found).toBeDefined();
+      expect(found!.id).toBe(active.id);
+      expect(found!.healed_at).toBeNull();
 
-    // clean up
-    injuryStore.heal(itemId);
-  });
+      // clean up
+      injuryStore.heal(itemId);
+    },
+  );
 });
 
 describe('heal', () => {
-  it('sets healed_at only for the active injury, leaving already-healed ones unchanged', () => {
-    // First injury: record and heal it
-    const first = injuryStore.record(itemId, 1);
-    injuryStore.heal(itemId);
-    const firstHealed = injuryStore.find(first.id)!;
-    expect(firstHealed.healed_at).not.toBeNull();
-    const firstHealedAt = firstHealed.healed_at;
+  it(
+    'sets healed_at only for the active injury, leaving already-healed ' +
+      'ones unchanged',
+    () => {
+      // First injury: record and heal it
+      const first = injuryStore.record(itemId, 1);
+      injuryStore.heal(itemId);
+      const firstHealed = injuryStore.find(first.id)!;
+      expect(firstHealed.healed_at).not.toBeNull();
+      const firstHealedAt = firstHealed.healed_at;
 
-    // Second injury: record but don't heal yet
-    const second = injuryStore.record(itemId, 2);
-    expect(injuryStore.find(second.id)!.healed_at).toBeNull();
+      // Second injury: record but don't heal yet
+      const second = injuryStore.record(itemId, 2);
+      expect(injuryStore.find(second.id)!.healed_at).toBeNull();
 
-    // Heal active (second injury)
-    injuryStore.heal(itemId);
+      // Heal active (second injury)
+      injuryStore.heal(itemId);
 
-    // First injury's healed_at must be unchanged
-    expect(injuryStore.find(first.id)!.healed_at).toBe(firstHealedAt);
-    // Second injury now healed
-    expect(injuryStore.find(second.id)!.healed_at).not.toBeNull();
-  });
+      // First injury's healed_at must be unchanged
+      expect(injuryStore.find(first.id)!.healed_at).toBe(firstHealedAt);
+      // Second injury now healed
+      expect(injuryStore.find(second.id)!.healed_at).not.toBeNull();
+    },
+  );
 });
