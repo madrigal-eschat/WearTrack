@@ -15,11 +15,18 @@ test.describe('Category management', () => {
     // Clean up any category this test created.
     await page.goto('/items');
     const row = page.locator('li').filter({ hasText: createdName }).first();
-    await row.getByRole('button', { name: 'Delete' }).first().click().catch(() => {});
-    // force: true — every row mounts its own (fixed, viewport-centered) confirm dialog,
-    // so an unrelated row's closed dialog can sit in the hit-test path even though only
-    // this row's dialog is visually open.
-    await row.getByTestId('delete-confirm').click({ force: true }).catch(() => {});
+    await row
+      .getByRole('button', { name: 'Delete' })
+      .first()
+      .click()
+      .catch(() => {});
+    // force: true — every row mounts its own (fixed, viewport-centered)
+    // confirm dialog, so an unrelated row's closed dialog can sit in the
+    // hit-test path even though only this row's dialog is visually open.
+    await row
+      .getByTestId('delete-confirm')
+      .click({ force: true })
+      .catch(() => {});
   });
 
   test('shows empty state when no categories exist', async ({ page }) => {
@@ -92,30 +99,43 @@ test.describe('Category management', () => {
     await expect(page.getByText(name).first()).not.toBeVisible();
   });
 
-  test('duration picker hours column wraps when scrolled past the end', async ({ page }) => {
+  test('duration picker hours column wraps when scrolled past the end', async ({
+    page,
+  }) => {
     await page.goto('/items');
-    await page.getByRole('button', { name: '+ Add', exact: false }).first().click();
+    await page
+      .getByRole('button', { name: '+ Add', exact: false })
+      .first()
+      .click();
 
-    // Open the duration picker via the Initial wear button (first ▾ button in the form)
+    // Open the duration picker via the Initial wear button (first ▾ button
+    // in the form)
     await page.getByRole('button', { name: /▾/ }).first().click();
     await page.waitForSelector('[data-testid="hours-col"]');
 
     // Scroll the hours column to the very bottom of the tripled list
     await page.evaluate(() => {
-      const el = document.querySelector('[data-testid="hours-col"]') as HTMLElement;
+      const el = document.querySelector(
+        '[data-testid="hours-col"]',
+      ) as HTMLElement;
       el.scrollTop = el.scrollHeight;
     });
 
     // Wait for the debounce (150ms) + JS smooth-scroll wrap to settle.
-    // Use waitForFunction so slow CI runners don't race against a fixed timeout.
+    // Use waitForFunction so slow CI runners don't race against a fixed
+    // timeout.
     await page.waitForFunction(() => {
-      const el = document.querySelector('[data-testid="hours-col"]') as HTMLElement | null;
+      const el = document.querySelector(
+        '[data-testid="hours-col"]',
+      ) as HTMLElement | null;
       if (!el) return false;
       return el.scrollTop >= 24 * 44 && el.scrollTop < 2 * 24 * 44;
     }, { timeout: 2000 });
 
     const scrollTop = await page.evaluate(() => {
-      const el = document.querySelector('[data-testid="hours-col"]') as HTMLElement;
+      const el = document.querySelector(
+        '[data-testid="hours-col"]',
+      ) as HTMLElement;
       return el.scrollTop;
     });
 
@@ -127,62 +147,81 @@ test.describe('Category management', () => {
     await page.getByTestId('duration-picker-cancel').click();
   });
 
-  test('can create a category with custom initial wear, rest multiplier, and band count', async ({ page }) => {
-    const name = `Cat-${uid()}`;
-    createdName = name;
+  test(
+    'can create a category with custom initial wear, rest multiplier, ' +
+      'and band count',
+    async ({ page }) => {
+      const name = `Cat-${uid()}`;
+      createdName = name;
 
-    await page.goto('/items');
-    await page.getByRole('button', { name: '+ Add', exact: false }).first().click();
-    await page.getByLabel('Name').first().fill(name);
+      await page.goto('/items');
+      await page
+        .getByRole('button', { name: '+ Add', exact: false })
+        .first()
+        .click();
+      await page.getByLabel('Name').first().fill(name);
 
-    // Open icon picker and select the first available icon
-    await page.getByRole('button', { name: /choose icon/i }).click();
-    await page.waitForSelector('.overflow-y-auto'); // icon grid
-    await page.locator('.overflow-y-auto button').first().click(); // pick first icon
+      // Open icon picker and select the first available icon
+      await page.getByRole('button', { name: /choose icon/i }).click();
+      await page.waitForSelector('.overflow-y-auto'); // icon grid
+      // pick first icon
+      await page.locator('.overflow-y-auto button').first().click();
 
-    // Set initial wear to 1h 30m via the picker
-    await page.getByRole('button', { name: /▾/ }).first().click();
-    await page.waitForSelector('[data-testid="hours-col"]');
-    // Scroll hours to 1 (middle copy index = 24 + 1 = 25, scrollTop = 25 * 44)
-    await page.evaluate(() => {
-      const el = document.querySelector('[data-testid="hours-col"]') as HTMLElement;
-      el.scrollTop = 25 * 44;
-    });
-    // Scroll minutes to 30 (middle copy index = 60 + 30 = 90, scrollTop = 90 * 44)
-    await page.evaluate(() => {
-      const el = document.querySelector('[data-testid="minutes-col"]') as HTMLElement;
-      el.scrollTop = 90 * 44;
-    });
-    await page.waitForTimeout(200); // let scroll settle
-    await page.getByTestId('duration-picker-done').click();
+      // Set initial wear to 1h 30m via the picker
+      await page.getByRole('button', { name: /▾/ }).first().click();
+      await page.waitForSelector('[data-testid="hours-col"]');
+      // Scroll hours to 1 (middle copy index = 24 + 1 = 25,
+      // scrollTop = 25 * 44)
+      await page.evaluate(() => {
+        const el = document.querySelector(
+          '[data-testid="hours-col"]',
+        ) as HTMLElement;
+        el.scrollTop = 25 * 44;
+      });
+      // Scroll minutes to 30 (middle copy index = 60 + 30 = 90,
+      // scrollTop = 90 * 44)
+      await page.evaluate(() => {
+        const el = document.querySelector(
+          '[data-testid="minutes-col"]',
+        ) as HTMLElement;
+        el.scrollTop = 90 * 44;
+      });
+      await page.waitForTimeout(200); // let scroll settle
+      await page.getByTestId('duration-picker-done').click();
 
-    // Set rest multiplier to 1.5
-    await page.getByLabel(/rest multiplier/i).fill('1.5');
+      // Set rest multiplier to 1.5
+      await page.getByLabel(/rest multiplier/i).fill('1.5');
 
-    // Add a 4th band
-    await page.getByTestId('add-band').click();
+      // Add a 4th band
+      await page.getByTestId('add-band').click();
 
-    // Submit
-    await page.getByTestId('category-form-submit').click();
-    await page.getByText(name).first().waitFor();
+      // Submit
+      await page.getByTestId('category-form-submit').click();
+      await page.getByText(name).first().waitFor();
 
-    // Verify via API
-    const res = await page.request.get('/api/categories');
-    const cats: Array<{
-      name: string;
-      initial_target_wear_duration_seconds: number;
-      rest_multiplier: number;
-      risk_levels: unknown[];
-    }> = await res.json();
-    const saved = cats.find((c) => c.name === name);
+      // Verify via API
+      const res = await page.request.get('/api/categories');
+      const cats: Array<{
+        name: string;
+        initial_target_wear_duration_seconds: number;
+        rest_multiplier: number;
+        risk_levels: unknown[];
+      }> = await res.json();
+      const saved = cats.find((c) => c.name === name);
 
-    expect(saved).toBeDefined();
-    expect(saved!.initial_target_wear_duration_seconds).toBe(1 * 3600 + 30 * 60); // 5400
-    expect(saved!.rest_multiplier).toBe(1.5);
-    expect(saved!.risk_levels).toHaveLength(4);
-  });
+      expect(saved).toBeDefined();
+      // 5400
+      expect(saved!.initial_target_wear_duration_seconds).toBe(
+        1 * 3600 + 30 * 60,
+      );
+      expect(saved!.rest_multiplier).toBe(1.5);
+      expect(saved!.risk_levels).toHaveLength(4);
+    },
+  );
 
-  test('clearing the maximum disables the minimum rest picker', async ({ page }) => {
+  test('clearing the maximum disables the minimum rest picker', async ({
+    page,
+  }) => {
     const name = `NoMax-${uid()}`;
     createdName = name;
 
@@ -229,7 +268,9 @@ test.describe('Category editing', () => {
     await expect(page.getByTestId('category-form-submit')).toBeVisible();
   });
 
-  test('edit form is pre-filled with the existing category values', async ({ page }) => {
+  test('edit form is pre-filled with the existing category values', async ({
+    page,
+  }) => {
     const row = page.locator('li').filter({ hasText: categoryName }).first();
     await row.getByRole('button', { name: 'Edit' }).click();
 
@@ -259,7 +300,9 @@ test.describe('Category editing', () => {
     categoryName = newName;
   });
 
-  test('cancel edit closes the form without saving changes', async ({ page }) => {
+  test('cancel edit closes the form without saving changes', async ({
+    page,
+  }) => {
     const row = page.locator('li').filter({ hasText: categoryName }).first();
     await row.getByRole('button', { name: 'Edit' }).click();
 
@@ -277,7 +320,9 @@ test.describe('Category editing', () => {
     expect(cats.find((c) => c.id === categoryId)?.name).toBe(categoryName);
   });
 
-  test('clicking Edit a second time closes the inline form (toggle)', async ({ page }) => {
+  test('clicking Edit a second time closes the inline form (toggle)', async ({
+    page,
+  }) => {
     const row = page.locator('li').filter({ hasText: categoryName }).first();
     await row.getByRole('button', { name: 'Edit' }).click();
     await expect(page.getByTestId('category-form-submit')).toBeVisible();
@@ -288,7 +333,10 @@ test.describe('Category editing', () => {
 
   test('opening the edit form closes the add form', async ({ page }) => {
     // Open the add form first
-    await page.getByRole('button', { name: '+ Add', exact: false }).first().click();
+    await page
+      .getByRole('button', { name: '+ Add', exact: false })
+      .first()
+      .click();
     await expect(page.getByTestId('category-form-submit')).toBeVisible();
 
     // Open edit for the existing category
@@ -299,28 +347,36 @@ test.describe('Category editing', () => {
     await expect(page.getByTestId('category-form-submit')).toHaveCount(1);
   });
 
-  test('can edit custom fields (initial wear, rest multiplier, band count)', async ({ page }) => {
-    const row = page.locator('li').filter({ hasText: categoryName }).first();
-    await row.getByRole('button', { name: 'Edit' }).click();
+  test(
+    'can edit custom fields (initial wear, rest multiplier, band count)',
+    async ({ page }) => {
+      const row = page
+        .locator('li')
+        .filter({ hasText: categoryName })
+        .first();
+      await row.getByRole('button', { name: 'Edit' }).click();
 
-    // Change rest multiplier to 3
-    await page.getByLabel(/rest multiplier/i).fill('3');
+      // Change rest multiplier to 3
+      await page.getByLabel(/rest multiplier/i).fill('3');
 
-    // Add a 4th band
-    await page.getByTestId('add-band').click();
+      // Add a 4th band
+      await page.getByTestId('add-band').click();
 
-    await page.getByTestId('category-form-submit').click();
-    await expect(page.getByTestId('category-form-submit')).not.toBeVisible();
+      await page.getByTestId('category-form-submit').click();
+      await expect(
+        page.getByTestId('category-form-submit'),
+      ).not.toBeVisible();
 
-    // Verify via API
-    const res = await page.request.get('/api/categories');
-    const cats: Array<{
-      id: number;
-      rest_multiplier: number;
-      risk_levels: unknown[];
-    }> = await res.json();
-    const updated = cats.find((c) => c.id === categoryId);
-    expect(updated?.rest_multiplier).toBe(3);
-    expect(updated?.risk_levels).toHaveLength(4);
-  });
+      // Verify via API
+      const res = await page.request.get('/api/categories');
+      const cats: Array<{
+        id: number;
+        rest_multiplier: number;
+        risk_levels: unknown[];
+      }> = await res.json();
+      const updated = cats.find((c) => c.id === categoryId);
+      expect(updated?.rest_multiplier).toBe(3);
+      expect(updated?.risk_levels).toHaveLength(4);
+    },
+  );
 });

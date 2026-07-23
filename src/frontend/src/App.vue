@@ -4,7 +4,15 @@
     <div data-testid="main-content">
       <router-view />
     </div>
-    <k-tabbar bottom labels icons class="left-0 right-0 bottom-0 fixed z-30 !bg-white border-t border-gray-200">
+    <k-tabbar
+      bottom
+      labels
+      icons
+      class="
+        left-0 right-0 bottom-0 fixed z-30 !bg-white border-t
+        border-gray-200
+      "
+    >
         <k-tabbar-link
           :active="route.path === '/'"
           label="Home"
@@ -48,7 +56,12 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router';
 import { kApp, kTabbar, kTabbarLink } from 'konsta/vue';
-import { HomeIcon, Squares2X2Icon as ItemsIcon, ChartBarIcon, ClockIcon } from '@heroicons/vue/24/solid';
+import {
+  HomeIcon,
+  Squares2X2Icon as ItemsIcon,
+  ChartBarIcon,
+  ClockIcon,
+} from '@heroicons/vue/24/solid';
 import Toast from './components/Toast.vue';
 import { useVersionCheck } from './composables/useVersionCheck.js';
 

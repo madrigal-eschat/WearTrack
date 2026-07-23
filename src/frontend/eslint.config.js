@@ -17,7 +17,11 @@ export default tseslint.config(
       'vue/max-attributes-per-line': 'off',
       'vue/multi-word-component-names': 'off',
       'vue/singleline-html-element-content-newline': 'off',
-      'vue/max-lines-per-block': ['error', { template: 200, skipBlankLines: true }],
+      'vue/max-lines-per-block': [
+        'error',
+        { template: 200, skipBlankLines: true },
+      ],
+      'max-len': ['error', { code: 80 }],
     },
   },
   { ignores: ['node_modules/', 'dist/'] },

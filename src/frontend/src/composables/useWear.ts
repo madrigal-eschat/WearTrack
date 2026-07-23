@@ -10,7 +10,12 @@ export interface Category {
   initial_max_wear_duration_seconds: number | null;
   rest_multiplier: number;
   minimum_rest: number;
-  risk_levels: Array<{ lower: number | null; upper: number | null; text: string; severity: number }>;
+  risk_levels: Array<{
+    lower: number | null;
+    upper: number | null;
+    text: string;
+    severity: number;
+  }>;
   break_decay_multiplier: number;
   break_grace_time: number;
   type: 'duration' | 'rotation';
@@ -115,7 +120,10 @@ async function endSession(sessionId: number): Promise<Session> {
   return session;
 }
 
-async function reportInjury(itemId: number, wearSeconds?: number): Promise<void> {
+async function reportInjury(
+  itemId: number,
+  wearSeconds?: number,
+): Promise<void> {
   const body: Record<string, unknown> = { item_id: itemId };
   if (wearSeconds !== undefined) body.wear_seconds = wearSeconds;
   const res = await apiFetch('/api/injuries', {

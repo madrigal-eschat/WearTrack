@@ -20,15 +20,33 @@
         <template v-for="cat in categories" :key="cat.id">
           <k-list-item :title="cat.name">
             <template #media>
-              <Icon v-if="cat.icon?.includes(':')" :icon="cat.icon" class="text-2xl w-8 h-8" />
+              <Icon
+                v-if="cat.icon?.includes(':')"
+                :icon="cat.icon"
+                class="text-2xl w-8 h-8"
+              />
               <span v-else class="text-2xl">{{ cat.icon }}</span>
             </template>
             <template #after>
               <div class="flex gap-1">
-                <k-button small outline type="button" @click="onToggleEdit(cat.id)">Edit</k-button>
-                <DeleteButton title="Delete this category and all its items?" message="This cannot be undone." @confirm="onConfirmDeleteCategory(cat.id)">
+                <k-button
+                  small
+                  outline
+                  type="button"
+                  @click="onToggleEdit(cat.id)"
+                >Edit</k-button>
+                <DeleteButton
+                  title="Delete this category and all its items?"
+                  message="This cannot be undone."
+                  @confirm="onConfirmDeleteCategory(cat.id)"
+                >
                   <template #trigger="{ open }">
-                    <k-button small outline type="button" @click="open">Delete</k-button>
+                    <k-button
+                      small
+                      outline
+                      type="button"
+                      @click="open"
+                    >Delete</k-button>
                   </template>
                 </DeleteButton>
               </div>
@@ -44,7 +62,9 @@
         </template>
       </k-list>
       <k-block v-else>
-        <p class="text-center text-gray-400 text-sm">No categories yet. Use "+ Add" above to create one.</p>
+        <p class="text-center text-gray-400 text-sm">
+          No categories yet. Use "+ Add" above to create one.
+        </p>
       </k-block>
     </template>
   </div>
@@ -57,13 +77,22 @@ import { kList, kListItem, kButton, kBlock } from 'konsta/vue';
 import { useCategories } from '../composables/useCategories.js';
 import { useItems } from '../composables/useItems.js';
 import { useToast } from '../composables/useToast.js';
-import { categoryToFormState, formStateToApiPayload } from '../utils/categoryForm.js';
+import {
+  categoryToFormState,
+  formStateToApiPayload,
+} from '../utils/categoryForm.js';
 import type { CategoryFormState } from './CategoryForm.vue';
 import FormSectionHeader from './FormSectionHeader.vue';
 import CategoryForm from './CategoryForm.vue';
 import DeleteButton from './DeleteButton.vue';
 
-const { categories, loadCategories, createCategory, updateCategory, deleteCategory } = useCategories();
+const {
+  categories,
+  loadCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+} = useCategories();
 const { loadItems } = useItems();
 const { showError } = useToast();
 

@@ -36,16 +36,23 @@ test.describe('Direct navigation to each route', () => {
   ];
 
   for (const { path, description, landmark } of routes) {
-    test(`${description} loads when navigating directly to ${path}`, async ({ page }) => {
-      await page.goto(path);
-      // Tab bar must be visible — proves Vue mounted (JS loaded correctly)
-      await expect(page.getByRole('link', { name: /home/i })).toBeVisible();
-      // Screen-specific landmark scoped to main content — proves the correct view
-      // was rendered and guards against accidental matches on tab bar labels.
-      await expect(
-        page.locator('[data-testid="main-content"]').getByText(landmark, { exact: true }).first()
-      ).toBeVisible();
-    });
+    test(
+      `${description} loads when navigating directly to ${path}`,
+      async ({ page }) => {
+        await page.goto(path);
+        // Tab bar must be visible — proves Vue mounted (JS loaded)
+        await expect(page.getByRole('link', { name: /home/i }))
+          .toBeVisible();
+        // Screen-specific landmark in main content — proves the correct
+        // view was rendered and guards against accidental tab bar matches.
+        await expect(
+          page
+            .locator('[data-testid="main-content"]')
+            .getByText(landmark, { exact: true })
+            .first()
+        ).toBeVisible();
+      }
+    );
   }
 });
 
@@ -58,7 +65,10 @@ test.describe('Navigation', () => {
     await expect(page).toHaveTitle(/weartrack/i);
     // Home renders the ActionPane "Currently Wearing" block title
     await expect(
-      page.locator('[data-testid="main-content"]').getByText('Currently Wearing').first()
+      page
+        .locator('[data-testid="main-content"]')
+        .getByText('Currently Wearing')
+        .first()
     ).toBeVisible();
   });
 
@@ -71,8 +81,10 @@ test.describe('Navigation', () => {
   test('navigates to Items tab', async ({ page }) => {
     await page.getByRole('link', { name: /items/i }).click();
     await expect(page).toHaveURL(/\/items/);
-    await expect(page.getByText('Categories', { exact: true })).toBeVisible();
-    await expect(page.getByText('Items', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('Categories', { exact: true }))
+      .toBeVisible();
+    await expect(page.getByText('Items', { exact: true }).first())
+      .toBeVisible();
   });
 
   test('navigates to Stats tab', async ({ page }) => {

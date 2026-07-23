@@ -4,8 +4,15 @@
     <template #title>{{ title }}</template>
     <template #content>{{ message }}</template>
     <template #buttons>
-      <k-dialog-button data-testid="delete-cancel" @click="confirmOpen = false">Cancel</k-dialog-button>
-      <k-dialog-button strong data-testid="delete-confirm" @click="onConfirm">Delete</k-dialog-button>
+      <k-dialog-button
+        data-testid="delete-cancel"
+        @click="confirmOpen = false"
+      >Cancel</k-dialog-button>
+      <k-dialog-button
+        strong
+        data-testid="delete-confirm"
+        @click="onConfirm"
+      >Delete</k-dialog-button>
     </template>
   </k-dialog>
 </template>

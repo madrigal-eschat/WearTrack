@@ -23,7 +23,8 @@
     />
   </div>
   <p class="text-xs text-gray-400 -mt-1">
-    <strong>Target</strong> is the goal duration; <strong>Maximum</strong> (optional) is the hard ceiling.
+    <strong>Target</strong> is the goal duration;
+    <strong>Maximum</strong> (optional) is the hard ceiling.
     Minimum rest only applies when a maximum is set.
   </p>
   <RiskBands

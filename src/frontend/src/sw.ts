@@ -7,7 +7,9 @@ declare const self: ServiceWorkerGlobalScope;
 // Navigation requests go network-first so the auth proxy can redirect to login
 // when the session expires, rather than serving a stale cached page.
 // NetworkFirst falls back to its own cache when offline.
-registerRoute(new NavigationRoute(new NetworkFirst({ cacheName: 'navigations' })));
+registerRoute(
+  new NavigationRoute(new NetworkFirst({ cacheName: 'navigations' })),
+);
 
 precacheAndRoute(self.__WB_MANIFEST);
 

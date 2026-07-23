@@ -57,6 +57,9 @@ describe('apiFetch', () => {
 
     await apiFetch('/api/test', { method: 'POST' });
 
-    expect(mockFetch).toHaveBeenCalledWith('/api/test', { method: 'POST', redirect: 'manual' });
+    expect(mockFetch).toHaveBeenCalledWith('/api/test', {
+      method: 'POST',
+      redirect: 'manual',
+    });
   });
 });

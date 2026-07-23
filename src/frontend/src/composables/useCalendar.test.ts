@@ -3,12 +3,23 @@ import { useCalendar } from './useCalendar';
 import type { Session } from './useWear';
 
 // Helper to create a unix timestamp for a given date/time (local time)
-function ts(year: number, month: number, day: number, hour = 0, min = 0): number {
-  return Math.floor(new Date(year, month - 1, day, hour, min).getTime() / 1000);
+function ts(
+  year: number,
+  month: number,
+  day: number,
+  hour = 0,
+  min = 0,
+): number {
+  const date = new Date(year, month - 1, day, hour, min);
+  return Math.floor(date.getTime() / 1000);
 }
 
 // Helper to create a minimal Session fixture
-function makeSession(id: number, started_at: number, ended_at: number | null): Session {
+function makeSession(
+  id: number,
+  started_at: number,
+  ended_at: number | null,
+): Session {
   return {
     id,
     item_id: 1,
@@ -86,22 +97,29 @@ describe('useCalendar – session filtering in weekDays', () => {
     expect(weekDays.value[0].totalWearSeconds).toBe(3600);
   });
 
-  it('an open session (ended_at === null) is excluded from day totals', async () => {
-    await injectSessions([
-      makeSession(1, ts(2024, 1, 8, 10, 0), null),
-    ]);
-    const { weekDays } = useCalendar();
-    expect(weekDays.value[0].sessionCount).toBe(0);
-    expect(weekDays.value[0].totalWearSeconds).toBe(0);
-  });
+  it(
+    'an open session (ended_at === null) is excluded from day totals',
+    async () => {
+      await injectSessions([
+        makeSession(1, ts(2024, 1, 8, 10, 0), null),
+      ]);
+      const { weekDays } = useCalendar();
+      expect(weekDays.value[0].sessionCount).toBe(0);
+      expect(weekDays.value[0].totalWearSeconds).toBe(0);
+    },
+  );
 
-  it('a session starting at exactly dayStart (midnight) is included', async () => {
-    // started_at === dayStart boundary — filter is `>= dayStart` so this is included
-    const start = ts(2024, 1, 8, 0, 0);
-    await injectSessions([makeSession(1, start, start + 1800)]);
-    const { weekDays } = useCalendar();
-    expect(weekDays.value[0].sessionCount).toBe(1);
-  });
+  it(
+    'a session starting at exactly dayStart (midnight) is included',
+    async () => {
+      // started_at === dayStart boundary — filter is `>= dayStart` so
+      // this is included
+      const start = ts(2024, 1, 8, 0, 0);
+      await injectSessions([makeSession(1, start, start + 1800)]);
+      const { weekDays } = useCalendar();
+      expect(weekDays.value[0].sessionCount).toBe(1);
+    },
+  );
 
   it('a session from the day before the week start is excluded', async () => {
     // Sunday Jan 7 2024 – outside the week
@@ -113,18 +131,22 @@ describe('useCalendar – session filtering in weekDays', () => {
     expect(total).toBe(0);
   });
 
-  it('a session starting at Tuesday midnight is in Tuesday, not Monday', async () => {
-    const start = ts(2024, 1, 9, 0, 0); // Tuesday midnight — dayStart of Tue
-    await injectSessions([makeSession(1, start, start + 3600)]);
-    const { weekDays } = useCalendar();
-    expect(weekDays.value[0].sessionCount).toBe(0); // Monday
-    expect(weekDays.value[1].sessionCount).toBe(1); // Tuesday
-  });
+  it(
+    'a session starting at Tuesday midnight is in Tuesday, not Monday',
+    async () => {
+      const start = ts(2024, 1, 9, 0, 0); // Tuesday midnight, dayStart of Tue
+      await injectSessions([makeSession(1, start, start + 3600)]);
+      const { weekDays } = useCalendar();
+      expect(weekDays.value[0].sessionCount).toBe(0); // Monday
+      expect(weekDays.value[1].sessionCount).toBe(1); // Tuesday
+    },
+  );
 
   it('multiple sessions on different days are counted correctly', async () => {
     await injectSessions([
-      makeSession(1, ts(2024, 1, 8, 9, 0), ts(2024, 1, 8, 10, 0)),   // Mon 1h
-      makeSession(2, ts(2024, 1, 10, 14, 0), ts(2024, 1, 10, 15, 30)), // Wed 1h30m
+      makeSession(1, ts(2024, 1, 8, 9, 0), ts(2024, 1, 8, 10, 0)), // Mon 1h
+      // Wed 1h30m
+      makeSession(2, ts(2024, 1, 10, 14, 0), ts(2024, 1, 10, 15, 30)),
     ]);
     const { weekDays } = useCalendar();
     expect(weekDays.value[0].sessionCount).toBe(1);

@@ -28,7 +28,8 @@ export const LEADERBOARD_TYPES = [
   {
     value: 'most-sessions' as const,
     label: 'Most Sessions',
-    badge: (entry: Record<string, unknown>) => `${entry.session_count ?? 0} sessions`,
+    badge: (entry: Record<string, unknown>) =>
+      `${entry.session_count ?? 0} sessions`,
   },
 ] as const;
 

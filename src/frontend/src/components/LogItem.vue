@@ -16,18 +16,33 @@
       <div class="flex items-center gap-2">
         <div class="text-right tabular-nums leading-snug whitespace-nowrap">
           <div class="text-sm text-gray-600">
-            <span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Worn</span>{{ wornDuration }}
+            <span
+              class="text-xs text-gray-400 uppercase tracking-wide mr-1"
+            >Worn</span>{{ wornDuration }}
           </div>
           <div class="text-xs text-gray-500">
-            <span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Target</span>{{ formatDuration(entry.target_wear_seconds) }}
+            <span
+              class="text-xs text-gray-400 uppercase tracking-wide mr-1"
+            >Target</span>{{ formatDuration(entry.target_wear_seconds) }}
             <template v-if="entry.max_wear_seconds !== null">
               <span class="mx-1 text-gray-300">/</span>
-              <span class="text-xs text-gray-400 uppercase tracking-wide mr-1">Max</span>{{ formatDuration(entry.max_wear_seconds) }}
+              <span
+                class="text-xs text-gray-400 uppercase tracking-wide mr-1"
+              >Max</span>{{ formatDuration(entry.max_wear_seconds) }}
             </template>
           </div>
         </div>
-        <Icon v-if="entry.ended_in_injury" icon="ph:warning-circle" class="text-red-500 w-5 h-5" />
-        <button type="button" aria-label="Session actions" class="text-gray-400 p-1" @click="$emit('open-actions')">
+        <Icon
+          v-if="entry.ended_in_injury"
+          icon="ph:warning-circle"
+          class="text-red-500 w-5 h-5"
+        />
+        <button
+          type="button"
+          aria-label="Session actions"
+          class="text-gray-400 p-1"
+          @click="$emit('open-actions')"
+        >
           <EllipsisHorizontalIcon class="w-5 h-5" />
         </button>
       </div>
@@ -48,11 +63,17 @@ defineEmits<{ 'open-actions': [] }>();
 
 function formatStart(unixSeconds: number): string {
   return new Date(unixSeconds * 1000).toLocaleString(undefined, {
-    day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
   });
 }
 
 const wornDuration = computed(() =>
-  props.entry.ended_at === null ? '' : formatDuration(props.entry.ended_at - props.entry.started_at),
+  props.entry.ended_at === null
+    ? ''
+    : formatDuration(props.entry.ended_at - props.entry.started_at),
 );
 </script>

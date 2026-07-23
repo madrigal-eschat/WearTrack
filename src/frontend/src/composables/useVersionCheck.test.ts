@@ -20,7 +20,10 @@ describe('fetchVersion', () => {
   });
 
   it('returns null on a network error', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network error')));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockRejectedValue(new Error('network error')),
+    );
     expect(await fetchVersion()).toBeNull();
   });
 
@@ -31,6 +34,8 @@ describe('fetchVersion', () => {
     });
     vi.stubGlobal('fetch', mockFetch);
     await fetchVersion();
-    expect(mockFetch).toHaveBeenCalledWith('/api/version', { redirect: 'manual' });
+    expect(mockFetch).toHaveBeenCalledWith('/api/version', {
+      redirect: 'manual',
+    });
   });
 });
