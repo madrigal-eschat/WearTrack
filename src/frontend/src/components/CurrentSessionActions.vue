@@ -4,24 +4,44 @@
       <k-button small outline @click="$emit('stop')">Stop</k-button>
     </template>
     <template v-else>
-      <div v-if="entry.category.type !== 'rotation' || restRemaining === 0" class="flex gap-2 items-center">
+      <div
+        v-if="entry.category.type !== 'rotation' || restRemaining === 0"
+        class="flex gap-2 items-center"
+      >
         <template v-if="locked">
-          <span class="text-sm font-medium" data-testid="forced-item-label">{{ forcedItemName }}</span>
-          <k-button small inline outline data-testid="wear-something-else" @click="$emit('choose-something-else')">Choose Something Else</k-button>
+          <span
+            class="text-sm font-medium"
+            data-testid="forced-item-label"
+          >{{ forcedItemName }}</span>
+          <k-button
+            small
+            inline
+            outline
+            data-testid="wear-something-else"
+            @click="$emit('choose-something-else')"
+          >Choose Something Else</k-button>
           <k-button small inline @click="$emit('wear')">Wear</k-button>
         </template>
         <template v-else>
           <select
             v-if="items.length > 0"
             :value="selectedItemId"
-            @change="$emit('update:selectedItemId', Number(($event.target as HTMLSelectElement).value))"
+            @change="
+              $emit(
+                'update:selectedItemId',
+                Number(($event.target as HTMLSelectElement).value),
+              )
+            "
             class="text-sm border rounded px-1 py-0.5"
           >
             <option
               v-for="item in items"
               :key="item.id"
               :value="item.id"
-              :disabled="entry.category.type === 'rotation' && !itemRotationAvailable(item.id)"
+              :disabled="
+                entry.category.type === 'rotation' &&
+                  !itemRotationAvailable(item.id)
+              "
             >{{ item.name }}</option>
           </select>
           <span v-else class="text-sm text-gray-400 italic">No items</span>
@@ -56,7 +76,10 @@ defineProps<{
    * period, or hide it based on an unrelated per-item rest window.
    */
   restRemaining: number;
-  /** Per-item rest remaining (`restRemainingSeconds`), used only for the unlocked Wear button's opacity hint. */
+  /**
+   * Per-item rest remaining (`restRemainingSeconds`), used only for the
+   * unlocked Wear button's opacity hint.
+   */
   itemRestRemaining: number;
   itemRotationAvailable: (itemId: number) => boolean;
 }>();

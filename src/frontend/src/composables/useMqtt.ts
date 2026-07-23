@@ -13,8 +13,14 @@ export interface MqttConfigState {
 }
 
 const DEFAULT_CONFIG: MqttConfigState = {
-  enabled: false, host: null, port: 1883, username: null, hasPassword: false,
-  topic_prefix: 'weartrack', ha_discovery_enabled: false, status: 'disconnected',
+  enabled: false,
+  host: null,
+  port: 1883,
+  username: null,
+  hasPassword: false,
+  topic_prefix: 'weartrack',
+  ha_discovery_enabled: false,
+  status: 'disconnected',
 };
 
 export function useMqtt() {

@@ -1,13 +1,23 @@
-export function targetWearSeconds(session: { target_wear_seconds: number }): number {
+export function targetWearSeconds(
+  session: { target_wear_seconds: number },
+): number {
   return session.target_wear_seconds;
 }
 
-export function maxWearSeconds(session: { max_wear_seconds: number | null }): number | null {
+export function maxWearSeconds(
+  session: { max_wear_seconds: number | null },
+): number | null {
   return session.max_wear_seconds;
 }
 
-/** Elapsed wear for a session: now (seconds) minus start; freezes at ended_at once ended. */
-export function currentWear(session: { started_at: number; ended_at: number | null }, now: number): number {
+/**
+ * Elapsed wear for a session: now (seconds) minus start; freezes at
+ * ended_at once ended.
+ */
+export function currentWear(
+  session: { started_at: number; ended_at: number | null },
+  now: number,
+): number {
   const end = session.ended_at ?? now;
   return Math.max(0, end - session.started_at);
 }
@@ -18,14 +28,22 @@ export function currentWear(session: { started_at: number; ended_at: number | nu
  * max reached, or target reached with no max set.
  */
 export function remainingWearSeconds(
-  session: { started_at: number; ended_at: number | null; target_wear_seconds: number; max_wear_seconds: number | null },
-  now: number
+  session: {
+    started_at: number;
+    ended_at: number | null;
+    target_wear_seconds: number;
+    max_wear_seconds: number | null;
+  },
+  now: number,
 ): number | null {
   const elapsed = currentWear(session, now);
   if (elapsed < session.target_wear_seconds) {
     return session.target_wear_seconds - elapsed;
   }
-  if (session.max_wear_seconds !== null && elapsed < session.max_wear_seconds) {
+  if (
+    session.max_wear_seconds !== null &&
+    elapsed < session.max_wear_seconds
+  ) {
     return session.max_wear_seconds - elapsed;
   }
   return null;
@@ -37,13 +55,19 @@ export function lapCount(elapsed: number, target: number): number {
   return Math.floor(elapsed / target);
 }
 
-/** Bar fill fraction (0-1) that wraps every `target` seconds instead of capping at 1. */
+/**
+ * Bar fill fraction (0-1) that wraps every `target` seconds instead of
+ * capping at 1.
+ */
 export function lapFillFraction(elapsed: number, target: number): number {
   if (target <= 0) return 0;
   return (elapsed % target) / target;
 }
 
-/** Visual effect tier (0-4) for a given lap count. Caps at tier 4 from lap 8 onward. */
+/**
+ * Visual effect tier (0-4) for a given lap count. Caps at tier 4 from
+ * lap 8 onward.
+ */
 export function lapTier(lapCount: number): number {
   if (lapCount >= 8) return 4;
   if (lapCount >= 5) return 3;
@@ -52,14 +76,24 @@ export function lapTier(lapCount: number): number {
   return 0;
 }
 
-/** Generic fill-up fraction (0-1) for a countdown: 1 - remaining/total, clamped. */
+/**
+ * Generic fill-up fraction (0-1) for a countdown: 1 - remaining/total,
+ * clamped.
+ */
 export function fillUpFraction(remaining: number, total: number): number {
   if (total <= 0) return 1;
   return Math.max(0, Math.min(1 - remaining / total, 1));
 }
 
-/** Decay bar fill fraction (0-1): starts full at decay_start_time, empties to 0 by decay_full_time. */
-export function decayFillFraction(now: number, decayStartTime: number, decayFullTime: number): number {
+/**
+ * Decay bar fill fraction (0-1): starts full at decay_start_time, empties
+ * to 0 by decay_full_time.
+ */
+export function decayFillFraction(
+  now: number,
+  decayStartTime: number,
+  decayFullTime: number,
+): number {
   const window = decayFullTime - decayStartTime;
   if (window <= 0) return 0;
   const remaining = decayFullTime - now;

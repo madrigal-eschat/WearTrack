@@ -23,29 +23,32 @@ describe('Vite build output', () => {
   beforeAll(() => {
     if (!existsSync(distIndex)) {
       throw new Error(
-        `dist/index.html not found — run 'npm run build' before this test suite.`,
+        `dist/index.html not found — run 'npm run build' before this ` +
+          `test suite.`,
       );
     }
   });
 
   it('script src attributes use absolute paths (not relative)', () => {
     const html = readFileSync(distIndex, 'utf-8');
-    const relativeScripts = [...html.matchAll(/src="(\.[^"]+)"/g)].map(m => m[1]);
+    const relativeScripts = [...html.matchAll(/src="(\.[^"]+)"/g)]
+      .map((m) => m[1]);
     expect(
       relativeScripts,
-      'Script src paths must be absolute (/assets/…), not relative (./assets/…). ' +
-      'Check that vite.config.ts has base: \'/\'.',
+      'Script src paths must be absolute (/assets/…), not relative ' +
+        '(./assets/…). Check that vite.config.ts has base: \'/\'.',
     ).toEqual([]);
   });
 
   it('link href attributes for CSS/manifest use absolute paths', () => {
     const html = readFileSync(distIndex, 'utf-8');
     // Ignore favicon — it's fine as /favicon.ico (already absolute)
-    const relativeLinks = [...html.matchAll(/href="(\.[^"]+)"/g)].map(m => m[1]);
+    const relativeLinks = [...html.matchAll(/href="(\.[^"]+)"/g)]
+      .map((m) => m[1]);
     expect(
       relativeLinks,
-      'Link href paths must be absolute (/assets/…), not relative (./assets/…). ' +
-      'Check that vite.config.ts has base: \'/\'.',
+      'Link href paths must be absolute (/assets/…), not relative ' +
+        '(./assets/…). Check that vite.config.ts has base: \'/\'.',
     ).toEqual([]);
   });
 });

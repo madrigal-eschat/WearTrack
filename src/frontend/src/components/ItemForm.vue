@@ -10,7 +10,10 @@
           class="w-6 h-6 self-center shrink-0"
           :style="{ color: form.color }"
         />
-        <span v-else class="text-xl self-center shrink-0">{{ selectedCategory.icon }}</span>
+        <span
+          v-else
+          class="text-xl self-center shrink-0"
+        >{{ selectedCategory.icon }}</span>
       </template>
       <div class="flex-1 min-w-[10ch]">
         <SelectField
@@ -19,8 +22,14 @@
           :modelValue="form.category_id"
           @update:modelValue="form.category_id = $event"
         >
-          <option v-if="showPlaceholderOption" value="" disabled>Select…</option>
-          <option v-for="cat in categories" :key="cat.id" :value="String(cat.id)">{{ cat.name }}</option>
+          <option v-if="showPlaceholderOption" value="" disabled>
+            Select…
+          </option>
+          <option
+            v-for="cat in categories"
+            :key="cat.id"
+            :value="String(cat.id)"
+          >{{ cat.name }}</option>
         </SelectField>
       </div>
     </div>
@@ -34,8 +43,19 @@
         :step="0.1"
       />
       <div class="flex gap-2 ml-auto">
-        <k-button v-if="showCancel" small outline type="button" @click="$emit('cancel')">Cancel</k-button>
-        <k-button :small="showCancel" type="button" @click="onSubmit" :disabled="!form.name || !form.category_id">
+        <k-button
+          v-if="showCancel"
+          small
+          outline
+          type="button"
+          @click="$emit('cancel')"
+        >Cancel</k-button>
+        <k-button
+          :small="showCancel"
+          type="button"
+          @click="onSubmit"
+          :disabled="!form.name || !form.category_id"
+        >
           {{ submitLabel }}
         </k-button>
       </div>
@@ -71,7 +91,12 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  submit: [data: { name: string; color: string; category_id: number; difficulty_multiplier: number }];
+  submit: [data: {
+    name: string;
+    color: string;
+    category_id: number;
+    difficulty_multiplier: number;
+  }];
   cancel: [];
 }>();
 
@@ -83,15 +108,20 @@ const form = reactive<ItemFormValue>({
   ...props.initialValues,
 });
 
-const selectedCategory = computed(() => props.categories.find((c) => String(c.id) === form.category_id) ?? null);
+const selectedCategory = computed(
+  () => props.categories.find((c) => String(c.id) === form.category_id) ??
+    null,
+);
 
-// Keep the selected category in sync when the list changes (e.g. a category was deleted).
+// Keep the selected category in sync when the list changes (e.g. a
+// category was deleted).
 watch(
   () => props.categories,
   (cats) => {
     const validIds = cats.map((c) => String(c.id));
     if (form.category_id && !validIds.includes(form.category_id)) {
-      form.category_id = cats.length > 0 ? String(cats[cats.length - 1].id) : '';
+      form.category_id =
+        cats.length > 0 ? String(cats[cats.length - 1].id) : '';
     } else if (!form.category_id && cats.length > 0) {
       form.category_id = String(cats[cats.length - 1].id);
     }

@@ -17,6 +17,8 @@ export function computeEditableRange(
   const isLastEdited = lastEdited?.sessionId === session.id;
   return {
     min: session.started_at,
-    max: isLastEdited && lastEdited ? lastEdited.originalEndedAt : session.ended_at,
+    max: isLastEdited && lastEdited
+      ? lastEdited.originalEndedAt
+      : session.ended_at,
   };
 }

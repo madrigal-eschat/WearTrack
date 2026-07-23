@@ -1,10 +1,18 @@
 <template>
-  <div class="wear-progress" :class="`tier-${tier}`" :style="{ '--glow-color': barColor }" data-testid="wear-progress-bar">
+  <div
+    class="wear-progress"
+    :class="`tier-${tier}`"
+    :style="{ '--glow-color': barColor }"
+    data-testid="wear-progress-bar"
+  >
     <div class="bar-row">
       <div class="bar-wrap">
         <div
           class="bar-fill"
-          :class="{ 'decay-shadow': mode === 'decay', 'decay-anchor-right': mode === 'decay' }"
+          :class="{
+            'decay-shadow': mode === 'decay',
+            'decay-anchor-right': mode === 'decay',
+          }"
           :style="{ width: fillFraction * 100 + '%', background: barColor }"
         ></div>
         <div
@@ -18,11 +26,19 @@
             v-for="(s, i) in sparkles"
             :key="i"
             class="sparkle"
-            :style="{ left: s.left + '%', top: s.top + '%', animationDelay: s.delay + 's' }"
+            :style="{
+              left: s.left + '%',
+              top: s.top + '%',
+              animationDelay: s.delay + 's',
+            }"
           ></div>
         </div>
       </div>
-      <span v-if="mode === 'wear' && lapCount >= 1" class="lap-badge" data-testid="lap-badge">{{ lapCount }}x</span>
+      <span
+        v-if="mode === 'wear' && lapCount >= 1"
+        class="lap-badge"
+        data-testid="lap-badge"
+      >{{ lapCount }}x</span>
     </div>
   </div>
 </template>
@@ -53,12 +69,16 @@ const barColor = computed(() => {
   return props.color;
 });
 
-const tier = computed(() => (props.mode === 'wear' ? lapTier(props.lapCount) : 0));
+const tier = computed(() =>
+  props.mode === 'wear' ? lapTier(props.lapCount) : 0,
+);
 
 /** Sparkle count per tier: 0 (plain), 1 (glow only), 2, 3, 4 (max, capped). */
 const SPARKLE_COUNTS = [0, 0, 6, 20, 28];
 
-function generateSparkles(n: number): { left: number; top: number; delay: number }[] {
+function generateSparkles(
+  n: number,
+): { left: number; top: number; delay: number }[] {
   if (n === 0) return [];
   const tops = [0, 15, 30, 45, 60];
   return Array.from({ length: n }, (_, i) => ({
@@ -126,7 +146,10 @@ const sparkles = computed(() => generateSparkles(SPARKLE_COUNTS[tier.value]));
   width: 6px;
   height: 6px;
   background: var(--glow-color);
-  clip-path: polygon(50% 0%, 63% 37%, 100% 50%, 63% 63%, 50% 100%, 37% 63%, 0% 50%, 37% 37%);
+  clip-path: polygon(
+    50% 0%, 63% 37%, 100% 50%, 63% 63%,
+    50% 100%, 37% 63%, 0% 50%, 37% 37%
+  );
   opacity: 0;
   animation: sparkle-pop 1.6s ease-in-out infinite;
 }

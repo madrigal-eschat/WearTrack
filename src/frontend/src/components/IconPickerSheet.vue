@@ -3,14 +3,20 @@
     v-if="open"
     :opened="open"
     @backdropclick="close"
-    class="pb-safe bg-white dark:bg-gray-900 flex flex-col overflow-hidden h-[85vh]"
+    class="
+      pb-safe bg-white dark:bg-gray-900 flex flex-col overflow-hidden
+      h-[85vh]
+    "
   >
     <!-- Header -->
     <k-toolbar innerClass="!h-6 !w-full">
       <div class="relative flex w-full items-center justify-center">
         <button
           type="button"
-          class="absolute left-0 flex items-center justify-center w-8 h-full text-primary text-xl"
+          class="
+            absolute left-0 flex items-center justify-center w-8 h-full
+            text-primary text-xl
+          "
           @click="close"
         >✕</button>
         <SectionTitle variant="sheet">Choose Icon</SectionTitle>
@@ -23,7 +29,10 @@
         v-model="query"
         type="search"
         placeholder="Search icons…"
-        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        class="
+          w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+          focus:outline-none focus:ring-2 focus:ring-blue-500
+        "
       />
     </div>
 
@@ -38,7 +47,10 @@
         :key="cat"
         :ref="(el) => setPillRef(cat, el)"
         type="button"
-        class="shrink-0 px-3 py-1 rounded-full text-xs border transition-colors whitespace-nowrap"
+        class="
+          shrink-0 px-3 py-1 rounded-full text-xs border transition-colors
+          whitespace-nowrap
+        "
         :class="
           activeCategory === cat
             ? 'bg-blue-500 text-white border-blue-500'
@@ -55,10 +67,18 @@
 
       <!-- Search mode: flat deduplicated grid -->
       <template v-if="query.trim()">
-        <p v-if="searchResults.length === 0" class="text-center py-8 text-gray-400 text-sm">
+        <p
+          v-if="searchResults.length === 0"
+          class="text-center py-8 text-gray-400 text-sm"
+        >
           No icons found
         </p>
-        <IconGrid v-else :entries="searchResults" :selected-id="modelValue" @select="select" />
+        <IconGrid
+          v-else
+          :entries="searchResults"
+          :selected-id="modelValue"
+          @select="select"
+        />
       </template>
 
       <!-- Categorised mode: sections with headings -->
@@ -71,7 +91,11 @@
           >
             <SectionTitle variant="group">{{ cat }}</SectionTitle>
           </h3>
-          <IconGrid :entries="(categoriesData as PhCategories)[cat]" :selected-id="modelValue" @select="select" />
+          <IconGrid
+            :entries="(categoriesData as PhCategories)[cat]"
+            :selected-id="modelValue"
+            @select="select"
+          />
         </div>
       </template>
 
@@ -98,16 +122,19 @@ const query = ref('');
 const activeCategory = ref('');
 const gridEl = ref<HTMLElement | null>(null);
 
-// Non-reactive element maps — Vue doesn't need to track individual el references
+// Non-reactive element maps — Vue doesn't need to track individual el
+// references
 const headingEls: Record<string, HTMLElement | null> = {};
 const pillEls: Record<string, HTMLElement | null> = {};
 
 let observer: IntersectionObserver | null = null;
 
-const categoryNames = computed(() => Object.keys(categoriesData as PhCategories));
+const categoryNames = computed(() =>
+  Object.keys(categoriesData as PhCategories),
+);
 
 const searchResults = computed(() =>
-  filterIcons(categoriesData as PhCategories, query.value)
+  filterIcons(categoriesData as PhCategories, query.value),
 );
 
 function setHeadingRef(cat: string, el: unknown) {
@@ -138,15 +165,21 @@ function setupObserver() {
     (entries) => {
       const visible = entries.filter((e) => e.isIntersecting);
       if (!visible.length) return;
-      visible.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+      visible.sort(
+        (a, b) => a.boundingClientRect.top - b.boundingClientRect.top,
+      );
       const cat = (visible[0].target as HTMLElement).dataset.category ?? '';
       activeCategory.value = cat;
-      pillEls[cat]?.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+      pillEls[cat]?.scrollIntoView({
+        behavior: 'smooth',
+        inline: 'nearest',
+        block: 'nearest',
+      });
     },
     {
       root: gridEl.value,
       threshold: 0.1,
-    }
+    },
   );
   for (const el of Object.values(headingEls)) {
     if (el) observer.observe(el);
@@ -161,16 +194,18 @@ watch(
       activeCategory.value = '';
       observer?.disconnect();
       observer = null;
-      // Clear element maps — pills may not fire null-ref callbacks if hidden when sheet closes
+      // Clear element maps — pills may not fire null-ref callbacks if
+      // hidden when sheet closes
       for (const key of Object.keys(headingEls)) headingEls[key] = null;
       for (const key of Object.keys(pillEls)) pillEls[key] = null;
     } else {
       nextTick(() => setupObserver());
     }
-  }
+  },
 );
 
-// Guard against navigating away while the picker is open (watch won't fire in that case)
+// Guard against navigating away while the picker is open (watch won't
+// fire in that case)
 onUnmounted(() => {
   observer?.disconnect();
   observer = null;

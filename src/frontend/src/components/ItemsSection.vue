@@ -4,7 +4,10 @@
       title="Items"
       :isOpen="showItemForm"
       :showToggle="categories.length > 0"
-      @toggle="showItemForm = !showItemForm; if (showItemForm) editingItemId = null"
+      @toggle="
+        showItemForm = !showItemForm;
+        if (showItemForm) editingItemId = null;
+      "
     />
 
     <ItemForm
@@ -31,15 +34,32 @@
                   class="w-7 h-7"
                   :style="{ color: item.color }"
                 />
-                <span v-else-if="cat.icon" class="text-2xl">{{ cat.icon }}</span>
+                <span
+                  v-else-if="cat.icon"
+                  class="text-2xl"
+                >{{ cat.icon }}</span>
                 <ColorCircle v-else :color="item.color" />
               </template>
               <template #after>
                 <div class="flex gap-1">
-                  <k-button small outline type="button" @click="onToggleEdit(item)">Edit</k-button>
-                  <DeleteButton title="Delete item?" message="This cannot be undone." @confirm="onConfirmDeleteItem(item.id)">
+                  <k-button
+                    small
+                    outline
+                    type="button"
+                    @click="onToggleEdit(item)"
+                  >Edit</k-button>
+                  <DeleteButton
+                    title="Delete item?"
+                    message="This cannot be undone."
+                    @confirm="onConfirmDeleteItem(item.id)"
+                  >
                     <template #trigger="{ open }">
-                      <k-button small outline type="button" @click="open">Delete</k-button>
+                      <k-button
+                        small
+                        outline
+                        type="button"
+                        @click="open"
+                      >Delete</k-button>
                     </template>
                   </DeleteButton>
                 </div>
@@ -49,7 +69,12 @@
               v-if="editingItemId === item.id"
               id-prefix="edit-item"
               :categories="categories"
-              :initial-values="{ name: item.name, color: item.color, category_id: String(item.category_id), difficulty_multiplier: item.difficulty_multiplier }"
+              :initial-values="{
+                name: item.name,
+                color: item.color,
+                category_id: String(item.category_id),
+                difficulty_multiplier: item.difficulty_multiplier,
+              }"
               submit-label="Save"
               show-cancel
               @submit="onSaveItem(item.id, $event)"
@@ -81,7 +106,13 @@ import SectionTitle from './SectionTitle.vue';
 import ItemForm from './ItemForm.vue';
 import DeleteButton from './DeleteButton.vue';
 
-const { loadItems, createItem, updateItem, deleteItem, itemsForCategory } = useItems();
+const {
+  loadItems,
+  createItem,
+  updateItem,
+  deleteItem,
+  itemsForCategory,
+} = useItems();
 const { categories } = useCategories();
 const { showError } = useToast();
 
@@ -102,7 +133,14 @@ function onToggleEdit(item: Item) {
   if (editingItemId.value !== null) showItemForm.value = false;
 }
 
-async function onAddItem(data: { name: string; color: string; category_id: number; difficulty_multiplier: number }) {
+interface ItemFormData {
+  name: string;
+  color: string;
+  category_id: number;
+  difficulty_multiplier: number;
+}
+
+async function onAddItem(data: ItemFormData) {
   try {
     await createItem(data);
     showItemForm.value = false;
@@ -111,7 +149,7 @@ async function onAddItem(data: { name: string; color: string; category_id: numbe
   }
 }
 
-async function onSaveItem(id: number, data: { name: string; color: string; category_id: number; difficulty_multiplier: number }) {
+async function onSaveItem(id: number, data: ItemFormData) {
   try {
     await updateItem(id, data);
     editingItemId.value = null;

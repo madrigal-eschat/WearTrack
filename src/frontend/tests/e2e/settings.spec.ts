@@ -18,38 +18,61 @@ test.describe('Settings', () => {
   });
 
   test('Settings button is visible on the home screen', async ({ page }) => {
-    await expect(page.getByRole('button', { name: /^settings$/i })).toBeVisible();
+    const settingsBtn = page.getByRole('button', { name: /^settings$/i });
+    await expect(settingsBtn).toBeVisible();
   });
 
-  test('clicking the Settings button navigates to /settings', async ({ page }) => {
-    await openSettings(page);
-    await expect(page).toHaveURL(/\/settings/);
-  });
+  test(
+    'clicking the Settings button navigates to /settings',
+    async ({ page }) => {
+      await openSettings(page);
+      await expect(page).toHaveURL(/\/settings/);
+    },
+  );
 
-  test('settings page shows push-notification state message', async ({ page }) => {
-    await openSettings(page);
+  test(
+    'settings page shows push-notification state message',
+    async ({ page }) => {
+      await openSettings(page);
 
-    // In a test browser (Chromium/WebKit) without a push VAPID key configured on
-    // the server, one of three states is expected:
-    //   1. "Push notifications are not supported in this browser." — webkit/no-push
-    //   2. "Push notifications are not configured on the server." — chromium, no VAPID
-    //   3. A k-toggle element — only when server is configured AND browser supports push
-    const notSupported = page.getByText(/not supported in this browser/i);
-    const notConfigured = page.getByText(/not configured on the server/i);
-    const toggle = page.locator('[class*="toggle"], input[type="checkbox"]').filter({
-      hasText: '',
-    });
+      // In a test browser (Chromium/WebKit) without a push VAPID
+      // key configured on the server, one of three states is expected:
+      //   1. "Push notifications are not supported in this browser."
+      //      — webkit/no-push
+      //   2. "Push notifications are not configured on the server."
+      //      — chromium, no VAPID
+      //   3. A k-toggle element — only when server is configured AND
+      //      browser supports push
+      const notSupported = page.getByText(/not supported in this browser/i);
+      const notConfigured = page.getByText(
+        /not configured on the server/i,
+      );
+      const toggle = page
+        .locator('[class*="toggle"], input[type="checkbox"]')
+        .filter({ hasText: '' });
 
-    const anyVisible =
-      (await notSupported.isVisible({ timeout: 2000 }).catch(() => false)) ||
-      (await notConfigured.isVisible({ timeout: 2000 }).catch(() => false)) ||
-      (await toggle.first().isVisible({ timeout: 500 }).catch(() => false));
+      const anyVisible =
+        (await notSupported
+          .isVisible({ timeout: 2000 })
+          .catch(() => false)) ||
+        (await notConfigured
+          .isVisible({ timeout: 2000 })
+          .catch(() => false)) ||
+        (await toggle
+          .first()
+          .isVisible({ timeout: 500 })
+          .catch(() => false));
 
-    expect(anyVisible).toBe(true);
-  });
+      expect(anyVisible).toBe(true);
+    },
+  );
 
-  test('settings page content mentions the Items tab', async ({ page }) => {
-    await openSettings(page);
-    await expect(page.getByText(/Manage categories and items from the/i)).toBeVisible();
-  });
+  test(
+    'settings page content mentions the Items tab',
+    async ({ page }) => {
+      await openSettings(page);
+      const itemsText = page.getByText(/Manage categories and items from the/i);
+      await expect(itemsText).toBeVisible();
+    },
+  );
 });

@@ -3,13 +3,17 @@ import { apiFetch } from '../utils/apiFetch.js';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const base64 = (base64String + padding)
+    .replace(/-/g, '+')
+    .replace(/_/g, '/');
   const rawData = atob(base64);
   return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
 }
 
 const isSupported =
-  typeof window !== 'undefined' && 'Notification' in window && 'PushManager' in window;
+  typeof window !== 'undefined' &&
+  'Notification' in window &&
+  'PushManager' in window;
 
 export function useNotifications() {
   const isConfigured = ref(false);
@@ -64,5 +68,12 @@ export function useNotifications() {
 
   onMounted(() => { void init(); });
 
-  return { isSupported, isConfigured, permission, isSubscribed, enable, disable };
+  return {
+    isSupported,
+    isConfigured,
+    permission,
+    isSubscribed,
+    enable,
+    disable,
+  };
 }

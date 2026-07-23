@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { SWATCHES, MAX_LIGHTNESS, randomSwatchColor, buildOklch } from './colors';
+import {
+  SWATCHES,
+  MAX_LIGHTNESS,
+  randomSwatchColor,
+  buildOklch,
+} from './colors';
 
 describe('SWATCHES', () => {
   it('has 12 entries', () => {
@@ -17,7 +22,9 @@ describe('SWATCHES', () => {
       const m = s.match(/oklch\([\d.]+ [\d.]+ ([\d.]+)\)/);
       return m ? parseFloat(m[1]) : null;
     });
-    expect(hues).toEqual([0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330]);
+    expect(hues).toEqual([
+      0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330,
+    ]);
   });
 });
 

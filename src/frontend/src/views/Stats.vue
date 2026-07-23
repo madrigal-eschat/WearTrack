@@ -24,7 +24,10 @@
               class="text-2xl w-6 h-6"
               :style="{ color: entryColor(entry) }"
             />
-            <span v-else-if="entryIcon(entry)" class="text-xl leading-none">{{ entryIcon(entry) }}</span>
+            <span
+              v-else-if="entryIcon(entry)"
+              class="text-xl leading-none"
+            >{{ entryIcon(entry) }}</span>
             <span class="font-bold text-gray-400 text-xs">{{ idx + 1 }}</span>
           </div>
         </template>
@@ -34,7 +37,9 @@
       </k-list-item>
     </k-list>
     <k-block v-else>
-      <p class="text-center text-gray-400">No data yet. Start some wear sessions!</p>
+      <p class="text-center text-gray-400">
+        No data yet. Start some wear sessions!
+      </p>
     </k-block>
   </k-page>
 </template>
@@ -47,7 +52,13 @@ import { useStats } from '../composables/useStats.js';
 import SegmentedControl from '../components/SegmentedControl.vue';
 import PageHeader from '../components/PageHeader.vue';
 
-const { leaderboard, activeType, loading, loadLeaderboard, LEADERBOARD_TYPES } = useStats();
+const {
+  leaderboard,
+  activeType,
+  loading,
+  loadLeaderboard,
+  LEADERBOARD_TYPES,
+} = useStats();
 
 onMounted(() => loadLeaderboard('longest-wear'));
 
@@ -60,7 +71,9 @@ function entryName(entry: Record<string, unknown>): string {
 }
 
 function entrySubtitle(entry: Record<string, unknown>): string {
-  if (entry.item_name && entry.category_name) return `Category: ${entry.category_name}`;
+  if (entry.item_name && entry.category_name) {
+    return `Category: ${entry.category_name}`;
+  }
   return '';
 }
 
