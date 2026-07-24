@@ -44,8 +44,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { lapTier } from '../utils/wearCalculations.js';
+import { computed } from 'vue'
+import { lapTier } from '../utils/wearCalculations.js'
 
 const props = withDefaults(
   defineProps<{
@@ -61,40 +61,40 @@ const props = withDefaults(
     targetMarkerFraction: null,
     lapCount: 0,
   },
-);
+)
 
 const barColor = computed(() => {
   if (props.mode === 'rest') {
-    return '#d1d5db';
+    return '#d1d5db'
   }
   if (props.mode === 'decay') {
-    return '#111827';
+    return '#111827'
   }
-  return props.color;
-});
+  return props.color
+})
 
 const tier = computed(() =>
   props.mode === 'wear' ? lapTier(props.lapCount) : 0,
-);
+)
 
 /** Sparkle count per tier: 0 (plain), 1 (glow only), 2, 3, 4 (max, capped). */
-const SPARKLE_COUNTS = [0, 0, 6, 20, 28];
+const SPARKLE_COUNTS = [0, 0, 6, 20, 28]
 
 function generateSparkles(
   n: number,
 ): { left: number; top: number; delay: number }[] {
   if (n === 0) {
-    return [];
+    return []
   }
-  const tops = [0, 15, 30, 45, 60];
+  const tops = [0, 15, 30, 45, 60]
   return Array.from({ length: n }, (_, i) => ({
     left: Math.round(i * (96 / (n - 1)) * 10) / 10,
     top: tops[i % tops.length],
     delay: Math.round(i * (1.4 / n) * 100) / 100,
-  }));
+  }))
 }
 
-const sparkles = computed(() => generateSparkles(SPARKLE_COUNTS[tier.value]));
+const sparkles = computed(() => generateSparkles(SPARKLE_COUNTS[tier.value]))
 </script>
 
 <style scoped>

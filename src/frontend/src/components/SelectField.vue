@@ -25,6 +25,6 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{ id?: string; label?: string; modelValue: string }>();
-defineEmits<{ 'update:modelValue': [value: string] }>();
+defineProps<{ id?: string; label?: string; modelValue: string }>()
+defineEmits<{ 'update:modelValue': [value: string] }>()
 </script>

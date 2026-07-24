@@ -16,8 +16,8 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
-import { kPage, kNavbar, kBlock, kButton } from 'konsta/vue';
+import { useRouter } from 'vue-router'
+import { kPage, kNavbar, kBlock, kButton } from 'konsta/vue'
 
-const router = useRouter();
+const router = useRouter()
 </script>

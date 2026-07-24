@@ -1,7 +1,7 @@
-import app from '../src/server.js';
+import app from '../src/server.js'
 
-const CATEGORIES = '/api/categories';
-const ITEMS = '/api/items';
+const CATEGORIES = '/api/categories'
+const ITEMS = '/api/items'
 
 export const sampleCategory = {
   name: 'Footwear',
@@ -17,14 +17,14 @@ export const sampleCategory = {
   ],
   break_decay_multiplier: 0.91,
   break_grace_time: 86400,
-};
+}
 
 export async function createCategory(overrides: Record<string, unknown> = {}) {
   return app.request(CATEGORIES, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...sampleCategory, ...overrides }),
-  });
+  })
 }
 
 export async function createItem(
@@ -40,5 +40,5 @@ export async function createItem(
       color: '#ff0000',
       ...overrides,
     }),
-  });
+  })
 }

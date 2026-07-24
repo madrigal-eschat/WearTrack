@@ -17,8 +17,8 @@
 </template>
 
 <script setup lang="ts">
-import { useToast } from '../composables/useToast.js';
-const { message, dismiss } = useToast();
+import { useToast } from '../composables/useToast.js'
+const { message, dismiss } = useToast()
 </script>
 
 <style scoped>

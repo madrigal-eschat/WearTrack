@@ -1,12 +1,12 @@
-import { categoryStore, type Category } from '../db/stores/category-store.js';
-import { itemStore } from '../db/stores/item-store.js';
+import { categoryStore, type Category } from '../db/stores/category-store.js'
+import { itemStore } from '../db/stores/item-store.js'
 import {
   sessionStore,
   type ItemWithLastSession,
   type OpenSessionWithItem,
-} from '../db/stores/session-store.js';
-import { injuryStore } from '../db/stores/injury-store.js';
-import { statsStore } from '../db/stores/stats-store.js';
+} from '../db/stores/session-store.js'
+import { injuryStore } from '../db/stores/injury-store.js'
+import { statsStore } from '../db/stores/stats-store.js'
 import {
   computeSessionStart,
   computeDecay,
@@ -14,8 +14,8 @@ import {
   startOfTodayLocal,
   startOfNextLocalMidnight,
   type PreviousSession,
-} from '../db/calculations.js';
-import { nowSeconds } from '../utils/time.js';
+} from '../db/calculations.js'
+import { nowSeconds } from '../utils/time.js'
 
 interface ItemWithExpected extends ItemWithLastSession {
   expected_target: number;
@@ -65,32 +65,32 @@ function enrichItemsWithExpected(
       previous,
       now,
       injuryActive,
-    );
+    )
     return {
       ...it,
       expected_target: target,
       expected_max: max,
       rotation_available: rotationAvailableIds.has(it.item_id),
-    };
-  });
+    }
+  })
 }
 
 export class CurrentSessionsQuery {
   run(): CurrentSessionEntry[] {
-    const categories = categoryStore.findAll();
-    const openSessions = sessionStore.findOpenWithItemData();
-    const allItems = sessionStore.findAllLastSessions();
-    const now = nowSeconds();
+    const categories = categoryStore.findAll()
+    const openSessions = sessionStore.findOpenWithItemData()
+    const allItems = sessionStore.findAllLastSessions()
+    const now = nowSeconds()
 
     const sessionByCategory = new Map(
       openSessions.map((s) => [s.category_id, s]),
-    );
-    const itemsByCategory = new Map<number, ItemWithLastSession[]>();
+    )
+    const itemsByCategory = new Map<number, ItemWithLastSession[]>()
     for (const item of allItems) {
       if (!itemsByCategory.has(item.category_id)) {
-        itemsByCategory.set(item.category_id, []);
+        itemsByCategory.set(item.category_id, [])
       }
-      itemsByCategory.get(item.category_id)!.push(item);
+      itemsByCategory.get(item.category_id)!.push(item)
     }
 
     return categories.map((cat) =>
@@ -100,7 +100,7 @@ export class CurrentSessionsQuery {
         itemsByCategory.get(cat.id) ?? [],
         now,
       ),
-    );
+    )
   }
 
   private buildEntry(
@@ -109,8 +109,8 @@ export class CurrentSessionsQuery {
     categoryItems: ItemWithLastSession[],
     now: number,
   ): CurrentSessionEntry {
-    const previous = sessionStore.findLastEndedInCategory(cat.id) ?? null;
-    const injuryActive = injuryStore.hasActiveInCategory(cat.id);
+    const previous = sessionStore.findLastEndedInCategory(cat.id) ?? null
+    const injuryActive = injuryStore.hasActiveInCategory(cat.id)
     const { decay_start_time, decay_state, decay_full_time } =
       cat.type === 'duration'
         ? computeDecay(previous, cat, now)
@@ -118,8 +118,8 @@ export class CurrentSessionsQuery {
           decay_start_time: null,
           decay_state: 'none' as const,
           decay_full_time: null,
-        };
-    const streak_count = statsStore.findForCategory(cat.id)?.streak_count ?? 0;
+        }
+    const streak_count = statsStore.findForCategory(cat.id)?.streak_count ?? 0
 
     const rotationAvailableIds =
       cat.type === 'rotation'
@@ -127,7 +127,7 @@ export class CurrentSessionsQuery {
           itemStore.findAll(cat.id).map((i) => i.id),
           sessionStore.findRecentInCategory(cat.id, 100),
         )
-        : new Set(categoryItems.map((i) => i.item_id));
+        : new Set(categoryItems.map((i) => i.item_id))
 
     const restingUntil =
       cat.type === 'rotation' &&
@@ -136,7 +136,7 @@ export class CurrentSessionsQuery {
         startOfTodayLocal(now),
       )
         ? startOfNextLocalMidnight(now)
-        : null;
+        : null
 
     const items = enrichItemsWithExpected(
       categoryItems,
@@ -145,7 +145,7 @@ export class CurrentSessionsQuery {
       now,
       injuryActive,
       rotationAvailableIds,
-    );
+    )
 
     const entry: CurrentSessionEntry = {
       category: cat,
@@ -157,7 +157,7 @@ export class CurrentSessionsQuery {
       decay_full_time,
       streak_count,
       resting_until: restingUntil,
-    };
+    }
 
     if (openSession) {
       entry.item = {
@@ -166,7 +166,7 @@ export class CurrentSessionsQuery {
         name: openSession.item_name,
         color: openSession.item_color,
         difficulty_multiplier: openSession.item_difficulty_multiplier,
-      };
+      }
       entry.session = {
         id: openSession.id,
         item_id: openSession.item_id,
@@ -176,9 +176,9 @@ export class CurrentSessionsQuery {
         max_wear_seconds: openSession.max_wear_seconds,
         rest_seconds: openSession.rest_seconds,
         ended_in_injury: openSession.ended_in_injury,
-      };
+      }
     }
 
-    return entry;
+    return entry
   }
 }

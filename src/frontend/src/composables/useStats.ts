@@ -1,6 +1,6 @@
-import { ref } from 'vue';
-import { formatDuration } from '../utils/formatDuration.js';
-import { apiFetch } from '../utils/apiFetch.js';
+import { ref } from 'vue'
+import { formatDuration } from '../utils/formatDuration.js'
+import { apiFetch } from '../utils/apiFetch.js'
 
 export interface LeaderboardEntry {
   [key: string]: unknown;
@@ -31,26 +31,26 @@ export const LEADERBOARD_TYPES = [
     badge: (entry: Record<string, unknown>) =>
       `${entry.session_count ?? 0} sessions`,
   },
-] as const;
+] as const
 
 export type LeaderboardType = typeof LEADERBOARD_TYPES[number]['value'];
 
 // Module-level state shared across all component instances
-const leaderboard = ref<LeaderboardEntry[]>([]);
-const activeType = ref<LeaderboardType>('longest-wear');
-const loading = ref(false);
+const leaderboard = ref<LeaderboardEntry[]>([])
+const activeType = ref<LeaderboardType>('longest-wear')
+const loading = ref(false)
 
 async function loadLeaderboard(type: LeaderboardType): Promise<void> {
-  loading.value = true;
+  loading.value = true
   try {
-    const res = await apiFetch(`/api/leaderboards/${type}`);
+    const res = await apiFetch(`/api/leaderboards/${type}`)
     if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
+      throw new Error(`HTTP ${res.status}`)
     }
-    leaderboard.value = await res.json();
-    activeType.value = type;
+    leaderboard.value = await res.json()
+    activeType.value = type
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 }
 
@@ -61,5 +61,5 @@ export function useStats() {
     loading,
     loadLeaderboard,
     LEADERBOARD_TYPES,
-  };
+  }
 }

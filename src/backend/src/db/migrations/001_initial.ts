@@ -1,4 +1,4 @@
-import { dbExport } from '../index.js';
+import { dbExport } from '../index.js'
 
 export default function runMigration() {
   dbExport.exec(`
@@ -94,5 +94,5 @@ export default function runMigration() {
       -- session count of the all-time best streak
       best_streak_count INTEGER NOT NULL DEFAULT 0
     );
-  `);
+  `)
 }

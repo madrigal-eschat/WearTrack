@@ -200,24 +200,24 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, onMounted } from 'vue';
-import { Icon } from '@iconify/vue';
+import { reactive, onMounted } from 'vue'
+import { Icon } from '@iconify/vue'
 import {
   kBlockTitle, kList, kListItem, kDialog, kDialogButton,
-} from 'konsta/vue';
-import WearProgressBar from './WearProgressBar.vue';
-import CurrentSessionActions from './CurrentSessionActions.vue';
+} from 'konsta/vue'
+import WearProgressBar from './WearProgressBar.vue'
+import CurrentSessionActions from './CurrentSessionActions.vue'
 import {
   useWear,
   type CurrentEntry,
   type Session,
   type ItemWithLastSession,
-} from '../composables/useWear.js';
-import { useItems } from '../composables/useItems.js';
-import { useNow } from '../composables/useNow.js';
-import { useToast } from '../composables/useToast.js';
-import { apiFetch } from '../utils/apiFetch.js';
-import { formatDuration, shortDuration } from '../utils/formatDuration.js';
+} from '../composables/useWear.js'
+import { useItems } from '../composables/useItems.js'
+import { useNow } from '../composables/useNow.js'
+import { useToast } from '../composables/useToast.js'
+import { apiFetch } from '../utils/apiFetch.js'
+import { formatDuration, shortDuration } from '../utils/formatDuration.js'
 import {
   targetWearSeconds,
   maxWearSeconds,
@@ -228,29 +228,29 @@ import {
   fillUpFraction,
   decayFillFraction,
   decayTimeLeft,
-} from '../utils/wearCalculations.js';
+} from '../utils/wearCalculations.js'
 
-const { currentSessions, loaded, startSession, endSession } = useWear();
-const { loadItems, itemsForCategory } = useItems();
-const { showError } = useToast();
-const now = useNow();
+const { currentSessions, loaded, startSession, endSession } = useWear()
+const { loadItems, itemsForCategory } = useItems()
+const { showError } = useToast()
+const now = useNow()
 
-const selectedItem = reactive<Record<number, number | null>>({});
+const selectedItem = reactive<Record<number, number | null>>({})
 const recentSessionsByCategory = reactive<
   Record<number, { item_id: number }[]>
->({});
-const overrideLock = reactive<Record<number, boolean>>({});
+>({})
+const overrideLock = reactive<Record<number, boolean>>({})
 
 async function loadRecentSessions(categoryId: number) {
   const res = await apiFetch(
     `/api/sessions?category_id=${categoryId}&limit=20`,
-  );
+  )
   if (!res.ok) {
-    return;
+    return
   }
-  const sessions: { item_id: number }[] = await res.json();
+  const sessions: { item_id: number }[] = await res.json()
   // already newest-first per session-store.findAll ORDER BY started_at DESC
-  recentSessionsByCategory[categoryId] = sessions;
+  recentSessionsByCategory[categoryId] = sessions
 }
 
 /**
@@ -259,53 +259,53 @@ async function loadRecentSessions(categoryId: number) {
  */
 function trailingRunLength(sessions: { item_id: number }[]): number {
   if (sessions.length === 0) {
-    return 0;
+    return 0
   }
-  const mostRecent = sessions[0].item_id;
-  let count = 0;
+  const mostRecent = sessions[0].item_id
+  let count = 0
   for (const s of sessions) {
     if (s.item_id !== mostRecent) {
-      break;
+      break
     }
-    count++;
+    count++
   }
-  return count;
+  return count
 }
 
 function forcedItemId(entry: CurrentEntry): number | null {
   if (entry.category.type !== 'rotation') {
-    return null;
+    return null
   }
-  const sessions = recentSessionsByCategory[entry.category.id];
+  const sessions = recentSessionsByCategory[entry.category.id]
   if (!sessions || sessions.length === 0) {
-    return null;
+    return null
   }
-  const mostRecent = sessions[0].item_id;
-  const runLength = trailingRunLength(sessions);
+  const mostRecent = sessions[0].item_id
+  const runLength = trailingRunLength(sessions)
   if (runLength < entry.category.consecutive_wear_days) {
-    return mostRecent;
+    return mostRecent
   }
-  return null;
+  return null
 }
 
 function isLocked(entry: CurrentEntry): boolean {
-  return forcedItemId(entry) !== null && !overrideLock[entry.category.id];
+  return forcedItemId(entry) !== null && !overrideLock[entry.category.id]
 }
 
 function forcedItemName(entry: CurrentEntry): string {
-  const id = forcedItemId(entry);
+  const id = forcedItemId(entry)
   if (id === null) {
-    return '';
+    return ''
   }
   return (
     itemsForCategory(entry.category.id).find((i) => i.id === id)?.name ?? ''
-  );
+  )
 }
 
 function itemRotationAvailable(entry: CurrentEntry, itemId: number): boolean {
   return (
     entry.items.find((i) => i.item_id === itemId)?.rotation_available ?? true
-  );
+  )
 }
 
 /**
@@ -313,24 +313,24 @@ function itemRotationAvailable(entry: CurrentEntry, itemId: number): boolean {
  * to the first item at all if none are marked available).
  */
 function firstAvailableItemId(entry: CurrentEntry): number | null {
-  const items = itemsForCategory(entry.category.id);
-  const available = items.find((i) => itemRotationAvailable(entry, i.id));
-  return available?.id ?? items[0]?.id ?? null;
+  const items = itemsForCategory(entry.category.id)
+  const available = items.find((i) => itemRotationAvailable(entry, i.id))
+  return available?.id ?? items[0]?.id ?? null
 }
 
 function chooseSomethingElse(entry: CurrentEntry) {
-  overrideLock[entry.category.id] = true;
-  selectedItem[entry.category.id] = firstAvailableItemId(entry);
+  overrideLock[entry.category.id] = true
+  selectedItem[entry.category.id] = firstAvailableItemId(entry)
 }
 
 const restWarning = reactive<{
   visible: boolean;
   entry: CurrentEntry | null;
-}>({ visible: false, entry: null });
+}>({ visible: false, entry: null })
 
 function showRestWarning(entry: CurrentEntry) {
-  restWarning.entry = entry;
-  restWarning.visible = true;
+  restWarning.entry = entry
+  restWarning.visible = true
 }
 
 /**
@@ -339,105 +339,105 @@ function showRestWarning(entry: CurrentEntry) {
  * to fall back to whatever's selected in the dropdown (override/unlocked path).
  */
 function dialogItemIdOverride(entry: CurrentEntry): number | undefined {
-  return isLocked(entry) ? forcedItemId(entry) ?? undefined : undefined;
+  return isLocked(entry) ? forcedItemId(entry) ?? undefined : undefined
 }
 
 async function onWearConfirmed() {
-  restWarning.visible = false;
+  restWarning.visible = false
   if (restWarning.entry) {
     await onWear(
       restWarning.entry,
       dialogItemIdOverride(restWarning.entry),
-    );
+    )
   }
 }
 
 function onWearClick(entry: CurrentEntry) {
   if (isLocked(entry)) {
     if (restRemainingSeconds(entry, forcedItemId(entry)) > 0) {
-      showRestWarning(entry);
+      showRestWarning(entry)
     } else {
-      onWear(entry, forcedItemId(entry) ?? undefined);
+      onWear(entry, forcedItemId(entry) ?? undefined)
     }
-    return;
+    return
   }
   if (restRemainingSeconds(entry) > 0) {
-    showRestWarning(entry);
+    showRestWarning(entry)
   } else {
-    onWear(entry);
+    onWear(entry)
   }
 }
 
 onMounted(async () => {
-  await loadItems();
+  await loadItems()
   for (const entry of currentSessions.value) {
     if (entry.category.type === 'rotation') {
-      await loadRecentSessions(entry.category.id);
+      await loadRecentSessions(entry.category.id)
     }
   }
   for (const entry of currentSessions.value) {
-    selectedItem[entry.category.id] = firstAvailableItemId(entry);
+    selectedItem[entry.category.id] = firstAvailableItemId(entry)
   }
-});
+})
 
 function sessionSeconds(session: Session): number {
-  return currentWear(session, Math.floor(now.value / 1000));
+  return currentWear(session, Math.floor(now.value / 1000))
 }
 
 function elapsed(session: Session): string {
-  return formatDuration(sessionSeconds(session));
+  return formatDuration(sessionSeconds(session))
 }
 
 /** Denominator for the bar: max when set, else target. */
 function barCeiling(entry: CurrentEntry): number {
   if (!entry.session) {
-    return 0;
+    return 0
   }
-  const max = maxWearSeconds(entry.session);
-  return max ?? targetWearSeconds(entry.session);
+  const max = maxWearSeconds(entry.session)
+  return max ?? targetWearSeconds(entry.session)
 }
 
 function maxWear(entry: CurrentEntry): string {
   if (!entry.session) {
-    return '';
+    return ''
   }
-  const max = maxWearSeconds(entry.session);
-  return max === null ? '—' : formatDuration(max);
+  const max = maxWearSeconds(entry.session)
+  return max === null ? '—' : formatDuration(max)
 }
 
 function targetLabel(entry: CurrentEntry): string {
   if (!entry.session) {
-    return '';
+    return ''
   }
-  return formatDuration(targetWearSeconds(entry.session));
+  return formatDuration(targetWearSeconds(entry.session))
 }
 
 function remainingSecondsFor(session: Session): number | null {
-  return remainingWearSeconds(session, Math.floor(now.value / 1000));
+  return remainingWearSeconds(session, Math.floor(now.value / 1000))
 }
 
 function remainingLabel(entry: CurrentEntry): string {
   if (!entry.session) {
-    return '';
+    return ''
   }
-  const remaining = remainingSecondsFor(entry.session);
+  const remaining = remainingSecondsFor(entry.session)
   if (remaining !== null) {
-    return formatDuration(remaining);
+    return formatDuration(remaining)
   }
   return maxWearSeconds(entry.session) === null
     ? 'Target reached'
-    : 'Overdue';
+    : 'Overdue'
 }
 
 function isOverdue(entry: CurrentEntry): boolean {
   if (!entry.session) {
-    return false;
+    return false
   }
-  const max = maxWearSeconds(entry.session);
+  const max = maxWearSeconds(entry.session)
   if (max === null) {
-    return false;
+    return false
   }
-  return sessionSeconds(entry.session) >= max;
+  return sessionSeconds(entry.session) >= max
 }
 
 /**
@@ -446,18 +446,18 @@ function isOverdue(entry: CurrentEntry): boolean {
  */
 function barFillFraction(entry: CurrentEntry): number {
   if (!entry.session) {
-    return 0;
+    return 0
   }
-  const max = maxWearSeconds(entry.session);
-  const target = targetWearSeconds(entry.session);
-  const elapsed = sessionSeconds(entry.session);
+  const max = maxWearSeconds(entry.session)
+  const target = targetWearSeconds(entry.session)
+  const elapsed = sessionSeconds(entry.session)
   if (max === null) {
-    return lapFillFraction(elapsed, target);
+    return lapFillFraction(elapsed, target)
   }
   if (max <= 0) {
-    return 0;
+    return 0
   }
-  return Math.min(elapsed / max, 1);
+  return Math.min(elapsed / max, 1)
 }
 
 /**
@@ -466,52 +466,52 @@ function barFillFraction(entry: CurrentEntry): number {
  */
 function targetMarkerFraction(entry: CurrentEntry): number | null {
   if (!entry.session) {
-    return null;
+    return null
   }
-  const max = maxWearSeconds(entry.session);
+  const max = maxWearSeconds(entry.session)
   if (max === null || max <= 0) {
-    return null;
+    return null
   }
-  return Math.min(targetWearSeconds(entry.session) / max, 1);
+  return Math.min(targetWearSeconds(entry.session) / max, 1)
 }
 
 /** Completed laps this session (null-max categories only; 0 otherwise). */
 function lapCountFor(entry: CurrentEntry): number {
   if (!entry.session) {
-    return 0;
+    return 0
   }
   if (maxWearSeconds(entry.session) !== null) {
-    return 0;
+    return 0
   }
   return lapCount(
     sessionSeconds(entry.session),
     targetWearSeconds(entry.session),
-  );
+  )
 }
 
 function rowBg(entry: CurrentEntry): string {
   if (!entry.session) {
-    return '';
+    return ''
   }
-  const max = maxWearSeconds(entry.session);
+  const max = maxWearSeconds(entry.session)
   if (max === null) {
-    return '';
+    return ''
   }
-  const ceiling = barCeiling(entry);
+  const ceiling = barCeiling(entry)
   if (ceiling <= 0) {
-    return '';
+    return ''
   }
-  const remaining = 1 - sessionSeconds(entry.session) / ceiling;
+  const remaining = 1 - sessionSeconds(entry.session) / ceiling
   if (remaining <= 0) {
-    return 'bg-red-100';
+    return 'bg-red-100'
   }
   if (remaining <= 0.05) {
-    return 'bg-orange-100';
+    return 'bg-orange-100'
   }
   if (remaining <= 0.10) {
-    return 'bg-yellow-100';
+    return 'bg-yellow-100'
   }
-  return '';
+  return ''
 }
 
 /**
@@ -522,67 +522,67 @@ function selectedItemData(
   entry: CurrentEntry,
   itemIdOverride?: number | null,
 ): ItemWithLastSession | null {
-  const id = itemIdOverride ?? selectedItem[entry.category.id];
+  const id = itemIdOverride ?? selectedItem[entry.category.id]
   if (!id) {
-    return null;
+    return null
   }
-  return entry.items.find((i) => i.item_id === id) ?? null;
+  return entry.items.find((i) => i.item_id === id) ?? null
 }
 
 function idleTarget(
   entry: CurrentEntry,
   itemIdOverride?: number | null,
 ): string {
-  const item = selectedItemData(entry, itemIdOverride);
-  return item ? formatDuration(item.expected_target) : '';
+  const item = selectedItemData(entry, itemIdOverride)
+  return item ? formatDuration(item.expected_target) : ''
 }
 
 function idleMax(
   entry: CurrentEntry,
   itemIdOverride?: number | null,
 ): string {
-  const item = selectedItemData(entry, itemIdOverride);
+  const item = selectedItemData(entry, itemIdOverride)
   if (!item || item.expected_max === null) {
-    return '';
+    return ''
   }
-  return formatDuration(item.expected_max);
+  return formatDuration(item.expected_max)
 }
 
 function restRemainingSeconds(
   entry: CurrentEntry,
   itemIdOverride?: number | null,
 ): number {
-  const item = selectedItemData(entry, itemIdOverride);
+  const item = selectedItemData(entry, itemIdOverride)
   if (!item || item.ended_at === null || item.rest_seconds === null) {
-    return 0;
+    return 0
   }
   return Math.max(
     0,
     Math.ceil(item.ended_at + item.rest_seconds - now.value / 1000),
-  );
+  )
 }
 
 function restTotalSeconds(entry: CurrentEntry): number {
-  const item = selectedItemData(entry);
-  return item?.rest_seconds ?? 0;
+  const item = selectedItemData(entry)
+  return item?.rest_seconds ?? 0
 }
 
 function dailyRestRemainingSeconds(entry: CurrentEntry): number {
   if (entry.resting_until === null) {
-    return 0;
+    return 0
   }
-  return Math.max(0, entry.resting_until - Math.floor(now.value / 1000));
+  return Math.max(0, entry.resting_until - Math.floor(now.value / 1000))
 }
 
 function dailyRestTotalSeconds(entry: CurrentEntry): number {
   if (entry.resting_until === null) {
-    return 0;
+    return 0
   }
-  const sessionStart = entry.items[0]?.started_at;
+  const sessionStart = entry.items[0]?.started_at
   if (sessionStart === null || sessionStart === undefined) {
-    return 0;
+    return 0
   }
-  return Math.max(0, entry.resting_until - sessionStart);
+  return Math.max(0, entry.resting_until - sessionStart)
 }
 
 /**
@@ -592,41 +592,41 @@ function dailyRestTotalSeconds(entry: CurrentEntry): number {
 function effectiveRestRemainingSeconds(entry: CurrentEntry): number {
   return entry.category.type === 'rotation'
     ? dailyRestRemainingSeconds(entry)
-    : restRemainingSeconds(entry);
+    : restRemainingSeconds(entry)
 }
 
 /** Rest-total counterpart to `effectiveRestRemainingSeconds`. */
 function effectiveRestTotalSeconds(entry: CurrentEntry): number {
   return entry.category.type === 'rotation'
     ? dailyRestTotalSeconds(entry)
-    : restTotalSeconds(entry);
+    : restTotalSeconds(entry)
 }
 
 function effectiveRestFillFraction(entry: CurrentEntry): number {
   return fillUpFraction(
     effectiveRestRemainingSeconds(entry),
     effectiveRestTotalSeconds(entry),
-  );
+  )
 }
 
 function decayFillFractionFor(entry: CurrentEntry): number {
   if (entry.decay_start_time === null || entry.decay_full_time === null) {
-    return 0;
+    return 0
   }
   return decayFillFraction(
     Math.floor(now.value / 1000),
     entry.decay_start_time,
     entry.decay_full_time,
-  );
+  )
 }
 
 function decayTimeLeftLabel(entry: CurrentEntry): string {
   if (entry.decay_full_time === null) {
-    return '';
+    return ''
   }
   return shortDuration(
     decayTimeLeft(Math.floor(now.value / 1000), entry.decay_full_time),
-  );
+  )
 }
 
 function formatDecayDate(unixSeconds: number): string {
@@ -635,37 +635,37 @@ function formatDecayDate(unixSeconds: number): string {
     month: 'short',
     hour: 'numeric',
     minute: '2-digit',
-  });
+  })
 }
 
 async function onWear(entry: CurrentEntry, itemIdOverride?: number) {
-  const itemId = itemIdOverride ?? selectedItem[entry.category.id];
+  const itemId = itemIdOverride ?? selectedItem[entry.category.id]
   if (!itemId) {
-    return;
+    return
   }
   try {
-    await startSession(itemId);
+    await startSession(itemId)
     if (entry.category.type === 'rotation') {
-      overrideLock[entry.category.id] = false;
-      await loadRecentSessions(entry.category.id);
+      overrideLock[entry.category.id] = false
+      await loadRecentSessions(entry.category.id)
     }
   } catch (e) {
-    showError(String(e));
+    showError(String(e))
   }
 }
 
 async function onStop(entry: CurrentEntry) {
   if (!entry.session) {
-    return;
+    return
   }
   try {
-    await endSession(entry.session.id);
+    await endSession(entry.session.id)
     if (entry.category.type === 'rotation') {
-      overrideLock[entry.category.id] = false;
-      await loadRecentSessions(entry.category.id);
+      overrideLock[entry.category.id] = false
+      await loadRecentSessions(entry.category.id)
     }
   } catch (e) {
-    showError(String(e));
+    showError(String(e))
   }
 }
 </script>

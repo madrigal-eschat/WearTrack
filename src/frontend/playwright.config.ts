@@ -1,5 +1,5 @@
-import { defineConfig, devices } from '@playwright/test';
-import { execSync } from 'node:child_process';
+import { defineConfig, devices } from '@playwright/test'
+import { execSync } from 'node:child_process'
 
 // Target app. Locally this is the Vite dev server started by `webServer` below.
 // In CI the app runs as a service container (the built production image) and
@@ -12,17 +12,17 @@ import { execSync } from 'node:child_process';
 // ERR_SSL_PROTOCOL_ERROR. --disable-features flags don't prevent this path.
 // Fix: resolve "app" to its Docker-network IP at startup and use the raw IP as
 // the base URL — IP addresses skip DNS HTTPS lookups entirely.
-let baseURL = process.env.BASE_URL ?? 'http://localhost:3000';
+let baseURL = process.env.BASE_URL ?? 'http://localhost:3000'
 if (baseURL.includes('//app:')) {
   try {
     const ip = execSync(
       "getent hosts app 2>/dev/null | awk '{print $1}' | head -1",
       { encoding: 'utf-8', timeout: 3000 },
-    ).trim();
+    ).trim()
     if (ip) {
-      baseURL = baseURL.replace('//app:', `//${ip}:`);
+      baseURL = baseURL.replace('//app:', `//${ip}:`)
       // Keep BASE_URL in sync so globalSetup sees the same URL.
-      process.env.BASE_URL = baseURL;
+      process.env.BASE_URL = baseURL
     }
   } catch {
     // Not in a Docker environment — fall through and use the original URL.
@@ -64,4 +64,4 @@ export default defineConfig({
         cwd: '../..',
       },
     }),
-});
+})

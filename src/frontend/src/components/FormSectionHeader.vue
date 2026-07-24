@@ -13,8 +13,8 @@
 </template>
 
 <script setup lang="ts">
-import SectionTitle from './SectionTitle.vue';
+import SectionTitle from './SectionTitle.vue'
 
-defineProps<{ title: string; isOpen: boolean; showToggle?: boolean }>();
-defineEmits<{ toggle: [] }>();
+defineProps<{ title: string; isOpen: boolean; showToggle?: boolean }>()
+defineEmits<{ toggle: [] }>()
 </script>

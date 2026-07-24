@@ -1,4 +1,4 @@
-import { dbExport } from '../index.js';
+import { dbExport } from '../index.js'
 
 export default function runMigration005() {
   dbExport.exec(`
@@ -15,5 +15,5 @@ export default function runMigration005() {
       sent_at    INTEGER NOT NULL,
       UNIQUE (session_id, type)
     );
-  `);
+  `)
 }

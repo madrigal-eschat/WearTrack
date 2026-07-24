@@ -64,15 +64,15 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, computed, watch } from 'vue';
-import { Icon } from '@iconify/vue';
-import { kButton } from 'konsta/vue';
-import TextField from './TextField.vue';
-import SelectField from './SelectField.vue';
-import ColorPicker from './ColorPicker.vue';
-import NumberField from './NumberField.vue';
-import FormCard from './FormCard.vue';
-import { randomSwatchColor } from '../utils/colors.js';
+import { reactive, computed, watch } from 'vue'
+import { Icon } from '@iconify/vue'
+import { kButton } from 'konsta/vue'
+import TextField from './TextField.vue'
+import SelectField from './SelectField.vue'
+import ColorPicker from './ColorPicker.vue'
+import NumberField from './NumberField.vue'
+import FormCard from './FormCard.vue'
+import { randomSwatchColor } from '../utils/colors.js'
 
 interface ItemFormValue {
   name: string;
@@ -88,7 +88,7 @@ const props = defineProps<{
   showCancel?: boolean;
   idPrefix: string;
   showPlaceholderOption?: boolean;
-}>();
+}>()
 
 const emit = defineEmits<{
   submit: [data: {
@@ -98,7 +98,7 @@ const emit = defineEmits<{
     difficulty_multiplier: number;
   }];
   cancel: [];
-}>();
+}>()
 
 const form = reactive<ItemFormValue>({
   name: '',
@@ -106,38 +106,38 @@ const form = reactive<ItemFormValue>({
   category_id: '',
   difficulty_multiplier: 1.0,
   ...props.initialValues,
-});
+})
 
 const selectedCategory = computed(
   () => props.categories.find((c) => String(c.id) === form.category_id) ??
     null,
-);
+)
 
 // Keep the selected category in sync when the list changes (e.g. a
 // category was deleted).
 watch(
   () => props.categories,
   (cats) => {
-    const validIds = cats.map((c) => String(c.id));
+    const validIds = cats.map((c) => String(c.id))
     if (form.category_id && !validIds.includes(form.category_id)) {
       form.category_id =
-        cats.length > 0 ? String(cats[cats.length - 1].id) : '';
+        cats.length > 0 ? String(cats[cats.length - 1].id) : ''
     } else if (!form.category_id && cats.length > 0) {
-      form.category_id = String(cats[cats.length - 1].id);
+      form.category_id = String(cats[cats.length - 1].id)
     }
   },
   { immediate: true, deep: true },
-);
+)
 
 function onSubmit() {
   if (!form.name || !form.category_id) {
-    return;
+    return
   }
   emit('submit', {
     name: form.name,
     color: form.color,
     category_id: Number(form.category_id),
     difficulty_multiplier: form.difficulty_multiplier,
-  });
+  })
 }
 </script>

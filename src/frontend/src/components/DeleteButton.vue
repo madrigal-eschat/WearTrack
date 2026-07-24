@@ -18,22 +18,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { kDialog, kDialogButton } from 'konsta/vue';
+import { ref } from 'vue'
+import { kDialog, kDialogButton } from 'konsta/vue'
 
-defineProps<{ title: string; message: string }>();
-const emit = defineEmits<{ confirm: [] }>();
+defineProps<{ title: string; message: string }>()
+const emit = defineEmits<{ confirm: [] }>()
 
-const confirmOpen = ref(false);
+const confirmOpen = ref(false)
 
 function open() {
-  confirmOpen.value = true;
+  confirmOpen.value = true
 }
 
 function onConfirm() {
-  confirmOpen.value = false;
-  emit('confirm');
+  confirmOpen.value = false
+  emit('confirm')
 }
 
-defineExpose({ open });
+defineExpose({ open })
 </script>

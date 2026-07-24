@@ -29,8 +29,8 @@
 </template>
 
 <script setup lang="ts">
-import { Icon } from '@iconify/vue';
+import { Icon } from '@iconify/vue'
 
-defineProps<{ id?: string; label?: string; modelValue: string }>();
-defineEmits<{ click: [] }>();
+defineProps<{ id?: string; label?: string; modelValue: string }>()
+defineEmits<{ click: [] }>()
 </script>

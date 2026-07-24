@@ -28,7 +28,7 @@
 </template>
 
 <script setup lang="ts">
-import { clampNumber } from '../utils/clampNumber.js';
+import { clampNumber } from '../utils/clampNumber.js'
 
 const props = defineProps<{
   id?: string;
@@ -38,11 +38,11 @@ const props = defineProps<{
   max?: number;
   default: number;
   step?: number;
-}>();
-const emit = defineEmits<{ 'update:modelValue': [value: number] }>();
+}>()
+const emit = defineEmits<{ 'update:modelValue': [value: number] }>()
 
 function onBlur(e: Event) {
-  const raw = (e.target as HTMLInputElement).value;
+  const raw = (e.target as HTMLInputElement).value
   emit(
     'update:modelValue',
     clampNumber(raw, {
@@ -50,6 +50,6 @@ function onBlur(e: Event) {
       max: props.max,
       default: props.default,
     }),
-  );
+  )
 }
 </script>

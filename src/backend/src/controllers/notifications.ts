@@ -1,28 +1,28 @@
-import { Hono } from 'hono';
-import { notificationStore } from '../notifications/store.js';
-import { getPublicKey } from '../notifications/sender.js';
-import { ValidationError } from '../middleware/errors.js';
+import { Hono } from 'hono'
+import { notificationStore } from '../notifications/store.js'
+import { getPublicKey } from '../notifications/sender.js'
+import { ValidationError } from '../middleware/errors.js'
 
-export const router = new Hono();
+export const router = new Hono()
 
 router.get('/vapid-public-key', (c) => {
-  return c.json({ publicKey: getPublicKey() });
-});
+  return c.json({ publicKey: getPublicKey() })
+})
 
 router.post('/subscribe', async (c) => {
-  const body = await c.req.json();
+  const body = await c.req.json()
   if (
     typeof body.endpoint !== 'string' ||
     typeof body.keys?.p256dh !== 'string' ||
     typeof body.keys?.auth !== 'string'
   ) {
-    throw new ValidationError('Invalid push subscription');
+    throw new ValidationError('Invalid push subscription')
   }
-  notificationStore.upsertSubscription(JSON.stringify(body));
-  return c.json({ ok: true });
-});
+  notificationStore.upsertSubscription(JSON.stringify(body))
+  return c.json({ ok: true })
+})
 
 router.delete('/subscribe', (c) => {
-  notificationStore.deleteSubscription();
-  return c.json({ ok: true });
-});
+  notificationStore.deleteSubscription()
+  return c.json({ ok: true })
+})

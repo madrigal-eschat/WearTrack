@@ -22,8 +22,8 @@
 </template>
 
 <script setup lang="ts">
-import { Icon } from '@iconify/vue';
+import { Icon } from '@iconify/vue'
 
-defineProps<{ entries: { id: string }[]; selectedId: string }>();
-defineEmits<{ select: [id: string] }>();
+defineProps<{ entries: { id: string }[]; selectedId: string }>()
+defineEmits<{ select: [id: string] }>()
 </script>

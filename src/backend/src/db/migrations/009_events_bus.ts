@@ -1,4 +1,4 @@
-import { dbExport } from '../index.js';
+import { dbExport } from '../index.js'
 
 export default function runMigration009() {
   dbExport.exec(`
@@ -17,5 +17,5 @@ export default function runMigration009() {
       overtime_warning_5_notified  INTEGER NOT NULL DEFAULT 0,
       overtime_notified            INTEGER NOT NULL DEFAULT 0
     );
-  `);
+  `)
 }

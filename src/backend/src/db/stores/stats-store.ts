@@ -1,4 +1,4 @@
-import db from '../index.js';
+import db from '../index.js'
 
 // ─── Per-item stats ──────────────────────────────────────────────────────────
 
@@ -41,19 +41,19 @@ function computeNewStreak(
   session: SessionSnapshot,
   breakGraceTime: number,
 ): { streak_count: number; streak_wear: number } {
-  const duration = session.ended_at - session.started_at;
-  let streakWear = stats.streak_wear_seconds + duration;
-  let streakCount = stats.streak_count + 1;
+  const duration = session.ended_at - session.started_at
+  let streakWear = stats.streak_wear_seconds + duration
+  let streakCount = stats.streak_count + 1
 
   if (prevSession && prevSession.rest_seconds !== null) {
-    const breakSeconds = session.started_at - prevSession.ended_at;
+    const breakSeconds = session.started_at - prevSession.ended_at
     if (breakSeconds > prevSession.rest_seconds + breakGraceTime) {
-      streakWear = duration;
-      streakCount = 1;
+      streakWear = duration
+      streakCount = 1
     }
   }
 
-  return { streak_count: streakCount, streak_wear: streakWear };
+  return { streak_count: streakCount, streak_wear: streakWear }
 }
 
 class StatsStore {
@@ -61,16 +61,16 @@ class StatsStore {
 
   findForItem(itemId: number): ItemStats | undefined {
     return db.prepare('SELECT * FROM stats WHERE item_id = ?').get(itemId) as
-      ItemStats | undefined;
+      ItemStats | undefined
   }
 
   initItem(itemId: number): void {
-    db.prepare('INSERT OR IGNORE INTO stats (item_id) VALUES (?)').run(itemId);
+    db.prepare('INSERT OR IGNORE INTO stats (item_id) VALUES (?)').run(itemId)
   }
 
   /** Update cumulative per-item stats when a session ends. */
   recordItemSession(session: SessionSnapshot): void {
-    const duration = session.ended_at - session.started_at;
+    const duration = session.ended_at - session.started_at
     db.prepare(
       `
       UPDATE stats SET
@@ -80,7 +80,7 @@ class StatsStore {
           MAX(max_single_session_wear_seconds, ?)
       WHERE item_id = ?
     `,
-    ).run(duration, duration, session.item_id);
+    ).run(duration, duration, session.item_id)
   }
 
   /**
@@ -92,7 +92,7 @@ class StatsStore {
       `UPDATE stats SET total_wear_seconds = 0, session_count = 0,
        max_single_session_wear_seconds = 0
        WHERE item_id = ?`,
-    ).run(itemId);
+    ).run(itemId)
 
     const sessions = db
       .prepare(
@@ -100,16 +100,16 @@ class StatsStore {
          AND ended_in_injury = 0
          ORDER BY ended_at ASC`,
       )
-      .all(itemId) as SessionSnapshot[];
+      .all(itemId) as SessionSnapshot[]
 
     for (const session of sessions) {
-      this.recordItemSession(session);
+      this.recordItemSession(session)
     }
   }
 
   /** Time-series wear data for one item, grouped by month or week. */
   history(itemId: number, unit: 'month' | 'week'): unknown[] {
-    const format = unit === 'month' ? '%Y-%m' : '%Y-%W';
+    const format = unit === 'month' ? '%Y-%m' : '%Y-%W'
     return db
       .prepare(
         `SELECT strftime('${format}', datetime(ended_at, 'unixepoch'))
@@ -120,7 +120,7 @@ class StatsStore {
          WHERE item_id = ? AND ended_at IS NOT NULL
          GROUP BY period ORDER BY period ASC`,
       )
-      .all(itemId);
+      .all(itemId)
   }
 
   // ── Per-category ───────────────────────────────────────────────────────────
@@ -130,20 +130,20 @@ class StatsStore {
   ): (CategoryStats & { item_count: number }) | undefined {
     const stats = db
       .prepare('SELECT * FROM category_stats WHERE category_id = ?')
-      .get(categoryId) as CategoryStats | undefined;
+      .get(categoryId) as CategoryStats | undefined
     if (!stats) {
-      return undefined;
+      return undefined
     }
     const { item_count } = db
       .prepare('SELECT COUNT(*) AS item_count FROM items WHERE category_id = ?')
-      .get(categoryId) as { item_count: number };
-    return { ...stats, item_count };
+      .get(categoryId) as { item_count: number }
+    return { ...stats, item_count }
   }
 
   initCategory(categoryId: number): void {
     db.prepare(
       'INSERT OR IGNORE INTO category_stats (category_id) VALUES (?)',
-    ).run(categoryId);
+    ).run(categoryId)
   }
 
   /**
@@ -159,12 +159,12 @@ class StatsStore {
   ): void {
     const stats = db
       .prepare('SELECT * FROM category_stats WHERE category_id = ?')
-      .get(categoryId) as CategoryStats | undefined;
+      .get(categoryId) as CategoryStats | undefined
     if (!stats) {
-      return;
+      return
     }
 
-    const duration = session.ended_at - session.started_at;
+    const duration = session.ended_at - session.started_at
 
     const prev = db
       .prepare(
@@ -172,16 +172,16 @@ class StatsStore {
          WHERE i.category_id = ? AND s.ended_at IS NOT NULL AND s.id != ?
          ORDER BY s.ended_at DESC LIMIT 1`,
       )
-      .get(categoryId, session.id) as PrevSession | undefined;
+      .get(categoryId, session.id) as PrevSession | undefined
 
     const { streak_count: streakCount, streak_wear: streakWear } =
-      computeNewStreak(stats, prev ?? null, session, breakGraceTime);
+      computeNewStreak(stats, prev ?? null, session, breakGraceTime)
 
     const newBestStreakWear = Math.max(
       stats.best_streak_wear_seconds,
       streakWear,
-    );
-    const newBestStreakCount = Math.max(stats.best_streak_count, streakCount);
+    )
+    const newBestStreakCount = Math.max(stats.best_streak_count, streakCount)
 
     db.prepare(
       `
@@ -202,7 +202,7 @@ class StatsStore {
       newBestStreakWear,
       newBestStreakCount,
       categoryId,
-    );
+    )
   }
 
   /**
@@ -217,7 +217,7 @@ class StatsStore {
          streak_wear_seconds = 0, streak_count = 0,
          best_streak_wear_seconds = 0, best_streak_count = 0
        WHERE category_id = ?`,
-    ).run(categoryId);
+    ).run(categoryId)
 
     const sessions = db
       .prepare(
@@ -226,10 +226,10 @@ class StatsStore {
          AND s.ended_in_injury = 0
          ORDER BY s.ended_at ASC`,
       )
-      .all(categoryId) as SessionSnapshot[];
+      .all(categoryId) as SessionSnapshot[]
 
     for (const session of sessions) {
-      this.recordCategorySession(categoryId, breakGraceTime, session);
+      this.recordCategorySession(categoryId, breakGraceTime, session)
     }
   }
 
@@ -248,7 +248,7 @@ class StatsStore {
          ORDER BY s.max_single_session_wear_seconds DESC
          LIMIT 20`,
       )
-      .all();
+      .all()
   }
 
   mostTotalWear(): unknown[] {
@@ -264,7 +264,7 @@ class StatsStore {
          ORDER BY s.total_wear_seconds DESC
          LIMIT 20`,
       )
-      .all();
+      .all()
   }
 
   /** Best streak is per-category, not per-item. */
@@ -281,7 +281,7 @@ class StatsStore {
          ORDER BY cs.best_streak_count DESC
          LIMIT 20`,
       )
-      .all();
+      .all()
   }
 
   mostSessions(): unknown[] {
@@ -297,8 +297,8 @@ class StatsStore {
          ORDER BY s.session_count DESC
          LIMIT 20`,
       )
-      .all();
+      .all()
   }
 }
 
-export const statsStore = new StatsStore();
+export const statsStore = new StatsStore()

@@ -1,4 +1,4 @@
-import type { Category } from '../composables/useWear.js';
+import type { Category } from '../composables/useWear.js'
 
 export type CategoryDefaults = Omit<Category, 'id' | 'name' | 'icon'>;
 
@@ -16,4 +16,4 @@ export const DEFAULT_CATEGORY_FIELDS: CategoryDefaults = {
   break_grace_time: 86400,
   type: 'duration',
   consecutive_wear_days: 1,
-};
+}

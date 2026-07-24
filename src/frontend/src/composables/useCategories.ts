@@ -1,6 +1,6 @@
-import { ref } from 'vue';
-import type { Category } from './useWear.js';
-import { apiFetch } from '../utils/apiFetch.js';
+import { ref } from 'vue'
+import type { Category } from './useWear.js'
+import { apiFetch } from '../utils/apiFetch.js'
 
 export interface CategoryStats {
   category_id: number;
@@ -18,22 +18,22 @@ export type CategoryCreate = Omit<Category, 'id'>;
 export type CategoryUpdate = Partial<CategoryCreate>;
 
 // Module-level state shared across all component instances
-const categories = ref<Category[]>([]);
+const categories = ref<Category[]>([])
 
 async function loadCategories(): Promise<void> {
-  const res = await apiFetch('/api/categories');
+  const res = await apiFetch('/api/categories')
   if (!res.ok) {
-    throw new Error(`HTTP ${res.status}`);
+    throw new Error(`HTTP ${res.status}`)
   }
-  categories.value = await res.json();
+  categories.value = await res.json()
 }
 
 async function loadCategoryStats(id: number): Promise<CategoryStats> {
-  const res = await apiFetch(`/api/categories/${id}/stats`);
+  const res = await apiFetch(`/api/categories/${id}/stats`)
   if (!res.ok) {
-    throw new Error(`HTTP ${res.status}`);
+    throw new Error(`HTTP ${res.status}`)
   }
-  return res.json();
+  return res.json()
 }
 
 async function createCategory(data: CategoryCreate): Promise<Category> {
@@ -41,14 +41,14 @@ async function createCategory(data: CategoryCreate): Promise<Category> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
-  });
+  })
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? `HTTP ${res.status}`);
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.error ?? `HTTP ${res.status}`)
   }
-  const category: Category = await res.json();
-  categories.value.push(category);
-  return category;
+  const category: Category = await res.json()
+  categories.value.push(category)
+  return category
 }
 
 async function updateCategory(
@@ -59,25 +59,25 @@ async function updateCategory(
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
-  });
+  })
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? `HTTP ${res.status}`);
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.error ?? `HTTP ${res.status}`)
   }
-  const updated: Category = await res.json();
-  const idx = categories.value.findIndex((c) => c.id === id);
+  const updated: Category = await res.json()
+  const idx = categories.value.findIndex((c) => c.id === id)
   if (idx !== -1) {
-    categories.value[idx] = updated;
+    categories.value[idx] = updated
   }
-  return updated;
+  return updated
 }
 
 async function deleteCategory(id: number): Promise<void> {
-  const res = await apiFetch(`/api/categories/${id}`, { method: 'DELETE' });
+  const res = await apiFetch(`/api/categories/${id}`, { method: 'DELETE' })
   if (!res.ok) {
-    throw new Error(`HTTP ${res.status}`);
+    throw new Error(`HTTP ${res.status}`)
   }
-  categories.value = categories.value.filter((c) => c.id !== id);
+  categories.value = categories.value.filter((c) => c.id !== id)
 }
 
 export function useCategories() {
@@ -88,5 +88,5 @@ export function useCategories() {
     createCategory,
     updateCategory,
     deleteCategory,
-  };
+  }
 }

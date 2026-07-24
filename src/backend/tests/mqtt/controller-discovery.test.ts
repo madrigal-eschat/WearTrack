@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
 
 vi.mock('../../src/mqtt/client.js', () => ({
   getStatus: vi.fn(() => 'disconnected'),
@@ -7,25 +7,25 @@ vi.mock('../../src/mqtt/client.js', () => ({
   publish: vi.fn(),
   disconnect: vi.fn(),
   connect: vi.fn(),
-}));
+}))
 
-import app from '../../src/server.js';
-import { runMigrations } from '../../src/db/migrations/index.js';
-import { dbExport } from '../../src/db/index.js';
-import { categoryStore } from '../../src/db/stores/category-store.js';
-import { publish } from '../../src/mqtt/client.js';
+import app from '../../src/server.js'
+import { runMigrations } from '../../src/db/migrations/index.js'
+import { dbExport } from '../../src/db/index.js'
+import { categoryStore } from '../../src/db/stores/category-store.js'
+import { publish } from '../../src/mqtt/client.js'
 
-const mockPublish = vi.mocked(publish);
-const MQTT = '/api/mqtt';
+const mockPublish = vi.mocked(publish)
+const MQTT = '/api/mqtt'
 
 beforeAll(() => {
-  runMigrations();
-});
+  runMigrations()
+})
 
 beforeEach(() => {
-  vi.clearAllMocks();
-  dbExport.exec('DELETE FROM mqtt_config; DELETE FROM categories;');
-});
+  vi.clearAllMocks()
+  dbExport.exec('DELETE FROM mqtt_config; DELETE FROM categories;')
+})
 
 describe('PUT /api/mqtt/config discovery republish', () => {
   it(
@@ -41,7 +41,7 @@ describe('PUT /api/mqtt/config discovery republish', () => {
         risk_levels: [],
         break_decay_multiplier: 0.91,
         break_grace_time: 86400,
-      });
+      })
 
       const res = await app.request(`${MQTT}/config`, {
         method: 'PUT',
@@ -53,8 +53,8 @@ describe('PUT /api/mqtt/config discovery republish', () => {
           topic_prefix: 'weartrack',
           ha_discovery_enabled: true,
         }),
-      });
-      expect(res.status).toBe(200);
+      })
+      expect(res.status).toBe(200)
 
       expect(mockPublish).toHaveBeenCalledWith(
         `homeassistant/sensor/weartrack_${category.id}/config`,
@@ -62,8 +62,8 @@ describe('PUT /api/mqtt/config discovery republish', () => {
           unique_id: `weartrack_${category.id}_status`,
         }),
         { retain: true },
-      );
-    });
+      )
+    })
 
   it(
     'does not republish discovery when the saved config disables it',
@@ -78,7 +78,7 @@ describe('PUT /api/mqtt/config discovery republish', () => {
         risk_levels: [],
         break_decay_multiplier: 0.91,
         break_grace_time: 86400,
-      });
+      })
 
       const res = await app.request(`${MQTT}/config`, {
         method: 'PUT',
@@ -89,8 +89,8 @@ describe('PUT /api/mqtt/config discovery republish', () => {
           port: 1883,
           ha_discovery_enabled: false,
         }),
-      });
-      expect(res.status).toBe(200);
-      expect(mockPublish).not.toHaveBeenCalled();
-    });
-});
+      })
+      expect(res.status).toBe(200)
+      expect(mockPublish).not.toHaveBeenCalled()
+    })
+})

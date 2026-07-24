@@ -1,6 +1,6 @@
-import { buildRiskLevels } from './riskLevels.js';
-import type { CategoryFormState } from '../components/CategoryForm.vue';
-import type { RiskLevel } from './riskLevels.js';
+import { buildRiskLevels } from './riskLevels.js'
+import type { CategoryFormState } from '../components/CategoryForm.vue'
+import type { RiskLevel } from './riskLevels.js'
 
 export interface CategoryApiShape {
   name: string;
@@ -19,12 +19,12 @@ export interface CategoryApiShape {
 
 /** Days for a value decaying at `multiplier` retained per day to halve. */
 export function multiplierToHalfLifeDays(multiplier: number): number {
-  return Math.log(0.5) / Math.log(multiplier);
+  return Math.log(0.5) / Math.log(multiplier)
 }
 
 /** The daily retain-fraction that gives a value the given half-life in days. */
 export function halfLifeDaysToMultiplier(halfLifeDays: number): number {
-  return 0.5 ** (1 / halfLifeDays);
+  return 0.5 ** (1 / halfLifeDays)
 }
 
 export function categoryToFormState(cat: CategoryApiShape): CategoryFormState {
@@ -43,7 +43,7 @@ export function categoryToFormState(cat: CategoryApiShape): CategoryFormState {
     crossoverPoints: cat.risk_levels.slice(0, -1).map((l) => l.upper as number),
     type: cat.type,
     consecutiveWearDays: cat.consecutive_wear_days,
-  };
+  }
 }
 
 export function formStateToApiPayload(data: CategoryFormState): {
@@ -73,5 +73,5 @@ export function formStateToApiPayload(data: CategoryFormState): {
     risk_levels: buildRiskLevels(data.bandCount, data.crossoverPoints),
     type: data.type,
     consecutive_wear_days: data.consecutiveWearDays,
-  };
+  }
 }
