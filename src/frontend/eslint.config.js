@@ -24,6 +24,7 @@ export default tseslint.config(
       'max-len': ['error', { code: 80 }],
       curly: ['error', 'all'],
       'brace-style': ['error', '1tbs', { allowSingleLine: false }],
+      indent: ['error', 2],
     },
   },
   { ignores: ['node_modules/', 'dist/'] },

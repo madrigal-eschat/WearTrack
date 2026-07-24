@@ -14,43 +14,43 @@ function copyFor<E extends Exclude<EventName, 'poller_tick'>>(
 ): Copy | null {
   const categoryName = payload.category_name;
   switch (event) {
-    case 'rest_end':
-      return { title: `${categoryName} wearable`, body: 'Rest period is over' };
-    case 'idle_halfway_reached': {
-      const p = payload as EventPayloads['idle_halfway_reached'];
-      const remaining = p.decay_start_time - p.timestamp;
-      return {
-        title: `Wear ${categoryName} soon`,
-        body: `Durations start decaying in ${formatDuration(remaining)}`,
-      };
-    }
-    case 'decay_soon':
-      return {
-        title: `Wear ${categoryName} now!`,
-        body: 'Durations start decaying in 1 hour',
-      };
-    case 'target_met':
-      return {
-        title: `${categoryName} target reached!`,
-        body: 'You can stop when ready',
-      };
-    case 'overtime_warning_30':
-      return {
-        title: `${categoryName}: 30 minutes left`,
-        body: 'End your session before overtime',
-      };
-    case 'overtime_warning_5':
-      return {
-        title: `Stop wearing ${categoryName}`,
-        body: '5 minutes until overtime',
-      };
-    case 'overtime':
-      return {
-        title: `Stop wearing ${categoryName} now!`,
-        body: 'Your session is in overtime',
-      };
-    default:
-      return null;
+  case 'rest_end':
+    return { title: `${categoryName} wearable`, body: 'Rest period is over' };
+  case 'idle_halfway_reached': {
+    const p = payload as EventPayloads['idle_halfway_reached'];
+    const remaining = p.decay_start_time - p.timestamp;
+    return {
+      title: `Wear ${categoryName} soon`,
+      body: `Durations start decaying in ${formatDuration(remaining)}`,
+    };
+  }
+  case 'decay_soon':
+    return {
+      title: `Wear ${categoryName} now!`,
+      body: 'Durations start decaying in 1 hour',
+    };
+  case 'target_met':
+    return {
+      title: `${categoryName} target reached!`,
+      body: 'You can stop when ready',
+    };
+  case 'overtime_warning_30':
+    return {
+      title: `${categoryName}: 30 minutes left`,
+      body: 'End your session before overtime',
+    };
+  case 'overtime_warning_5':
+    return {
+      title: `Stop wearing ${categoryName}`,
+      body: '5 minutes until overtime',
+    };
+  case 'overtime':
+    return {
+      title: `Stop wearing ${categoryName} now!`,
+      body: 'Your session is in overtime',
+    };
+  default:
+    return null;
   }
 }
 

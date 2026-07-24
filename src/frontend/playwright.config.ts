@@ -56,12 +56,12 @@ export default defineConfig({
   ...(process.env.BASE_URL
     ? {}
     : {
-        webServer: {
-          command: 'npm run dev',
-          url: 'http://localhost:3000/api/health',
-          reuseExistingServer: true,
-          timeout: 120_000,
-          cwd: '../..',
-        },
-      }),
+      webServer: {
+        command: 'npm run dev',
+        url: 'http://localhost:3000/api/health',
+        reuseExistingServer: true,
+        timeout: 120_000,
+        cwd: '../..',
+      },
+    }),
 });

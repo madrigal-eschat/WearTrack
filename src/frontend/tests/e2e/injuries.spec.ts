@@ -83,48 +83,48 @@ test.describe('Injury recording and healing (API)', () => {
     'recording an injury via API ends any open session and blocks re-wear',
     async ({ request }) => {
     // Start a session
-    const startRes = await request.post('/api/sessions/start', {
-      data: { item_id: itemId },
-    });
-    expect(startRes.status()).toBe(201);
-    const session = await startRes.json();
+      const startRes = await request.post('/api/sessions/start', {
+        data: { item_id: itemId },
+      });
+      expect(startRes.status()).toBe(201);
+      const session = await startRes.json();
 
-    // Record injury — should end the session implicitly
-    const injuryRes = await request.post('/api/injuries', {
-      data: { item_id: itemId },
-    });
-    expect(injuryRes.status()).toBe(201);
-    const injury = await injuryRes.json();
-    expect(injury.id).toBeDefined();
-    expect(injury.healed_at).toBeNull();
+      // Record injury — should end the session implicitly
+      const injuryRes = await request.post('/api/injuries', {
+        data: { item_id: itemId },
+      });
+      expect(injuryRes.status()).toBe(201);
+      const injury = await injuryRes.json();
+      expect(injury.id).toBeDefined();
+      expect(injury.healed_at).toBeNull();
 
-    // The session should now be ended (ended_in_injury = 1)
-    const sessRes = await request
-      .get(`/api/sessions/${session.id}`)
-      .catch(() => null);
-    if (sessRes && sessRes.ok()) {
-      const updatedSession = await sessRes.json();
-      expect(updatedSession.ended_at).not.toBeNull();
-    }
+      // The session should now be ended (ended_in_injury = 1)
+      const sessRes = await request
+        .get(`/api/sessions/${session.id}`)
+        .catch(() => null);
+      if (sessRes && sessRes.ok()) {
+        const updatedSession = await sessRes.json();
+        expect(updatedSession.ended_at).not.toBeNull();
+      }
 
-    // Attempting to start another session while injured should fail
-    await request.post('/api/sessions/start', {
-      data: { item_id: itemId },
-    });
-    // The server rejects a second injury, but a new session can
-    // still be started (injury blocks the item only at the UI level
-    // via expected_target of 0 or similar — the API itself does not
-    // block new sessions for injured items in the current codebase).
-    // Record this as an observation so future tests can be updated
-    // when UI support lands. For now just verify the injury exists
-    // and is unhealed.
-    const injuries = await request
-      .get(`/api/injuries?item_id=${itemId}`)
-      .then((r) => r.json());
-    const active = injuries.filter(
-      (i: { healed_at: null | number }) => i.healed_at === null,
-    );
-    expect(active).toHaveLength(1);
+      // Attempting to start another session while injured should fail
+      await request.post('/api/sessions/start', {
+        data: { item_id: itemId },
+      });
+      // The server rejects a second injury, but a new session can
+      // still be started (injury blocks the item only at the UI level
+      // via expected_target of 0 or similar — the API itself does not
+      // block new sessions for injured items in the current codebase).
+      // Record this as an observation so future tests can be updated
+      // when UI support lands. For now just verify the injury exists
+      // and is unhealed.
+      const injuries = await request
+        .get(`/api/injuries?item_id=${itemId}`)
+        .then((r) => r.json());
+      const active = injuries.filter(
+        (i: { healed_at: null | number }) => i.healed_at === null,
+      );
+      expect(active).toHaveLength(1);
     },
   );
 
@@ -148,22 +148,22 @@ test.describe('Injury recording and healing (API)', () => {
     'can start a new session after an injury is healed',
     async ({ request }) => {
     // Record and immediately heal an injury
-    const injuryRes = await request.post('/api/injuries', {
-      data: { item_id: itemId, wear_seconds: 30 },
-    });
-    const injury = await injuryRes.json();
-    await request.post(`/api/injuries/${injury.id}/heal`);
+      const injuryRes = await request.post('/api/injuries', {
+        data: { item_id: itemId, wear_seconds: 30 },
+      });
+      const injury = await injuryRes.json();
+      await request.post(`/api/injuries/${injury.id}/heal`);
 
-    // Should now be able to start a session
-    const startRes = await request.post('/api/sessions/start', {
-      data: { item_id: itemId },
-    });
-    expect(startRes.status()).toBe(201);
-    const session = await startRes.json();
-    expect(session.id).toBeDefined();
+      // Should now be able to start a session
+      const startRes = await request.post('/api/sessions/start', {
+        data: { item_id: itemId },
+      });
+      expect(startRes.status()).toBe(201);
+      const session = await startRes.json();
+      expect(session.id).toBeDefined();
 
-    // Clean up
-    await request.post(`/api/sessions/${session.id}/end`, { data: {} });
+      // Clean up
+      await request.post(`/api/sessions/${session.id}/end`, { data: {} });
     },
   );
 
@@ -171,16 +171,16 @@ test.describe('Injury recording and healing (API)', () => {
     'recording a second injury while one is active returns an error',
     async ({ request }) => {
     // Record first injury
-    const first = await request.post('/api/injuries', {
-      data: { item_id: itemId, wear_seconds: 60 },
-    });
-    expect(first.status()).toBe(201);
+      const first = await request.post('/api/injuries', {
+        data: { item_id: itemId, wear_seconds: 60 },
+      });
+      expect(first.status()).toBe(201);
 
-    // Try to record a second — should fail
-    const second = await request.post('/api/injuries', {
-      data: { item_id: itemId, wear_seconds: 90 },
-    });
-    expect(second.status()).toBe(400);
+      // Try to record a second — should fail
+      const second = await request.post('/api/injuries', {
+        data: { item_id: itemId, wear_seconds: 90 },
+      });
+      expect(second.status()).toBe(400);
     },
   );
 
@@ -188,26 +188,26 @@ test.describe('Injury recording and healing (API)', () => {
     'injury severity reflects risk level from wear duration',
     async ({ request }) => {
     // low severity: wear_seconds < 3600 → severity 1
-    const lowRes = await request.post('/api/injuries', {
-      data: { item_id: itemId, wear_seconds: 1800 },
-    });
-    expect(lowRes.status()).toBe(201);
-    const low = await lowRes.json();
-    expect(low.severity).toBe(1);
+      const lowRes = await request.post('/api/injuries', {
+        data: { item_id: itemId, wear_seconds: 1800 },
+      });
+      expect(lowRes.status()).toBe(201);
+      const low = await lowRes.json();
+      expect(low.severity).toBe(1);
 
-    // Heal so we can record a second
-    await request.post(`/api/injuries/${low.id}/heal`);
+      // Heal so we can record a second
+      await request.post(`/api/injuries/${low.id}/heal`);
 
-    // medium severity: 3600 ≤ wear_seconds < 7200 → severity 2
-    const medRes = await request.post('/api/injuries', {
-      data: { item_id: itemId, wear_seconds: 5000 },
-    });
-    expect(medRes.status()).toBe(201);
-    const med = await medRes.json();
-    expect(med.severity).toBe(2);
+      // medium severity: 3600 ≤ wear_seconds < 7200 → severity 2
+      const medRes = await request.post('/api/injuries', {
+        data: { item_id: itemId, wear_seconds: 5000 },
+      });
+      expect(medRes.status()).toBe(201);
+      const med = await medRes.json();
+      expect(med.severity).toBe(2);
 
-    // Heal
-    await request.post(`/api/injuries/${med.id}/heal`);
+      // Heal
+      await request.post(`/api/injuries/${med.id}/heal`);
     },
   );
 });

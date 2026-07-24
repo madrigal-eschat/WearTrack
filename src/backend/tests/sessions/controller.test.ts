@@ -50,17 +50,17 @@ describe('GET /api/sessions/current expected durations', () => {
       'session)',
     async () => {
     // sampleCategory: target 900, max 1800; Test Shoe difficulty 1; idle
-    const res = await app.request(`${SESSIONS}/current`);
-    const body = await res.json();
-    const entry = body.find(
-      (e: { category: { id: number } }) => e.category.id === categoryId,
-    );
-    const ourItem = entry.items.find(
-      (i: { item_id: number }) => i.item_id === itemId,
-    );
-    expect(ourItem.expected_target).toBe(900);
-    expect(ourItem.expected_max).toBe(1800);
-  });
+      const res = await app.request(`${SESSIONS}/current`);
+      const body = await res.json();
+      const entry = body.find(
+        (e: { category: { id: number } }) => e.category.id === categoryId,
+      );
+      const ourItem = entry.items.find(
+        (i: { item_id: number }) => i.item_id === itemId,
+      );
+      expect(ourItem.expected_target).toBe(900);
+      expect(ourItem.expected_max).toBe(1800);
+    });
 
   it(
     'halves expected_target and expected_max when an active injury exists ' +
@@ -201,16 +201,16 @@ describe('POST /api/sessions/:id/end', () => {
     'ends a session, leaves target/max unchanged, and ' +
       'sets rest_seconds',
     async () => {
-    const started = await (await startSession()).json();
-    const res = await endSession(started.id);
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.ended_at).toBeTypeOf('number');
-    expect(body.target_wear_seconds).toBe(started.target_wear_seconds);
-    expect(body.max_wear_seconds).toBe(started.max_wear_seconds);
-    expect(body.rest_seconds).toBeTypeOf('number');
-    expect(body.rest_seconds).toBeGreaterThan(0);
-  });
+      const started = await (await startSession()).json();
+      const res = await endSession(started.id);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.ended_at).toBeTypeOf('number');
+      expect(body.target_wear_seconds).toBe(started.target_wear_seconds);
+      expect(body.max_wear_seconds).toBe(started.max_wear_seconds);
+      expect(body.rest_seconds).toBeTypeOf('number');
+      expect(body.rest_seconds).toBeGreaterThan(0);
+    });
 
   it('accepts an explicit ended_at timestamp', async () => {
     const startTs = Math.floor(Date.now() / 1000) - 7200; // 2 hours ago
@@ -340,51 +340,53 @@ describe('GET /api/sessions/current — items field', () => {
       'has no history',
     async () => {
     // Create a fresh category + item with no sessions
-    const catRes = await app.request(CATEGORIES, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: 'Fresh Cat',
-        icon: 'ph:sneaker',
-        initial_target_wear_duration_seconds: 900,
-        initial_max_wear_duration_seconds: 1800,
-        rest_multiplier: 6,
-        minimum_rest: 86400,
-        risk_levels: [{ lower: null, upper: null, text: 'safe', severity: 1 }],
-        break_decay_multiplier: 0.91,
-        break_grace_time: 86400,
-      }),
+      const catRes = await app.request(CATEGORIES, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Fresh Cat',
+          icon: 'ph:sneaker',
+          initial_target_wear_duration_seconds: 900,
+          initial_max_wear_duration_seconds: 1800,
+          rest_multiplier: 6,
+          minimum_rest: 86400,
+          risk_levels: [
+            { lower: null, upper: null, text: 'safe', severity: 1 },
+          ],
+          break_decay_multiplier: 0.91,
+          break_grace_time: 86400,
+        }),
+      });
+      const cat = await catRes.json();
+
+      const itemRes = await app.request(ITEMS, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Fresh Shoe',
+          category_id: cat.id,
+          color: '#123456',
+        }),
+      });
+      const item = await itemRes.json();
+
+      const res = await app.request(`${SESSIONS}/current`);
+      const body = await res.json();
+      const entry = body.find(
+        (e: { category: { id: number } }) => e.category.id === cat.id,
+      );
+      expect(entry).toBeDefined();
+      expect(entry.items).toHaveLength(1);
+
+      const ourItem = entry.items[0];
+      expect(ourItem.item_id).toBe(item.id);
+      expect(ourItem.name).toBe('Fresh Shoe');
+      expect(ourItem.difficulty_multiplier).toBeTypeOf('number');
+      expect(ourItem.ended_at).toBeNull();
+      expect(ourItem.target_wear_seconds).toBeNull();
+      expect(ourItem.max_wear_seconds).toBeNull();
+      expect(ourItem.rest_seconds).toBeNull();
     });
-    const cat = await catRes.json();
-
-    const itemRes = await app.request(ITEMS, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: 'Fresh Shoe',
-        category_id: cat.id,
-        color: '#123456',
-      }),
-    });
-    const item = await itemRes.json();
-
-    const res = await app.request(`${SESSIONS}/current`);
-    const body = await res.json();
-    const entry = body.find(
-      (e: { category: { id: number } }) => e.category.id === cat.id,
-    );
-    expect(entry).toBeDefined();
-    expect(entry.items).toHaveLength(1);
-
-    const ourItem = entry.items[0];
-    expect(ourItem.item_id).toBe(item.id);
-    expect(ourItem.name).toBe('Fresh Shoe');
-    expect(ourItem.difficulty_multiplier).toBeTypeOf('number');
-    expect(ourItem.ended_at).toBeNull();
-    expect(ourItem.target_wear_seconds).toBeNull();
-    expect(ourItem.max_wear_seconds).toBeNull();
-    expect(ourItem.rest_seconds).toBeNull();
-  });
 
   it('populates last-session fields after a session ends', async () => {
     const s = await (await startSession()).json();
@@ -414,46 +416,48 @@ describe('GET /api/sessions/current — decay fields', () => {
     // Use the existing categoryId (fresh DB in beforeAll, all sessions ended
     // cleanly)
     // At test-suite start there are no sessions yet for this category
-    const catRes = await app.request(CATEGORIES, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: 'DecayCat',
-        icon: 'ph:sneaker',
-        initial_target_wear_duration_seconds: 900,
-        initial_max_wear_duration_seconds: 1800,
-        rest_multiplier: 6,
-        minimum_rest: 86400,
-        risk_levels: [{ lower: null, upper: null, text: 'safe', severity: 1 }],
-        break_decay_multiplier: 0.91,
-        break_grace_time: 86400,
-      }),
+      const catRes = await app.request(CATEGORIES, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'DecayCat',
+          icon: 'ph:sneaker',
+          initial_target_wear_duration_seconds: 900,
+          initial_max_wear_duration_seconds: 1800,
+          rest_multiplier: 6,
+          minimum_rest: 86400,
+          risk_levels: [
+            { lower: null, upper: null, text: 'safe', severity: 1 },
+          ],
+          break_decay_multiplier: 0.91,
+          break_grace_time: 86400,
+        }),
+      });
+      const cat = await catRes.json();
+      const itemRes = await app.request(ITEMS, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Decay Shoe',
+          category_id: cat.id,
+          color: '#aabbcc',
+        }),
+      });
+      const item = await itemRes.json();
+
+      const res = await app.request(`${SESSIONS}/current`);
+      const body = await res.json();
+      const entry = body.find(
+        (e: { category: { id: number } }) => e.category.id === cat.id,
+      );
+
+      expect(entry.decay_start_time).toBeNull();
+      expect(entry.decay_state).toBe('none');
+
+      // Store for later tests
+      decayCategoryId = cat.id;
+      decayItemId = item.id;
     });
-    const cat = await catRes.json();
-    const itemRes = await app.request(ITEMS, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: 'Decay Shoe',
-        category_id: cat.id,
-        color: '#aabbcc',
-      }),
-    });
-    const item = await itemRes.json();
-
-    const res = await app.request(`${SESSIONS}/current`);
-    const body = await res.json();
-    const entry = body.find(
-      (e: { category: { id: number } }) => e.category.id === cat.id,
-    );
-
-    expect(entry.decay_start_time).toBeNull();
-    expect(entry.decay_state).toBe('none');
-
-    // Store for later tests
-    decayCategoryId = cat.id;
-    decayItemId = item.id;
-  });
 
   it(
     'returns decay_start_time and state none when within ' +
@@ -461,33 +465,33 @@ describe('GET /api/sessions/current — decay fields', () => {
     async () => {
     // End a session 1 second ago — still in rest period (minimum_rest =
     // 86400)
-    const now = Math.floor(Date.now() / 1000);
-    const startTs = now - 3600;
-    const endTs = now - 1;
-    const s = await (
-      await app.request(`${SESSIONS}/start`, {
+      const now = Math.floor(Date.now() / 1000);
+      const startTs = now - 3600;
+      const endTs = now - 1;
+      const s = await (
+        await app.request(`${SESSIONS}/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ item_id: decayItemId, started_at: startTs }),
+        })
+      ).json();
+      await app.request(`${SESSIONS}/${s.id}/end`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ item_id: decayItemId, started_at: startTs }),
-      })
-    ).json();
-    await app.request(`${SESSIONS}/${s.id}/end`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ended_at: endTs }),
+        body: JSON.stringify({ ended_at: endTs }),
+      });
+
+      const res = await app.request(`${SESSIONS}/current`);
+      const body = await res.json();
+      const entry = body.find(
+        (e: { category: { id: number } }) => e.category.id === decayCategoryId,
+      );
+
+      // decay_start_time = endTs + rest_seconds + break_grace_time — well in
+      // the future
+      expect(entry.decay_start_time).toBeGreaterThan(now);
+      expect(entry.decay_state).toBe('none');
     });
-
-    const res = await app.request(`${SESSIONS}/current`);
-    const body = await res.json();
-    const entry = body.find(
-      (e: { category: { id: number } }) => e.category.id === decayCategoryId,
-    );
-
-    // decay_start_time = endTs + rest_seconds + break_grace_time — well in
-    // the future
-    expect(entry.decay_start_time).toBeGreaterThan(now);
-    expect(entry.decay_state).toBe('none');
-  });
 
   it('returns decay_state decaying when past grace period', async () => {
     // Use a fresh category so findLastEndedInCategory only sees this test's
@@ -595,61 +599,63 @@ describe('GET /api/sessions/current — decay fields', () => {
     async () => {
     // Use a fresh category so findLastEndedInCategory only sees this test's
     // session
-    const now = Math.floor(Date.now() / 1000);
-    const fullyCatRes = await app.request(CATEGORIES, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: 'FullyDecayedCat',
-        icon: 'ph:sneaker',
-        initial_target_wear_duration_seconds: 900,
-        initial_max_wear_duration_seconds: 1800,
-        rest_multiplier: 6,
-        minimum_rest: 86400,
-        risk_levels: [{ lower: null, upper: null, text: 'safe', severity: 1 }],
-        break_decay_multiplier: 0.91,
-        break_grace_time: 86400,
-      }),
-    });
-    const fullyCat = await fullyCatRes.json();
-    const fullyItemRes = await app.request(ITEMS, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: 'Fully Decayed Shoe',
-        category_id: fullyCat.id,
-        color: '#ffeedd',
-      }),
-    });
-    const fullyItem = await fullyItemRes.json();
-
-    // End a session 10 000 days ago — 0.91^10000 rounds to 0, definitely
-    // fully decayed
-    const endTs = now - 10_000 * 86400;
-    const s = await (
-      await app.request(`${SESSIONS}/start`, {
+      const now = Math.floor(Date.now() / 1000);
+      const fullyCatRes = await app.request(CATEGORIES, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          item_id: fullyItem.id,
-          started_at: endTs - 3600,
+          name: 'FullyDecayedCat',
+          icon: 'ph:sneaker',
+          initial_target_wear_duration_seconds: 900,
+          initial_max_wear_duration_seconds: 1800,
+          rest_multiplier: 6,
+          minimum_rest: 86400,
+          risk_levels: [
+            { lower: null, upper: null, text: 'safe', severity: 1 },
+          ],
+          break_decay_multiplier: 0.91,
+          break_grace_time: 86400,
         }),
-      })
-    ).json();
-    await app.request(`${SESSIONS}/${s.id}/end`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ended_at: endTs }),
+      });
+      const fullyCat = await fullyCatRes.json();
+      const fullyItemRes = await app.request(ITEMS, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Fully Decayed Shoe',
+          category_id: fullyCat.id,
+          color: '#ffeedd',
+        }),
+      });
+      const fullyItem = await fullyItemRes.json();
+
+      // End a session 10 000 days ago — 0.91^10000 rounds to 0, definitely
+      // fully decayed
+      const endTs = now - 10_000 * 86400;
+      const s = await (
+        await app.request(`${SESSIONS}/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            item_id: fullyItem.id,
+            started_at: endTs - 3600,
+          }),
+        })
+      ).json();
+      await app.request(`${SESSIONS}/${s.id}/end`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ended_at: endTs }),
+      });
+
+      const res = await app.request(`${SESSIONS}/current`);
+      const body = await res.json();
+      const entry = body.find(
+        (e: { category: { id: number } }) => e.category.id === fullyCat.id,
+      );
+
+      expect(entry.decay_state).toBe('fully_decayed');
     });
-
-    const res = await app.request(`${SESSIONS}/current`);
-    const body = await res.json();
-    const entry = body.find(
-      (e: { category: { id: number } }) => e.category.id === fullyCat.id,
-    );
-
-    expect(entry.decay_state).toBe('fully_decayed');
-  });
 
   it(
     'rotation categories never show decay, even long after a session ' +
@@ -760,33 +766,34 @@ describe('session_day_index population', () => {
     'is a no-op on a second session ending the same day for ' +
       'the same item',
     async () => {
-    const startTs = Math.floor(Date.now() / 1000) - 3600;
-    const day = new Date(startTs * 1000).toISOString().slice(0, 10);
+      const startTs = Math.floor(Date.now() / 1000) - 3600;
+      const day = new Date(startTs * 1000).toISOString().slice(0, 10);
 
-    const s1 = await (await startSession({ started_at: startTs })).json();
-    await endSession(s1.id);
-    const countAfterFirst = (
+      const s1 = await (await startSession({ started_at: startTs })).json();
+      await endSession(s1.id);
+      const countAfterFirst = (
       prepare(
         'SELECT COUNT(*) AS n FROM session_day_index ' +
           'WHERE day = ? AND item_id = ?',
       ).get(day, itemId) as {
         n: number;
       }
-    ).n;
+      ).n;
 
-    const s2 = await (await startSession({ started_at: startTs + 60 })).json();
-    await endSession(s2.id);
-    const countAfterSecond = (
+      const s2 =
+        await (await startSession({ started_at: startTs + 60 })).json();
+      await endSession(s2.id);
+      const countAfterSecond = (
       prepare(
         'SELECT COUNT(*) AS n FROM session_day_index ' +
           'WHERE day = ? AND item_id = ?',
       ).get(day, itemId) as {
         n: number;
       }
-    ).n;
+      ).n;
 
-    expect(countAfterSecond).toBe(countAfterFirst);
-  });
+      expect(countAfterSecond).toBe(countAfterFirst);
+    });
 
   it('also adds a row when a session ends in injury', async () => {
     const startTs = Math.floor(Date.now() / 1000) - 3600;
@@ -821,123 +828,124 @@ describe(
   'GET /api/sessions — pagination, category filter, ' +
     'enrichment',
   () => {
-  it('only returns completed sessions', async () => {
-    const s = await (await startSession()).json(); // left open
-    const res = await app.request(SESSIONS);
-    const body = await res.json();
-    expect(body.find((x: { id: number }) => x.id === s.id)).toBeUndefined();
-    await endSession(s.id);
-  });
+    it('only returns completed sessions', async () => {
+      const s = await (await startSession()).json(); // left open
+      const res = await app.request(SESSIONS);
+      const body = await res.json();
+      expect(body.find((x: { id: number }) => x.id === s.id)).toBeUndefined();
+      await endSession(s.id);
+    });
 
-  it('enriches rows with item/category name/icon/color', async () => {
-    const s = await (await startSession()).json();
-    await endSession(s.id);
-    const res = await app.request(`${SESSIONS}?item_id=${itemId}`);
-    const body = await res.json();
-    const row = body.find((x: { id: number }) => x.id === s.id);
-    expect(row.item_name).toBe('Test Shoe');
-    expect(row.category_id).toBe(categoryId);
-    expect(row.category_name).toBeTypeOf('string');
-    expect(row.category_icon).toBeTypeOf('string');
-    expect(row.item_color).toBeTypeOf('string');
-  });
+    it('enriches rows with item/category name/icon/color', async () => {
+      const s = await (await startSession()).json();
+      await endSession(s.id);
+      const res = await app.request(`${SESSIONS}?item_id=${itemId}`);
+      const body = await res.json();
+      const row = body.find((x: { id: number }) => x.id === s.id);
+      expect(row.item_name).toBe('Test Shoe');
+      expect(row.category_id).toBe(categoryId);
+      expect(row.category_name).toBeTypeOf('string');
+      expect(row.category_icon).toBeTypeOf('string');
+      expect(row.item_color).toBeTypeOf('string');
+    });
 
-  it('filters by category_id', async () => {
-    const otherCat = await (await createCategory({ name: 'Other Cat' })).json();
-    const otherItem = await (
-      await createItem(otherCat.id, { name: 'Other Item' })
-    ).json();
-    const s1 = await (
-      await app.request(`${SESSIONS}/start`, {
+    it('filters by category_id', async () => {
+      const otherCat =
+        await (await createCategory({ name: 'Other Cat' })).json();
+      const otherItem = await (
+        await createItem(otherCat.id, { name: 'Other Item' })
+      ).json();
+      const s1 = await (
+        await app.request(`${SESSIONS}/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ item_id: otherItem.id }),
+        })
+      ).json();
+      await app.request(`${SESSIONS}/${s1.id}/end`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ item_id: otherItem.id }),
-      })
-    ).json();
-    await app.request(`${SESSIONS}/${s1.id}/end`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: '{}',
+        body: '{}',
+      });
+
+      const res = await app.request(`${SESSIONS}?category_id=${otherCat.id}`);
+      const body = await res.json();
+      expect(body.length).toBeGreaterThan(0);
+      body.forEach((row: { category_id: number }) =>
+        expect(row.category_id).toBe(otherCat.id),
+      );
     });
 
-    const res = await app.request(`${SESSIONS}?category_id=${otherCat.id}`);
-    const body = await res.json();
-    expect(body.length).toBeGreaterThan(0);
-    body.forEach((row: { category_id: number }) =>
-      expect(row.category_id).toBe(otherCat.id),
-    );
-  });
-
-  it('combines category_id and item_id filters', async () => {
-    const res = await app.request(
-      `${SESSIONS}?category_id=${categoryId}&item_id=${itemId}`,
-    );
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    body.forEach((row: { category_id: number; item_id: number }) => {
-      expect(row.category_id).toBe(categoryId);
-      expect(row.item_id).toBe(itemId);
+    it('combines category_id and item_id filters', async () => {
+      const res = await app.request(
+        `${SESSIONS}?category_id=${categoryId}&item_id=${itemId}`,
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      body.forEach((row: { category_id: number; item_id: number }) => {
+        expect(row.category_id).toBe(categoryId);
+        expect(row.item_id).toBe(itemId);
+      });
     });
-  });
 
-  it('paginates with before/limit, newest first', async () => {
+    it('paginates with before/limit, newest first', async () => {
     // Use a dedicated item so earlier tests' completed sessions (which share
     // this file's
     // real-clock second with `now` since the whole suite runs in milliseconds)
     // can't
     // outrank these offset-based rows and make the ordering assertions flaky.
-    const pagCat = await (
-      await createCategory({ name: 'Pagination Cat' })
-    ).json();
-    const pagItem = await (
-      await createItem(pagCat.id, { name: 'Pagination Item' })
-    ).json();
+      const pagCat = await (
+        await createCategory({ name: 'Pagination Cat' })
+      ).json();
+      const pagItem = await (
+        await createItem(pagCat.id, { name: 'Pagination Item' })
+      ).json();
 
-    // Create 3 fresh completed sessions with distinct started_at values, oldest
-    // to newest
-    const now = Math.floor(Date.now() / 1000);
-    const ids: number[] = [];
-    for (const offset of [300, 200, 100]) {
-      const s = await (
-        await app.request(`${SESSIONS}/start`, {
+      // Create 3 fresh completed sessions with distinct started_at values,
+      // oldest to newest
+      const now = Math.floor(Date.now() / 1000);
+      const ids: number[] = [];
+      for (const offset of [300, 200, 100]) {
+        const s = await (
+          await app.request(`${SESSIONS}/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              item_id: pagItem.id,
+              started_at: now - offset,
+            }),
+          })
+        ).json();
+        await app.request(`${SESSIONS}/${s.id}/end`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            item_id: pagItem.id,
-            started_at: now - offset,
-          }),
-        })
+          body: JSON.stringify({ ended_at: now - offset + 10 }),
+        });
+        ids.push(s.id);
+      }
+
+      const page1 = await (
+        await app.request(`${SESSIONS}?item_id=${pagItem.id}&limit=2`)
       ).json();
-      await app.request(`${SESSIONS}/${s.id}/end`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ended_at: now - offset + 10 }),
-      });
-      ids.push(s.id);
-    }
+      expect(page1.length).toBe(2);
+      expect(page1[0].id).toBe(ids[2]); // newest (offset 100) first
+      expect(page1[1].id).toBe(ids[1]);
 
-    const page1 = await (
-      await app.request(`${SESSIONS}?item_id=${pagItem.id}&limit=2`)
-    ).json();
-    expect(page1.length).toBe(2);
-    expect(page1[0].id).toBe(ids[2]); // newest (offset 100) first
-    expect(page1[1].id).toBe(ids[1]);
-
-    const page2 = await (
-      await app.request(
-        `${SESSIONS}?item_id=${pagItem.id}&limit=2&` +
+      const page2 = await (
+        await app.request(
+          `${SESSIONS}?item_id=${pagItem.id}&limit=2&` +
           `before=${page1[1].started_at}`,
-      )
-    ).json();
-    expect(page2[0].id).toBe(ids[0]);
-  });
+        )
+      ).json();
+      expect(page2[0].id).toBe(ids[0]);
+    });
 
-  it('defaults limit to 100', async () => {
-    const res = await app.request(`${SESSIONS}?item_id=${itemId}`);
-    const body = await res.json();
-    expect(body.length).toBeLessThanOrEqual(100);
+    it('defaults limit to 100', async () => {
+      const res = await app.request(`${SESSIONS}?item_id=${itemId}`);
+      const body = await res.json();
+      expect(body.length).toBeLessThanOrEqual(100);
+    });
   });
-});
 
 describe('GET /api/sessions/dates', () => {
   it('returns distinct days with completed sessions for an item', async () => {
@@ -970,46 +978,47 @@ describe('stats recompute-from-scratch', () => {
     'recomputeItem reproduces the same totals as incremental ' +
       'recording',
     async () => {
-    const cat = await (await createCategory({ name: 'Recompute Cat' })).json();
-    const item = await (
-      await createItem(cat.id, { name: 'Recompute Shoe' })
-    ).json();
+      const cat =
+        await (await createCategory({ name: 'Recompute Cat' })).json();
+      const item = await (
+        await createItem(cat.id, { name: 'Recompute Shoe' })
+      ).json();
 
-    const now = Math.floor(Date.now() / 1000);
-    for (const offset of [300, 200, 100]) {
-      const s = await (
-        await app.request(`${SESSIONS}/start`, {
+      const now = Math.floor(Date.now() / 1000);
+      for (const offset of [300, 200, 100]) {
+        const s = await (
+          await app.request(`${SESSIONS}/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              item_id: item.id,
+              started_at: now - offset,
+            }),
+          })
+        ).json();
+        await app.request(`${SESSIONS}/${s.id}/end`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            item_id: item.id,
-            started_at: now - offset,
-          }),
-        })
-      ).json();
-      await app.request(`${SESSIONS}/${s.id}/end`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ended_at: now - offset + 10 }),
-      });
-    }
+          body: JSON.stringify({ ended_at: now - offset + 10 }),
+        });
+      }
 
-    const before = prepare('SELECT * FROM stats WHERE item_id = ?').get(
-      item.id,
-    ) as {
+      const before = prepare('SELECT * FROM stats WHERE item_id = ?').get(
+        item.id,
+      ) as {
       total_wear_seconds: number;
       session_count: number;
       max_single_session_wear_seconds: number;
     };
 
-    const { statsStore } = await import('../../src/db/stores/stats-store.js');
-    statsStore.recomputeItem(item.id);
+      const { statsStore } = await import('../../src/db/stores/stats-store.js');
+      statsStore.recomputeItem(item.id);
 
-    const after = prepare('SELECT * FROM stats WHERE item_id = ?').get(
-      item.id,
-    ) as typeof before;
-    expect(after).toEqual(before);
-  });
+      const after = prepare('SELECT * FROM stats WHERE item_id = ?').get(
+        item.id,
+      ) as typeof before;
+      expect(after).toEqual(before);
+    });
 
   it(
     'recomputeCategory reproduces the same streak state as incremental ' +
@@ -1113,15 +1122,15 @@ describe('PATCH /api/sessions/:id', () => {
     'accepts duration_seconds and derives ended_at from ' +
       'started_at',
     async () => {
-    const startTs = Math.floor(Date.now() / 1000) - 3600;
-    const s = await (await startSession({ started_at: startTs })).json();
-    await endSession(s.id, { ended_at: startTs + 1000 });
+      const startTs = Math.floor(Date.now() / 1000) - 3600;
+      const s = await (await startSession({ started_at: startTs })).json();
+      await endSession(s.id, { ended_at: startTs + 1000 });
 
-    const res = await patchSession(s.id, { duration_seconds: 200 });
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.ended_at).toBe(startTs + 200);
-  });
+      const res = await patchSession(s.id, { duration_seconds: 200 });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.ended_at).toBe(startTs + 200);
+    });
 
   it('recomputes rest_seconds for the new duration', async () => {
     // Use a category with minimum_rest low enough that it doesn't clamp away
@@ -1251,12 +1260,12 @@ describe('PATCH /api/sessions/:id', () => {
     'returns 400 when neither ended_at nor ' +
       'duration_seconds is provided',
     async () => {
-    const startTs = Math.floor(Date.now() / 1000) - 3600;
-    const s = await (await startSession({ started_at: startTs })).json();
-    await endSession(s.id, { ended_at: startTs + 1000 });
-    const res = await patchSession(s.id, {});
-    expect(res.status).toBe(400);
-  });
+      const startTs = Math.floor(Date.now() / 1000) - 3600;
+      const s = await (await startSession({ started_at: startTs })).json();
+      await endSession(s.id, { ended_at: startTs + 1000 });
+      const res = await patchSession(s.id, {});
+      expect(res.status).toBe(400);
+    });
 });
 
 describe('GET /api/sessions/current streak_count', () => {
@@ -1411,49 +1420,49 @@ describe('DELETE /api/sessions/:id', () => {
     'leaves the session_day_index row when a sibling ' +
       'session remains that day',
     async () => {
-    const cat = await (
-      await createCategory({ name: 'Delete Index Sibling Cat' })
-    ).json();
-    const item = await (
-      await createItem(cat.id, { name: 'Delete Index Sibling Shoe' })
-    ).json();
-    const startTs = Math.floor(Date.now() / 1000) - 7200;
-    const day = new Date(startTs * 1000).toISOString().slice(0, 10);
+      const cat = await (
+        await createCategory({ name: 'Delete Index Sibling Cat' })
+      ).json();
+      const item = await (
+        await createItem(cat.id, { name: 'Delete Index Sibling Shoe' })
+      ).json();
+      const startTs = Math.floor(Date.now() / 1000) - 7200;
+      const day = new Date(startTs * 1000).toISOString().slice(0, 10);
 
-    const s1 = await (
-      await app.request(`${SESSIONS}/start`, {
+      const s1 = await (
+        await app.request(`${SESSIONS}/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ item_id: item.id, started_at: startTs }),
+        })
+      ).json();
+      await app.request(`${SESSIONS}/${s1.id}/end`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ item_id: item.id, started_at: startTs }),
-      })
-    ).json();
-    await app.request(`${SESSIONS}/${s1.id}/end`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ended_at: startTs + 100 }),
-    });
+        body: JSON.stringify({ ended_at: startTs + 100 }),
+      });
 
-    const s2 = await (
-      await app.request(`${SESSIONS}/start`, {
+      const s2 = await (
+        await app.request(`${SESSIONS}/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ item_id: item.id, started_at: startTs + 200 }),
+        })
+      ).json();
+      await app.request(`${SESSIONS}/${s2.id}/end`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ item_id: item.id, started_at: startTs + 200 }),
-      })
-    ).json();
-    await app.request(`${SESSIONS}/${s2.id}/end`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ended_at: startTs + 300 }),
+        body: JSON.stringify({ ended_at: startTs + 300 }),
+      });
+
+      await app.request(`${SESSIONS}/${s1.id}`, { method: 'DELETE' });
+
+      expect(
+        prepare(
+          'SELECT * FROM session_day_index WHERE day = ? AND item_id = ?',
+        ).get(day, item.id),
+      ).toBeDefined();
     });
-
-    await app.request(`${SESSIONS}/${s1.id}`, { method: 'DELETE' });
-
-    expect(
-      prepare(
-        'SELECT * FROM session_day_index WHERE day = ? AND item_id = ?',
-      ).get(day, item.id),
-    ).toBeDefined();
-  });
 
   it('returns 404 for unknown session', async () => {
     const res = await app.request(`${SESSIONS}/999999`, { method: 'DELETE' });
@@ -1861,60 +1870,62 @@ describe('GET /api/sessions/current — resting_until', () => {
     'sets resting_until to the next local midnight after a ' +
       'same-day session',
     async () => {
-    const cat = await (
-      await createCategory({
-        name: 'Resting Until Cat',
-        type: 'rotation',
-        consecutive_wear_days: 1,
-        initial_target_wear_duration_seconds: 57600,
-        initial_max_wear_duration_seconds: null,
-      })
-    ).json();
-    const itemA = await (await createItem(cat.id, { name: 'RUA' })).json();
+      const cat = await (
+        await createCategory({
+          name: 'Resting Until Cat',
+          type: 'rotation',
+          consecutive_wear_days: 1,
+          initial_target_wear_duration_seconds: 57600,
+          initial_max_wear_duration_seconds: null,
+        })
+      ).json();
+      const itemA = await (await createItem(cat.id, { name: 'RUA' })).json();
 
-    const start1 = await app.request(`${SESSIONS}/start`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ item_id: itemA.id }),
-    });
-    const session1 = await start1.json();
-    await app.request(`${SESSIONS}/${session1.id}/end`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    });
+      const start1 = await app.request(`${SESSIONS}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: itemA.id }),
+      });
+      const session1 = await start1.json();
+      await app.request(`${SESSIONS}/${session1.id}/end`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
 
-    const res = await app.request(`${SESSIONS}/current`);
-    const body = await res.json();
-    const entry = body.find(
-      (e: { category: { id: number } }) => e.category.id === cat.id,
-    );
-    expect(entry.resting_until).not.toBeNull();
-    expect(entry.resting_until).toBeGreaterThan(Math.floor(Date.now() / 1000));
-  });
+      const res = await app.request(`${SESSIONS}/current`);
+      const body = await res.json();
+      const entry = body.find(
+        (e: { category: { id: number } }) => e.category.id === cat.id,
+      );
+      expect(entry.resting_until).not.toBeNull();
+      expect(entry.resting_until).toBeGreaterThan(
+        Math.floor(Date.now() / 1000),
+      );
+    });
 
   it(
     'resting_until is null for a rotation category with ' +
       'no session today',
     async () => {
-    const cat = await (
-      await createCategory({
-        name: 'Resting Until Cat 2',
-        type: 'rotation',
-        consecutive_wear_days: 1,
-        initial_target_wear_duration_seconds: 57600,
-        initial_max_wear_duration_seconds: null,
-      })
-    ).json();
-    await createItem(cat.id, { name: 'RUB' });
+      const cat = await (
+        await createCategory({
+          name: 'Resting Until Cat 2',
+          type: 'rotation',
+          consecutive_wear_days: 1,
+          initial_target_wear_duration_seconds: 57600,
+          initial_max_wear_duration_seconds: null,
+        })
+      ).json();
+      await createItem(cat.id, { name: 'RUB' });
 
-    const res = await app.request(`${SESSIONS}/current`);
-    const body = await res.json();
-    const entry = body.find(
-      (e: { category: { id: number } }) => e.category.id === cat.id,
-    );
-    expect(entry.resting_until).toBeNull();
-  });
+      const res = await app.request(`${SESSIONS}/current`);
+      const body = await res.json();
+      const entry = body.find(
+        (e: { category: { id: number } }) => e.category.id === cat.id,
+      );
+      expect(entry.resting_until).toBeNull();
+    });
 
   it('resting_until is always null for duration categories', async () => {
     const res = await app.request(`${SESSIONS}/current`);

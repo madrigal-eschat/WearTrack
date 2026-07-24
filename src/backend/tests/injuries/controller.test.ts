@@ -124,43 +124,43 @@ describe('POST /api/injuries', () => {
   it(
     'derives severity from last session wear when wear_seconds is omitted',
     async () => {
-    const item = await (
-      await createItem(categoryId, {
-        name: 'Wear Derive Shoe',
-        color: '#fedcba',
-      })
-    ).json();
+      const item = await (
+        await createItem(categoryId, {
+          name: 'Wear Derive Shoe',
+          color: '#fedcba',
+        })
+      ).json();
 
-    // Start and end a session with substantial wear (5h = 18000s → moderate =
-    // severity 2)
-    const now = Math.floor(Date.now() / 1000);
-    const session = await (
-      await app.request(`${SESSIONS}/start`, {
+      // Start and end a session with substantial wear (5h = 18000s → moderate =
+      // severity 2)
+      const now = Math.floor(Date.now() / 1000);
+      const session = await (
+        await app.request(`${SESSIONS}/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ item_id: item.id, started_at: now - 18000 }),
+        })
+      ).json();
+      await app.request(`${SESSIONS}/${session.id}/end`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ item_id: item.id, started_at: now - 18000 }),
-      })
-    ).json();
-    await app.request(`${SESSIONS}/${session.id}/end`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ended_at: now }),
+        body: JSON.stringify({ ended_at: now }),
+      });
+
+      // Create an injury without specifying wear_seconds — should pick up
+      // 18000s from last session
+      const injury = await (
+        await app.request(INJURIES, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ item_id: item.id }),
+        })
+      ).json();
+      // 18000s is in the moderate band (14400..28800)
+      expect(injury.severity).toBe(2);
+
+      await healInjury(injury.id);
     });
-
-    // Create an injury without specifying wear_seconds — should pick up
-    // 18000s from last session
-    const injury = await (
-      await app.request(INJURIES, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ item_id: item.id }),
-      })
-    ).json();
-    // 18000s is in the moderate band (14400..28800)
-    expect(injury.severity).toBe(2);
-
-    await healInjury(injury.id);
-  });
 });
 
 describe('POST /api/injuries/:id/heal', () => {

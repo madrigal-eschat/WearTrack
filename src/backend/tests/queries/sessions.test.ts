@@ -27,17 +27,17 @@ describe('CurrentSessionsQuery', () => {
     'returns an entry per category with ' +
     'item=null/session=null when nothing is open',
     () => {
-    const category = categoryStore.create({
-      ...baseCategory,
-      name: 'Idle Query Cat',
+      const category = categoryStore.create({
+        ...baseCategory,
+        name: 'Idle Query Cat',
+      });
+      const entries = new CurrentSessionsQuery().run();
+      const entry = entries.find((e) => e.category.id === category.id)!;
+      expect(entry).toBeDefined();
+      expect(entry.item).toBeNull();
+      expect(entry.session).toBeNull();
+      expect(entry.decay_state).toBe('none');
     });
-    const entries = new CurrentSessionsQuery().run();
-    const entry = entries.find((e) => e.category.id === category.id)!;
-    expect(entry).toBeDefined();
-    expect(entry.item).toBeNull();
-    expect(entry.session).toBeNull();
-    expect(entry.decay_state).toBe('none');
-  });
 
   it('returns item and session when a session is open', () => {
     const category = categoryStore.create({
@@ -64,23 +64,23 @@ describe('CurrentSessionsQuery', () => {
     'reports resting_until for a rotation category ' +
     'with a session already started today',
     () => {
-    const category = categoryStore.create({
-      ...baseCategory,
-      name: 'Rotation Query Cat',
-      type: 'rotation',
-    });
-    const item = itemStore.create({
-      name: 'Rotation Item',
-      category_id: category.id,
-      color: '#fff',
-    });
-    const raw = categoryStore.findRaw(category.id)!;
-    const now = nowSeconds();
-    const session = sessionStore.start(item.id, raw, item, now - 500);
-    sessionStore.end(session, raw, now - 100);
+      const category = categoryStore.create({
+        ...baseCategory,
+        name: 'Rotation Query Cat',
+        type: 'rotation',
+      });
+      const item = itemStore.create({
+        name: 'Rotation Item',
+        category_id: category.id,
+        color: '#fff',
+      });
+      const raw = categoryStore.findRaw(category.id)!;
+      const now = nowSeconds();
+      const session = sessionStore.start(item.id, raw, item, now - 500);
+      sessionStore.end(session, raw, now - 100);
 
-    const entries = new CurrentSessionsQuery().run();
-    const entry = entries.find((e) => e.category.id === category.id)!;
-    expect(entry.resting_until).not.toBeNull();
-  });
+      const entries = new CurrentSessionsQuery().run();
+      const entry = entries.find((e) => e.category.id === category.id)!;
+      expect(entry.resting_until).not.toBeNull();
+    });
 });
