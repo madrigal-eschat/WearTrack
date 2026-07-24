@@ -118,18 +118,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
-import { shortDuration } from '../utils/formatDuration.js';
-import FormCard from './FormCard.vue';
-import TextField from './TextField.vue';
-import IconPickerTrigger from './IconPickerTrigger.vue';
-import IconPickerSheet from './IconPickerSheet.vue';
-import DurationPickerSheet from './DurationPickerSheet.vue';
-import NumberField from './NumberField.vue';
-import DurationTrigger from './DurationTrigger.vue';
-import { multiplierToHalfLifeDays } from '../utils/categoryForm.js';
-import SegmentedControl from './SegmentedControl.vue';
-import DurationCategoryFields from './DurationCategoryFields.vue';
+import { ref, reactive } from 'vue'
+import { shortDuration } from '../utils/formatDuration.js'
+import FormCard from './FormCard.vue'
+import TextField from './TextField.vue'
+import IconPickerTrigger from './IconPickerTrigger.vue'
+import IconPickerSheet from './IconPickerSheet.vue'
+import DurationPickerSheet from './DurationPickerSheet.vue'
+import NumberField from './NumberField.vue'
+import DurationTrigger from './DurationTrigger.vue'
+import { multiplierToHalfLifeDays } from '../utils/categoryForm.js'
+import SegmentedControl from './SegmentedControl.vue'
+import DurationCategoryFields from './DurationCategoryFields.vue'
 
 export interface CategoryFormState {
   name: string;
@@ -146,7 +146,7 @@ export interface CategoryFormState {
   consecutiveWearDays: number;
 }
 
-const DEFAULT_HALF_LIFE_DAYS = multiplierToHalfLifeDays(0.91);
+const DEFAULT_HALF_LIFE_DAYS = multiplierToHalfLifeDays(0.91)
 
 const DEFAULT_STATE: CategoryFormState = {
   name: '',
@@ -161,17 +161,17 @@ const DEFAULT_STATE: CategoryFormState = {
   crossoverPoints: [3600, 7200],
   type: 'duration',
   consecutiveWearDays: 1,
-};
+}
 
 const props = defineProps<{
   initialValues?: Partial<CategoryFormState>;
   submitLabel?: string;
-}>();
+}>()
 
 const emit = defineEmits<{
   submit: [data: CategoryFormState];
   cancel: [];
-}>();
+}>()
 
 const catForm = reactive<CategoryFormState>({
   ...DEFAULT_STATE,
@@ -179,83 +179,83 @@ const catForm = reactive<CategoryFormState>({
   crossoverPoints: props.initialValues?.crossoverPoints
     ? [...props.initialValues.crossoverPoints]
     : [...DEFAULT_STATE.crossoverPoints],
-});
+})
 
 type DurationTarget = 'target' | 'max' | 'minRest' | 'grace' | number;
 
-const showIconPicker = ref(false);
-const showDurationPicker = ref(false);
-const durationPickerTarget = ref<DurationTarget>('target');
-const durationPickerValue = ref(0);
+const showIconPicker = ref(false)
+const showDurationPicker = ref(false)
+const durationPickerTarget = ref<DurationTarget>('target')
+const durationPickerValue = ref(0)
 
 function openDurationPicker(target: DurationTarget) {
-  durationPickerTarget.value = target;
+  durationPickerTarget.value = target
   if (target === 'target') {
-    durationPickerValue.value = catForm.initialWearTargetSeconds;
+    durationPickerValue.value = catForm.initialWearTargetSeconds
   } else if (target === 'max') {
     durationPickerValue.value =
-      catForm.initialWearMaxSeconds ?? catForm.initialWearTargetSeconds;
+      catForm.initialWearMaxSeconds ?? catForm.initialWearTargetSeconds
   } else if (target === 'minRest') {
-    durationPickerValue.value = catForm.minimumRestSeconds;
+    durationPickerValue.value = catForm.minimumRestSeconds
   } else if (target === 'grace') {
-    durationPickerValue.value = catForm.breakGraceSeconds;
+    durationPickerValue.value = catForm.breakGraceSeconds
   } else {
-    durationPickerValue.value = catForm.crossoverPoints[target as number];
+    durationPickerValue.value = catForm.crossoverPoints[target as number]
   }
-  showDurationPicker.value = true;
+  showDurationPicker.value = true
 }
 
 function onDurationPicked(seconds: number) {
-  const target = durationPickerTarget.value;
+  const target = durationPickerTarget.value
   if (target === 'target') {
-    catForm.initialWearTargetSeconds = seconds;
-    return;
+    catForm.initialWearTargetSeconds = seconds
+    return
   }
   if (target === 'max') {
-    catForm.initialWearMaxSeconds = seconds;
-    return;
+    catForm.initialWearMaxSeconds = seconds
+    return
   }
   if (target === 'minRest') {
-    catForm.minimumRestSeconds = seconds;
-    return;
+    catForm.minimumRestSeconds = seconds
+    return
   }
   if (target === 'grace') {
-    catForm.breakGraceSeconds = seconds;
-    return;
+    catForm.breakGraceSeconds = seconds
+    return
   }
-  const idx = target as number;
-  const prev = idx > 0 ? catForm.crossoverPoints[idx - 1] : 0;
+  const idx = target as number
+  const prev = idx > 0 ? catForm.crossoverPoints[idx - 1] : 0
   const next =
     idx < catForm.crossoverPoints.length - 1
       ? catForm.crossoverPoints[idx + 1]
-      : Infinity;
+      : Infinity
   catForm.crossoverPoints[idx] = Math.max(
     prev + 60,
     Math.min(next - 60, seconds),
-  );
+  )
 }
 
 function addBand() {
   if (catForm.bandCount >= 5) {
-    return;
+    return
   }
   const last =
-    catForm.crossoverPoints[catForm.crossoverPoints.length - 1] ?? 0;
-  catForm.crossoverPoints.push(last + 3600);
-  catForm.bandCount++;
+    catForm.crossoverPoints[catForm.crossoverPoints.length - 1] ?? 0
+  catForm.crossoverPoints.push(last + 3600)
+  catForm.bandCount++
 }
 
 function removeBand() {
   if (catForm.bandCount <= 1) {
-    return;
+    return
   }
-  catForm.crossoverPoints.pop();
-  catForm.bandCount--;
+  catForm.crossoverPoints.pop()
+  catForm.bandCount--
 }
 
 function onSubmit() {
   if (!catForm.name || !catForm.icon) {
-    return;
+    return
   }
   emit('submit', {
     name: catForm.name,
@@ -270,6 +270,6 @@ function onSubmit() {
     crossoverPoints: [...catForm.crossoverPoints],
     type: catForm.type,
     consecutiveWearDays: catForm.consecutiveWearDays,
-  });
+  })
 }
 </script>

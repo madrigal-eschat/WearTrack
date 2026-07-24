@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test'
 
 // ── Deep-route direct-load tests ─────────────────────────────────────────────
 // Each test navigates straight to the route (no prior load of '/') and checks
@@ -33,16 +33,16 @@ test.describe('Direct navigation to each route', () => {
       // k-navbar title is always visible
       landmark: 'Welcome to Weartrack',
     },
-  ];
+  ]
 
   for (const { path, description, landmark } of routes) {
     test(
       `${description} loads when navigating directly to ${path}`,
       async ({ page }) => {
-        await page.goto(path);
+        await page.goto(path)
         // Tab bar must be visible — proves Vue mounted (JS loaded)
         await expect(page.getByRole('link', { name: /home/i }))
-          .toBeVisible();
+          .toBeVisible()
         // Screen-specific landmark in main content — proves the correct
         // view was rendered and guards against accidental tab bar matches.
         await expect(
@@ -50,51 +50,51 @@ test.describe('Direct navigation to each route', () => {
             .locator('[data-testid="main-content"]')
             .getByText(landmark, { exact: true })
             .first()
-        ).toBeVisible();
+        ).toBeVisible()
       }
-    );
+    )
   }
-});
+})
 
 test.describe('Navigation', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-  });
+    await page.goto('/')
+  })
 
   test('loads home page', async ({ page }) => {
-    await expect(page).toHaveTitle(/weartrack/i);
+    await expect(page).toHaveTitle(/weartrack/i)
     // Home renders the ActionPane "Currently Wearing" block title
     await expect(
       page
         .locator('[data-testid="main-content"]')
         .getByText('Currently Wearing')
         .first()
-    ).toBeVisible();
-  });
+    ).toBeVisible()
+  })
 
   test('tab bar is always visible', async ({ page }) => {
-    await expect(page.getByRole('link', { name: /home/i })).toBeVisible();
-    await expect(page.getByRole('link', { name: /items/i })).toBeVisible();
-    await expect(page.getByRole('link', { name: /stats/i })).toBeVisible();
-  });
+    await expect(page.getByRole('link', { name: /home/i })).toBeVisible()
+    await expect(page.getByRole('link', { name: /items/i })).toBeVisible()
+    await expect(page.getByRole('link', { name: /stats/i })).toBeVisible()
+  })
 
   test('navigates to Items tab', async ({ page }) => {
-    await page.getByRole('link', { name: /items/i }).click();
-    await expect(page).toHaveURL(/\/items/);
+    await page.getByRole('link', { name: /items/i }).click()
+    await expect(page).toHaveURL(/\/items/)
     await expect(page.getByText('Categories', { exact: true }))
-      .toBeVisible();
+      .toBeVisible()
     await expect(page.getByText('Items', { exact: true }).first())
-      .toBeVisible();
-  });
+      .toBeVisible()
+  })
 
   test('navigates to Stats tab', async ({ page }) => {
-    await page.getByRole('link', { name: /stats/i }).click();
-    await expect(page).toHaveURL(/\/stats/);
-  });
+    await page.getByRole('link', { name: /stats/i }).click()
+    await expect(page).toHaveURL(/\/stats/)
+  })
 
   test('navigates back to Home tab', async ({ page }) => {
-    await page.getByRole('link', { name: /items/i }).click();
-    await page.getByRole('link', { name: /home/i }).click();
-    await expect(page).toHaveURL('/');
-  });
-});
+    await page.getByRole('link', { name: /items/i }).click()
+    await page.getByRole('link', { name: /home/i }).click()
+    await expect(page).toHaveURL('/')
+  })
+})

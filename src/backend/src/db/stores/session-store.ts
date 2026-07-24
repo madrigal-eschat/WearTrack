@@ -1,4 +1,4 @@
-import db from '../index.js';
+import db from '../index.js'
 import {
   computeSessionStart,
   computeRest,
@@ -7,11 +7,11 @@ import {
   type Category,
   type PreviousSession,
   type RiskLevel,
-} from '../calculations.js';
-import { statsStore } from './stats-store.js';
-import { injuryStore } from './injury-store.js';
-import { eventBus } from '../../events/bus.js';
-import { eventPollerStore } from '../../events/store.js';
+} from '../calculations.js'
+import { statsStore } from './stats-store.js'
+import { injuryStore } from './injury-store.js'
+import { eventBus } from '../../events/bus.js'
+import { eventPollerStore } from '../../events/store.js'
 
 export interface Session {
   id: number;
@@ -69,7 +69,7 @@ class SessionStore {
            ORDER BY sess.ended_at DESC LIMIT 1
          )`,
       )
-      .all() as ItemWithLastSession[];
+      .all() as ItemWithLastSession[]
   }
 
   findAll(
@@ -80,22 +80,22 @@ class SessionStore {
       limit?: number;
     } = {},
   ): SessionWithDetails[] {
-    const { itemId, categoryId, before, limit = 100 } = opts;
-    const clauses: string[] = ['s.ended_at IS NOT NULL'];
-    const params: number[] = [];
+    const { itemId, categoryId, before, limit = 100 } = opts
+    const clauses: string[] = ['s.ended_at IS NOT NULL']
+    const params: number[] = []
     if (itemId !== undefined) {
-      clauses.push('s.item_id = ?');
-      params.push(itemId);
+      clauses.push('s.item_id = ?')
+      params.push(itemId)
     }
     if (categoryId !== undefined) {
-      clauses.push('i.category_id = ?');
-      params.push(categoryId);
+      clauses.push('i.category_id = ?')
+      params.push(categoryId)
     }
     if (before !== undefined) {
-      clauses.push('s.started_at < ?');
-      params.push(before);
+      clauses.push('s.started_at < ?')
+      params.push(before)
     }
-    params.push(limit);
+    params.push(limit)
 
     return db
       .prepare(
@@ -108,32 +108,32 @@ class SessionStore {
          ORDER BY s.started_at DESC
          LIMIT ?`,
       )
-      .all(...params) as SessionWithDetails[];
+      .all(...params) as SessionWithDetails[]
   }
 
   dates(categoryId?: number, itemId?: number): string[] {
-    const clauses: string[] = [];
-    const params: number[] = [];
+    const clauses: string[] = []
+    const params: number[] = []
     if (categoryId !== undefined) {
-      clauses.push('category_id = ?');
-      params.push(categoryId);
+      clauses.push('category_id = ?')
+      params.push(categoryId)
     }
     if (itemId !== undefined) {
-      clauses.push('item_id = ?');
-      params.push(itemId);
+      clauses.push('item_id = ?')
+      params.push(itemId)
     }
-    const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+    const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : ''
     const rows = db
       .prepare(
         `SELECT DISTINCT day FROM session_day_index ${where} ORDER BY day`,
       )
-      .all(...params) as { day: string }[];
-    return rows.map((r) => r.day);
+      .all(...params) as { day: string }[]
+    return rows.map((r) => r.day)
   }
 
   find(id: number): Session | undefined {
     return db.prepare('SELECT * FROM sessions WHERE id = ?').get(id) as
-      Session | undefined;
+      Session | undefined
   }
 
   /**
@@ -150,7 +150,7 @@ class SessionStore {
          AND s.ended_in_injury = 0
          ORDER BY s.ended_at DESC LIMIT 1`,
       )
-      .get(categoryId) as PreviousSession | undefined;
+      .get(categoryId) as PreviousSession | undefined
   }
 
   /**
@@ -167,7 +167,7 @@ class SessionStore {
          WHERE i.category_id = ? AND s.ended_at IS NOT NULL
          ORDER BY s.ended_at DESC LIMIT ?`,
       )
-      .all(categoryId, limit) as { item_id: number }[];
+      .all(categoryId, limit) as { item_id: number }[]
   }
 
   /**
@@ -184,7 +184,7 @@ class SessionStore {
          WHERE i.category_id = ? AND s.started_at >= ?
          ORDER BY s.started_at DESC LIMIT 1`,
       )
-      .get(categoryId, dayStart) as { started_at: number } | undefined;
+      .get(categoryId, dayStart) as { started_at: number } | undefined
   }
 
   findOpenInCategory(
@@ -197,7 +197,7 @@ class SessionStore {
          WHERE i.category_id = ? AND s.ended_at IS NULL`,
       )
       .get(categoryId) as
-      { session_id: number; item_id: number; item_name: string } | undefined;
+      { session_id: number; item_id: number; item_name: string } | undefined
   }
 
   /**
@@ -209,7 +209,7 @@ class SessionStore {
       .prepare(
         'SELECT id FROM sessions WHERE item_id = ? AND ended_at IS NULL',
       )
-      .get(itemId) as { id: number } | undefined;
+      .get(itemId) as { id: number } | undefined
   }
 
   findOpenWithItemData(): OpenSessionWithItem[] {
@@ -220,7 +220,7 @@ class SessionStore {
          FROM sessions s JOIN items i ON i.id = s.item_id
          WHERE s.ended_at IS NULL`,
       )
-      .all() as OpenSessionWithItem[];
+      .all() as OpenSessionWithItem[]
   }
 
   /**
@@ -233,15 +233,15 @@ class SessionStore {
     item: { difficulty_multiplier: number },
     startedAt: number,
   ): Session {
-    let target: number;
-    let max: number | null;
-    let previous: PreviousSession | null = null;
+    let target: number
+    let max: number | null
+    let previous: PreviousSession | null = null
 
     if (category.type === 'rotation') {
-      target = category.initial_target_wear_duration_seconds;
-      max = null;
+      target = category.initial_target_wear_duration_seconds
+      max = null
     } else {
-      previous = this.findLastEndedInCategory(category.id) ?? null;
+      previous = this.findLastEndedInCategory(category.id) ?? null
       const injuryActive = injuryStore.hasActiveInCategory(category.id);
       ({ target, max } = computeSessionStart(
         category,
@@ -249,7 +249,7 @@ class SessionStore {
         previous,
         startedAt,
         injuryActive,
-      ));
+      ))
     }
 
     // A new session in this category synchronously resolves any
@@ -260,7 +260,7 @@ class SessionStore {
     // categories have no rest/decay concept, so `previous` stays null
     // for them and this block is a no-op.
     if (previous) {
-      const restEnd = previous.ended_at + previous.rest_seconds;
+      const restEnd = previous.ended_at + previous.rest_seconds
       if (startedAt < restEnd) {
         eventBus.emit('rest_end', {
           category_id: category.id,
@@ -268,18 +268,18 @@ class SessionStore {
           timestamp: startedAt,
           rest_seconds: previous.rest_seconds,
           elapsed_rest_seconds: startedAt - previous.ended_at,
-        });
+        })
       } else {
-        const decay = computeDecay(previous, category, startedAt);
-        const storedRow = eventPollerStore.get(category.id);
-        const alreadyReported = storedRow?.decay_state === 'fully_decayed';
+        const decay = computeDecay(previous, category, startedAt)
+        const storedRow = eventPollerStore.get(category.id)
+        const alreadyReported = storedRow?.decay_state === 'fully_decayed'
         if (decay.decay_state === 'fully_decayed' && !alreadyReported) {
           eventBus.emit('decay_finish', {
             category_id: category.id,
             category_name: category.name,
             timestamp: startedAt,
             decay_state: 'fully_decayed',
-          });
+          })
         }
       }
     }
@@ -289,8 +289,8 @@ class SessionStore {
         'INSERT INTO sessions (item_id, started_at, target_wear_seconds, ' +
           'max_wear_seconds) VALUES (?, ?, ?, ?)',
       )
-      .run(itemId, startedAt, target, max);
-    const session = this.find(result.lastInsertRowid as number)!;
+      .run(itemId, startedAt, target, max)
+    const session = this.find(result.lastInsertRowid as number)!
 
     eventBus.emit('session_start', {
       category_id: category.id,
@@ -300,9 +300,9 @@ class SessionStore {
       item_id: itemId,
       target_wear_seconds: session.target_wear_seconds,
       max_wear_seconds: session.max_wear_seconds,
-    });
+    })
 
-    return session;
+    return session
   }
 
   /**
@@ -315,7 +315,7 @@ class SessionStore {
        SELECT date(s.started_at, 'unixepoch'), i.category_id, s.item_id
        FROM sessions s JOIN items i ON i.id = s.item_id
        WHERE s.id = ?`,
-    ).run(sessionId);
+    ).run(sessionId)
   }
 
   /**
@@ -324,36 +324,36 @@ class SessionStore {
    */
   end(session: Session, category: Category, endedAt: number): Session {
     return db.transaction(() => {
-      const elapsed = endedAt - session.started_at;
-      let rest: number | null;
-      let riskLevel: RiskLevel | null = null;
+      const elapsed = endedAt - session.started_at
+      let rest: number | null
+      let riskLevel: RiskLevel | null = null
       if (category.type === 'rotation') {
-        rest = null;
+        rest = null
       } else {
-        const injuryActive = injuryStore.hasActiveInCategory(category.id);
-        riskLevel = riskLevelFor(elapsed, category);
+        const injuryActive = injuryStore.hasActiveInCategory(category.id)
+        riskLevel = riskLevelFor(elapsed, category)
         rest = computeRest(
           elapsed,
           session.max_wear_seconds,
           category,
           riskLevel,
           injuryActive,
-        );
+        )
       }
 
       db.prepare(
         'UPDATE sessions SET ended_at = ?, rest_seconds = ? WHERE id = ?',
-      ).run(endedAt, rest, session.id);
+      ).run(endedAt, rest, session.id)
 
-      const updated = this.find(session.id)!;
-      const snapshot = { ...updated, ended_at: endedAt };
-      statsStore.recordItemSession(snapshot);
+      const updated = this.find(session.id)!
+      const snapshot = { ...updated, ended_at: endedAt }
+      statsStore.recordItemSession(snapshot)
       statsStore.recordCategorySession(
         category.id,
         category.break_grace_time,
         snapshot,
-      );
-      this.recordDayIndex(session.id);
+      )
+      this.recordDayIndex(session.id)
 
       eventBus.emit('session_end', {
         category_id: category.id,
@@ -366,10 +366,10 @@ class SessionStore {
         actual_duration_seconds: elapsed,
         rest_seconds: rest ?? 0,
         risk_level: riskLevel?.text ?? null,
-      });
+      })
 
-      return updated;
-    })();
+      return updated
+    })()
   }
 
   /**
@@ -379,8 +379,8 @@ class SessionStore {
   endWithInjury(sessionId: number, endedAt: number): void {
     db.prepare(
       'UPDATE sessions SET ended_at = ?, ended_in_injury = 1 WHERE id = ?',
-    ).run(endedAt, sessionId);
-    this.recordDayIndex(sessionId);
+    ).run(endedAt, sessionId)
+    this.recordDayIndex(sessionId)
   }
 
   /**
@@ -399,35 +399,35 @@ class SessionStore {
         db.prepare('UPDATE sessions SET ended_at = ? WHERE id = ?').run(
           newEndedAt,
           session.id,
-        );
-        return this.find(session.id)!;
+        )
+        return this.find(session.id)!
       }
 
-      const elapsed = newEndedAt - session.started_at;
-      let rest: number | null;
+      const elapsed = newEndedAt - session.started_at
+      let rest: number | null
       if (category.type === 'rotation') {
-        rest = null;
+        rest = null
       } else {
-        const injuryActive = injuryStore.hasActiveInCategory(category.id);
-        const riskLevel = riskLevelFor(elapsed, category);
+        const injuryActive = injuryStore.hasActiveInCategory(category.id)
+        const riskLevel = riskLevelFor(elapsed, category)
         rest = computeRest(
           elapsed,
           session.max_wear_seconds,
           category,
           riskLevel,
           injuryActive,
-        );
+        )
       }
 
       db.prepare(
         'UPDATE sessions SET ended_at = ?, rest_seconds = ? WHERE id = ?',
-      ).run(newEndedAt, rest, session.id);
+      ).run(newEndedAt, rest, session.id)
 
-      statsStore.recomputeItem(session.item_id);
-      statsStore.recomputeCategory(category.id, category.break_grace_time);
+      statsStore.recomputeItem(session.item_id)
+      statsStore.recomputeCategory(category.id, category.break_grace_time)
 
-      return this.find(session.id)!;
-    })();
+      return this.find(session.id)!
+    })()
   }
 
   /**
@@ -438,30 +438,30 @@ class SessionStore {
   remove(session: Session, category: Category): void {
     const day = new Date(session.started_at * 1000)
       .toISOString()
-      .slice(0, 10);
+      .slice(0, 10)
 
     db.transaction(() => {
-      db.prepare('DELETE FROM sessions WHERE id = ?').run(session.id);
+      db.prepare('DELETE FROM sessions WHERE id = ?').run(session.id)
 
       const remaining = db
         .prepare(
           `SELECT COUNT(*) AS n FROM sessions
            WHERE item_id = ? AND date(started_at, 'unixepoch') = ?`,
         )
-        .get(session.item_id, day) as { n: number };
+        .get(session.item_id, day) as { n: number }
       if (remaining.n === 0) {
         db.prepare(
           'DELETE FROM session_day_index WHERE day = ? ' +
             'AND category_id = ? AND item_id = ?',
-        ).run(day, category.id, session.item_id);
+        ).run(day, category.id, session.item_id)
       }
 
       if (!session.ended_in_injury && session.ended_at !== null) {
-        statsStore.recomputeItem(session.item_id);
-        statsStore.recomputeCategory(category.id, category.break_grace_time);
+        statsStore.recomputeItem(session.item_id)
+        statsStore.recomputeCategory(category.id, category.break_grace_time)
       }
-    })();
+    })()
   }
 }
 
-export const sessionStore = new SessionStore();
+export const sessionStore = new SessionStore()

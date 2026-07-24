@@ -39,6 +39,6 @@ defineProps<{
   clearable?: boolean;
   testid?: string;
   clearTestid?: string;
-}>();
-defineEmits<{ click: []; clear: [] }>();
+}>()
+defineEmits<{ click: []; clear: [] }>()
 </script>

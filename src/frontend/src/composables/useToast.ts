@@ -1,25 +1,25 @@
-import { ref } from 'vue';
+import { ref } from 'vue'
 
-const message = ref<string | null>(null);
-let timer: ReturnType<typeof setTimeout> | null = null;
+const message = ref<string | null>(null)
+let timer: ReturnType<typeof setTimeout> | null = null
 
 export function useToast() {
   function showError(msg: string) {
-    message.value = msg;
+    message.value = msg
     if (timer) {
-      clearTimeout(timer);
+      clearTimeout(timer)
     }
     timer = setTimeout(() => {
-      message.value = null;
-    }, 4000);
+      message.value = null
+    }, 4000)
   }
 
   function dismiss() {
-    message.value = null;
+    message.value = null
     if (timer) {
-      clearTimeout(timer);
+      clearTimeout(timer)
     }
   }
 
-  return { message, showError, dismiss };
+  return { message, showError, dismiss }
 }

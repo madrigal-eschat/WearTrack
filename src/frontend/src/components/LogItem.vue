@@ -51,15 +51,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { Icon } from '@iconify/vue';
-import { kListItem } from 'konsta/vue';
-import { EllipsisHorizontalIcon } from '@heroicons/vue/24/solid';
-import type { SessionLogEntry } from '../composables/useSessionLog.js';
-import { formatDuration } from '../utils/formatDuration.js';
+import { computed } from 'vue'
+import { Icon } from '@iconify/vue'
+import { kListItem } from 'konsta/vue'
+import { EllipsisHorizontalIcon } from '@heroicons/vue/24/solid'
+import type { SessionLogEntry } from '../composables/useSessionLog.js'
+import { formatDuration } from '../utils/formatDuration.js'
 
-const props = defineProps<{ entry: SessionLogEntry }>();
-defineEmits<{ 'open-actions': [] }>();
+const props = defineProps<{ entry: SessionLogEntry }>()
+defineEmits<{ 'open-actions': [] }>()
 
 function formatStart(unixSeconds: number): string {
   return new Date(unixSeconds * 1000).toLocaleString(undefined, {
@@ -68,12 +68,12 @@ function formatStart(unixSeconds: number): string {
     year: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
-  });
+  })
 }
 
 const wornDuration = computed(() =>
   props.entry.ended_at === null
     ? ''
     : formatDuration(props.entry.ended_at - props.entry.started_at),
-);
+)
 </script>

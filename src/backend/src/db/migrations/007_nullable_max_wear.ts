@@ -1,4 +1,4 @@
-import { dbExport } from '../index.js';
+import { dbExport } from '../index.js'
 
 export default function runMigration007() {
   dbExport.exec(`
@@ -20,5 +20,5 @@ export default function runMigration007() {
 
     DROP TABLE sessions;
     ALTER TABLE sessions_new RENAME TO sessions;
-  `);
+  `)
 }

@@ -1,6 +1,6 @@
 // src/backend/src/db/stores/category-store.ts
-import db from '../index.js';
-import type { RiskLevel } from '../calculations.js';
+import db from '../index.js'
+import type { RiskLevel } from '../calculations.js'
 
 interface CategoryRow {
   id: number;
@@ -38,26 +38,26 @@ export interface CategoryCreate {
 export type CategoryUpdate = Partial<CategoryCreate>;
 
 function deserialize(row: CategoryRow): Category {
-  return { ...row, risk_levels: JSON.parse(row.risk_levels) as RiskLevel[] };
+  return { ...row, risk_levels: JSON.parse(row.risk_levels) as RiskLevel[] }
 }
 
 class CategoryStore {
   findAll(): Category[] {
     return (
       db.prepare('SELECT * FROM categories ORDER BY id').all() as CategoryRow[]
-    ).map(deserialize);
+    ).map(deserialize)
   }
 
   find(id: number): Category | undefined {
     const row = db.prepare('SELECT * FROM categories WHERE id = ?').get(id) as
-      CategoryRow | undefined;
-    return row ? deserialize(row) : undefined;
+      CategoryRow | undefined
+    return row ? deserialize(row) : undefined
   }
 
   /** Raw DB row (risk_levels as JSON string) — used by calculation callers. */
   findRaw(id: number): CategoryRow | undefined {
     return db.prepare('SELECT * FROM categories WHERE id = ?').get(id) as
-      CategoryRow | undefined;
+      CategoryRow | undefined
   }
 
   create(data: CategoryCreate): Category {
@@ -82,12 +82,12 @@ class CategoryStore {
         data.break_grace_time,
         data.type ?? 'duration',
         data.consecutive_wear_days ?? 1,
-      );
-    const category = this.find(result.lastInsertRowid as number)!;
+      )
+    const category = this.find(result.lastInsertRowid as number)!
     db.prepare(
       'INSERT OR IGNORE INTO category_stats (category_id) VALUES (?)',
-    ).run(category.id);
-    return category;
+    ).run(category.id)
+    return category
   }
 
   update(id: number, data: CategoryUpdate): Category {
@@ -103,26 +103,26 @@ class CategoryStore {
       'risk_levels',
       'type',
       'consecutive_wear_days',
-    ]);
+    ])
 
-    const dbData: Record<string, unknown> = { ...data };
+    const dbData: Record<string, unknown> = { ...data }
     if (data.risk_levels !== undefined) {
-      dbData.risk_levels = JSON.stringify(data.risk_levels);
+      dbData.risk_levels = JSON.stringify(data.risk_levels)
     }
     const entries = Object.entries(dbData).filter(([k]) =>
       ALLOWED_COLUMNS.has(k),
-    );
-    const setClauses = entries.map(([k]) => `${k} = ?`).join(', ');
+    )
+    const setClauses = entries.map(([k]) => `${k} = ?`).join(', ')
     db.prepare(`UPDATE categories SET ${setClauses} WHERE id = ?`).run(
       ...entries.map(([, v]) => v),
       id,
-    );
-    return this.find(id)!;
+    )
+    return this.find(id)!
   }
 
   delete(id: number): void {
-    db.prepare('DELETE FROM categories WHERE id = ?').run(id);
+    db.prepare('DELETE FROM categories WHERE id = ?').run(id)
   }
 }
 
-export const categoryStore = new CategoryStore();
+export const categoryStore = new CategoryStore()

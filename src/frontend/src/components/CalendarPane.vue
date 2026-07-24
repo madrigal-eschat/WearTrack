@@ -65,12 +65,12 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
-import { Icon } from '@iconify/vue';
-import { useCalendar, type DayEntry } from '../composables/useCalendar.js';
-import { useItems } from '../composables/useItems.js';
-import { useCategories } from '../composables/useCategories.js';
-import { shortDuration } from '../utils/formatDuration.js';
+import { onMounted } from 'vue'
+import { Icon } from '@iconify/vue'
+import { useCalendar, type DayEntry } from '../composables/useCalendar.js'
+import { useItems } from '../composables/useItems.js'
+import { useCategories } from '../composables/useCategories.js'
+import { shortDuration } from '../utils/formatDuration.js'
 
 const {
   weekDays,
@@ -78,13 +78,13 @@ const {
   prevWeek,
   nextWeek,
   formatWeekRange,
-} = useCalendar();
-const { items, loadItems } = useItems();
-const { categories, loadCategories } = useCategories();
+} = useCalendar()
+const { items, loadItems } = useItems()
+const { categories, loadCategories } = useCategories()
 
 onMounted(async () => {
-  await Promise.all([loadWeekSessions(), loadItems(), loadCategories()]);
-});
+  await Promise.all([loadWeekSessions(), loadItems(), loadCategories()])
+})
 
 interface DayBadge {
   categoryId: number;
@@ -93,24 +93,24 @@ interface DayBadge {
 }
 
 function dayBadges(day: DayEntry): DayBadge[] {
-  const seen = new Set<number>();
-  const badges: DayBadge[] = [];
+  const seen = new Set<number>()
+  const badges: DayBadge[] = []
   for (const session of day.sessions) {
-    const item = items.value.find((i) => i.id === session.item_id);
+    const item = items.value.find((i) => i.id === session.item_id)
     if (!item) {
-      continue;
+      continue
     }
     if (seen.has(item.category_id)) {
-      continue;
+      continue
     }
-    seen.add(item.category_id);
-    const category = categories.value.find((c) => c.id === item.category_id);
+    seen.add(item.category_id)
+    const category = categories.value.find((c) => c.id === item.category_id)
     badges.push({
       categoryId: item.category_id,
       icon: category?.icon,
       color: item.color,
-    });
+    })
   }
-  return badges;
+  return badges
 }
 </script>

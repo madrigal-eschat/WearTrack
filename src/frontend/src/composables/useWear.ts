@@ -1,6 +1,6 @@
-import { ref, onMounted, onUnmounted } from 'vue';
-import { currentWear } from '../utils/wearCalculations.js';
-import { apiFetch } from '../utils/apiFetch.js';
+import { ref, onMounted, onUnmounted } from 'vue'
+import { currentWear } from '../utils/wearCalculations.js'
+import { apiFetch } from '../utils/apiFetch.js'
 
 export interface Category {
   id: number;
@@ -70,25 +70,25 @@ export interface CurrentEntry {
 }
 
 // Module-level state shared across all component instances
-const currentSessions = ref<CurrentEntry[]>([]);
-const loading = ref(false);
-const loaded = ref(false);
-const error = ref<string | null>(null);
-let pollTimer: ReturnType<typeof setInterval> | null = null;
+const currentSessions = ref<CurrentEntry[]>([])
+const loading = ref(false)
+const loaded = ref(false)
+const error = ref<string | null>(null)
+let pollTimer: ReturnType<typeof setInterval> | null = null
 
 async function fetchCurrent() {
-  loading.value = true;
+  loading.value = true
   try {
-    const res = await apiFetch('/api/sessions/current');
+    const res = await apiFetch('/api/sessions/current')
     if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
+      throw new Error(`HTTP ${res.status}`)
     }
-    currentSessions.value = await res.json();
+    currentSessions.value = await res.json()
   } catch (e) {
-    error.value = String(e);
+    error.value = String(e)
   } finally {
-    loading.value = false;
-    loaded.value = true;
+    loading.value = false
+    loaded.value = true
   }
 }
 
@@ -97,14 +97,14 @@ async function startSession(itemId: number): Promise<Session> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ item_id: itemId }),
-  });
+  })
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? `HTTP ${res.status}`);
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.error ?? `HTTP ${res.status}`)
   }
-  const session: Session = await res.json();
-  await fetchCurrent();
-  return session;
+  const session: Session = await res.json()
+  await fetchCurrent()
+  return session
 }
 
 async function endSession(sessionId: number): Promise<Session> {
@@ -112,47 +112,47 @@ async function endSession(sessionId: number): Promise<Session> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({}),
-  });
+  })
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? `HTTP ${res.status}`);
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.error ?? `HTTP ${res.status}`)
   }
-  const session: Session = await res.json();
-  await fetchCurrent();
-  return session;
+  const session: Session = await res.json()
+  await fetchCurrent()
+  return session
 }
 
 async function reportInjury(
   itemId: number,
   wearSeconds?: number,
 ): Promise<void> {
-  const body: Record<string, unknown> = { item_id: itemId };
+  const body: Record<string, unknown> = { item_id: itemId }
   if (wearSeconds !== undefined) {
-    body.wear_seconds = wearSeconds;
+    body.wear_seconds = wearSeconds
   }
   const res = await apiFetch('/api/injuries', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-  });
+  })
   if (!res.ok) {
-    const resBody = await res.json().catch(() => ({}));
-    throw new Error(resBody.error ?? `HTTP ${res.status}`);
+    const resBody = await res.json().catch(() => ({}))
+    throw new Error(resBody.error ?? `HTTP ${res.status}`)
   }
-  await fetchCurrent();
+  await fetchCurrent()
 }
 
 export function useWear() {
   onMounted(() => {
-    fetchCurrent();
+    fetchCurrent()
     // Poll every 60s to keep elapsed times / rest countdowns fresh
-    pollTimer = setInterval(fetchCurrent, 60_000);
-  });
+    pollTimer = setInterval(fetchCurrent, 60_000)
+  })
   onUnmounted(() => {
     if (pollTimer !== null) {
-      clearInterval(pollTimer);
+      clearInterval(pollTimer)
     }
-  });
+  })
 
   return {
     currentSessions,
@@ -164,5 +164,5 @@ export function useWear() {
     endSession,
     reportInjury,
     currentWear,
-  };
+  }
 }
