@@ -45,29 +45,29 @@ describe('mqtt subscriber', () => {
     'publishes session_start to the event topic and the ' +
     'retained state topic',
     () => {
-    eventBus.emit('session_start', {
-      category_id: 1,
-      category_name: 'Footwear',
-      timestamp: 1000,
-      session_id: 5,
-      item_id: 2,
-      target_wear_seconds: 900,
-      max_wear_seconds: 1800,
+      eventBus.emit('session_start', {
+        category_id: 1,
+        category_name: 'Footwear',
+        timestamp: 1000,
+        session_id: 5,
+        item_id: 2,
+        target_wear_seconds: 900,
+        max_wear_seconds: 1800,
+      });
+      expect(mockPublish).toHaveBeenCalledWith(
+        'weartrack/footwear/session_start',
+        expect.objectContaining({
+          event: 'session_start',
+          item_name: 'Test Shoe',
+        }),
+        { retain: false },
+      );
+      expect(mockPublish).toHaveBeenCalledWith(
+        'weartrack/footwear/state',
+        expect.objectContaining({ event: 'session_start' }),
+        { retain: true },
+      );
     });
-    expect(mockPublish).toHaveBeenCalledWith(
-      'weartrack/footwear/session_start',
-      expect.objectContaining({
-        event: 'session_start',
-        item_name: 'Test Shoe',
-      }),
-      { retain: false },
-    );
-    expect(mockPublish).toHaveBeenCalledWith(
-      'weartrack/footwear/state',
-      expect.objectContaining({ event: 'session_start' }),
-      { retain: true },
-    );
-  });
 
   it('publishes rest_start with null item fields', () => {
     eventBus.emit('rest_start', {
@@ -110,12 +110,12 @@ describe('mqtt subscriber', () => {
     'does not subscribe to notification-only events ' +
     '(target_met has no publish)',
     () => {
-    eventBus.emit('target_met', {
-      category_id: 1,
-      category_name: 'Footwear',
-      timestamp: 1000,
-      session_id: 5,
+      eventBus.emit('target_met', {
+        category_id: 1,
+        category_name: 'Footwear',
+        timestamp: 1000,
+        session_id: 5,
+      });
+      expect(mockPublish).not.toHaveBeenCalled();
     });
-    expect(mockPublish).not.toHaveBeenCalled();
-  });
 });

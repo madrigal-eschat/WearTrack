@@ -38,37 +38,37 @@ describe('notifications runner (bus subscriber)', () => {
     'sends a push notification with a formatted time-to-decay ' +
       'when idle_halfway_reached fires',
     async () => {
-    startScheduler();
-    eventBus.emit('idle_halfway_reached', {
-      category_id: 1,
-      category_name: 'Footwear',
-      timestamp: 100,
-      decay_start_time: 100 + 7200,
+      startScheduler();
+      eventBus.emit('idle_halfway_reached', {
+        category_id: 1,
+        category_name: 'Footwear',
+        timestamp: 100,
+        decay_start_time: 100 + 7200,
+      });
+      await new Promise((r) => setTimeout(r, 0));
+      expect(send).toHaveBeenCalledWith(
+        '{"endpoint":"https://x"}',
+        expect.objectContaining({
+          body: 'Durations start decaying in 2 hours',
+          tag: 'category-1',
+        }),
+      );
     });
-    await new Promise((r) => setTimeout(r, 0));
-    expect(send).toHaveBeenCalledWith(
-      '{"endpoint":"https://x"}',
-      expect.objectContaining({
-        body: 'Durations start decaying in 2 hours',
-        tag: 'category-1',
-      }),
-    );
-  });
 
   it(
     'sends nothing for decay_start (no notification defined for it)',
     async () => {
-    startScheduler();
-    eventBus.emit('decay_start', {
-      category_id: 1,
-      category_name: 'Footwear',
-      timestamp: 100,
-      decay_state: 'decaying',
-      decay_full_time: 200,
+      startScheduler();
+      eventBus.emit('decay_start', {
+        category_id: 1,
+        category_name: 'Footwear',
+        timestamp: 100,
+        decay_state: 'decaying',
+        decay_full_time: 200,
+      });
+      await new Promise((r) => setTimeout(r, 0));
+      expect(send).not.toHaveBeenCalled();
     });
-    await new Promise((r) => setTimeout(r, 0));
-    expect(send).not.toHaveBeenCalled();
-  });
 
   it('does not send when there is no stored push subscription', async () => {
     vi.mocked(notificationStore.getSubscription).mockReturnValue(null);
@@ -87,29 +87,29 @@ describe('notifications runner (bus subscriber)', () => {
     'does not register duplicate listeners (and so does not ' +
       'double-send) when startScheduler is called twice',
     async () => {
-    vi.resetModules();
-    const senderMod = await import('../../src/notifications/sender.js');
-    const busMod = await import('../../src/events/bus.js');
-    const storeMod = await import('../../src/notifications/store.js');
-    const runnerMod = await import('../../src/notifications/runner.js');
+      vi.resetModules();
+      const senderMod = await import('../../src/notifications/sender.js');
+      const busMod = await import('../../src/events/bus.js');
+      const storeMod = await import('../../src/notifications/store.js');
+      const runnerMod = await import('../../src/notifications/runner.js');
 
-    vi.spyOn(storeMod.notificationStore, 'getSubscription').mockReturnValue(
-      '{"endpoint":"https://x"}',
-    );
+      vi.spyOn(storeMod.notificationStore, 'getSubscription').mockReturnValue(
+        '{"endpoint":"https://x"}',
+      );
 
-    runnerMod.startScheduler();
-    // second call must be a no-op, not a second registration
-    runnerMod.startScheduler();
+      runnerMod.startScheduler();
+      // second call must be a no-op, not a second registration
+      runnerMod.startScheduler();
 
-    busMod.eventBus.emit('rest_end', {
-      category_id: 9,
-      category_name: 'Footwear',
-      timestamp: 100,
-      rest_seconds: 3600,
-      elapsed_rest_seconds: 3600,
+      busMod.eventBus.emit('rest_end', {
+        category_id: 9,
+        category_name: 'Footwear',
+        timestamp: 100,
+        rest_seconds: 3600,
+        elapsed_rest_seconds: 3600,
+      });
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(senderMod.send).toHaveBeenCalledTimes(1);
     });
-    await new Promise((r) => setTimeout(r, 0));
-
-    expect(senderMod.send).toHaveBeenCalledTimes(1);
-  });
 });
