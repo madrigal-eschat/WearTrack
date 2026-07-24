@@ -1,3 +1,10 @@
+## [1.4.1](https://github.com/madrigal-eschat/WearTrack/compare/v1.4.0...v1.4.1) (2026-07-24)
+
+
+### Bug Fixes
+
+* **frontend:** restore single flex-row grouping in DurationCategoryFields ([7a71f82](https://github.com/madrigal-eschat/WearTrack/commit/7a71f82c6463a6f93c77743d4cb445bc8c2678b4))
+
 # [1.4.0](https://github.com/madrigal-eschat/WearTrack/compare/v1.3.0...v1.4.0) (2026-07-22)
 
 
