@@ -51,7 +51,9 @@ export function remainingWearSeconds(
 
 /** Completed laps for the current elapsed time (null-max categories only). */
 export function lapCount(elapsed: number, target: number): number {
-  if (target <= 0) return 0;
+  if (target <= 0) {
+    return 0;
+  }
   return Math.floor(elapsed / target);
 }
 
@@ -60,7 +62,9 @@ export function lapCount(elapsed: number, target: number): number {
  * capping at 1.
  */
 export function lapFillFraction(elapsed: number, target: number): number {
-  if (target <= 0) return 0;
+  if (target <= 0) {
+    return 0;
+  }
   return (elapsed % target) / target;
 }
 
@@ -69,10 +73,18 @@ export function lapFillFraction(elapsed: number, target: number): number {
  * lap 8 onward.
  */
 export function lapTier(lapCount: number): number {
-  if (lapCount >= 8) return 4;
-  if (lapCount >= 5) return 3;
-  if (lapCount >= 3) return 2;
-  if (lapCount >= 2) return 1;
+  if (lapCount >= 8) {
+    return 4;
+  }
+  if (lapCount >= 5) {
+    return 3;
+  }
+  if (lapCount >= 3) {
+    return 2;
+  }
+  if (lapCount >= 2) {
+    return 1;
+  }
   return 0;
 }
 
@@ -81,7 +93,9 @@ export function lapTier(lapCount: number): number {
  * clamped.
  */
 export function fillUpFraction(remaining: number, total: number): number {
-  if (total <= 0) return 1;
+  if (total <= 0) {
+    return 1;
+  }
   return Math.max(0, Math.min(1 - remaining / total, 1));
 }
 
@@ -95,7 +109,9 @@ export function decayFillFraction(
   decayFullTime: number,
 ): number {
   const window = decayFullTime - decayStartTime;
-  if (window <= 0) return 0;
+  if (window <= 0) {
+    return 0;
+  }
   const remaining = decayFullTime - now;
   return Math.max(0, Math.min(remaining / window, 1));
 }

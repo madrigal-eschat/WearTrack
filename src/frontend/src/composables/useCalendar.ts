@@ -62,7 +62,9 @@ async function loadWeekSessions(): Promise<void> {
   const to = from + 7 * 86400;
   // Fetch all sessions; filter client-side (API has no date range filter)
   const res = await apiFetch('/api/sessions');
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
   const all: Session[] = await res.json();
   sessions.value = all.filter((s) => s.started_at >= from && s.started_at < to);
 }

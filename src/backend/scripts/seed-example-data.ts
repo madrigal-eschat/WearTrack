@@ -13,8 +13,9 @@ async function post(path: string, body: unknown) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  if (!res.ok)
+  if (!res.ok) {
     throw new Error(`POST ${path} failed: ${res.status} ${await res.text()}`);
+  }
   return res.json();
 }
 

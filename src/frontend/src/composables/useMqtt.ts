@@ -32,7 +32,9 @@ export function useMqtt() {
     loading.value = true;
     try {
       const res = await apiFetch('/api/mqtt/config');
-      if (res.ok) config.value = (await res.json()) as MqttConfigState;
+      if (res.ok) {
+        config.value = (await res.json()) as MqttConfigState;
+      }
     } finally {
       loading.value = false;
     }
@@ -49,7 +51,9 @@ export function useMqtt() {
         topic_prefix: config.value.topic_prefix,
         ha_discovery_enabled: config.value.ha_discovery_enabled,
       };
-      if (password.value !== '') body.password = password.value;
+      if (password.value !== '') {
+        body.password = password.value;
+      }
 
       const res = await apiFetch('/api/mqtt/config', {
         method: 'PUT',

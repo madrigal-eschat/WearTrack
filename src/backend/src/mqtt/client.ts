@@ -35,13 +35,19 @@ export function connect(config: ConnectConfig): void {
   });
   client = thisClient;
   thisClient.on('connect', () => {
-    if (client === thisClient) status = 'connected';
+    if (client === thisClient) {
+      status = 'connected';
+    }
   });
   thisClient.on('close', () => {
-    if (client === thisClient) status = 'disconnected';
+    if (client === thisClient) {
+      status = 'disconnected';
+    }
   });
   thisClient.on('error', () => {
-    if (client === thisClient) status = 'error';
+    if (client === thisClient) {
+      status = 'error';
+    }
   });
 }
 
@@ -50,7 +56,9 @@ export function publish(
   payload: unknown,
   opts: { retain?: boolean } = {},
 ): void {
-  if (!client) return;
+  if (!client) {
+    return;
+  }
   client.publish(topic, JSON.stringify(payload), {
     qos: 0,
     retain: opts.retain ?? false,

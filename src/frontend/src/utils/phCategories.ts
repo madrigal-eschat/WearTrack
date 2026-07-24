@@ -6,7 +6,9 @@ const WEIGHT_SUFFIXES = [
 ] as const;
 
 function getOrCreateBucket(r: PhCategories, cat: string): PhIconEntry[] {
-  if (!r[cat]) r[cat] = []; // nosemgrep: gitlab.eslint.detect-object-injection
+  if (!r[cat]) {
+    r[cat] = [];
+  } // nosemgrep: gitlab.eslint.detect-object-injection
   return r[cat]; // nosemgrep: gitlab.eslint.detect-object-injection
 }
 
@@ -22,7 +24,9 @@ export function buildPhCategories(
 ): PhCategories {
   const result: PhCategories = {};
   for (const icon of icons) {
-    if (WEIGHT_SUFFIXES.some((s) => icon.name.endsWith(s))) continue;
+    if (WEIGHT_SUFFIXES.some((s) => icon.name.endsWith(s))) {
+      continue;
+    }
     for (const cat of icon.categories) {
       const bucket = getOrCreateBucket(result, cat);
       bucket.push({ id: `ph:${icon.name}`, tags: icon.tags });
@@ -43,12 +47,16 @@ export function filterIcons(
   query: string,
 ): PhIconEntry[] {
   const q = query.toLowerCase().trim();
-  if (!q) return [];
+  if (!q) {
+    return [];
+  }
   const seen = new Set<string>();
   const results: PhIconEntry[] = [];
   for (const entries of Object.values(categories)) {
     for (const entry of entries) {
-      if (seen.has(entry.id)) continue;
+      if (seen.has(entry.id)) {
+        continue;
+      }
       const name = entry.id.slice(3); // strip 'ph:' prefix (always 3 chars)
       if (name.includes(q) || entry.tags.some((t) => t.includes(q))) {
         results.push(entry);

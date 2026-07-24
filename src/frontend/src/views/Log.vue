@@ -162,9 +162,15 @@ async function refreshDateIndex(): Promise<void> {
 }
 
 function jumpLabel(entry: DateIndexEntry): string {
-  if (entry.granularity === 'day') return entry.label.slice(8, 10);
-  if (entry.granularity === 'week') return entry.label.slice(8, 10);
-  if (entry.granularity === 'month') return entry.label.slice(5, 7);
+  if (entry.granularity === 'day') {
+    return entry.label.slice(8, 10);
+  }
+  if (entry.granularity === 'week') {
+    return entry.label.slice(8, 10);
+  }
+  if (entry.granularity === 'month') {
+    return entry.label.slice(5, 7);
+  }
   return entry.label.slice(2, 4);
 }
 
@@ -187,7 +193,9 @@ const editRange = computed(() => (
 
 function startEdit(): void {
   actionsOpen.value = false;
-  if (!editTarget.value || editTarget.value.ended_at === null) return;
+  if (!editTarget.value || editTarget.value.ended_at === null) {
+    return;
+  }
   editDurationMinutes.value = Math.round(
     (editTarget.value.ended_at - editTarget.value.started_at) / 60,
   );
@@ -195,7 +203,9 @@ function startEdit(): void {
 }
 
 async function saveEdit(): Promise<void> {
-  if (!editTarget.value) return;
+  if (!editTarget.value) {
+    return;
+  }
   const newEndedAt = editTarget.value.started_at
     + editDurationMinutes.value * 60;
   const clamped = Math.min(
@@ -207,7 +217,9 @@ async function saveEdit(): Promise<void> {
 }
 
 async function performDelete(): Promise<void> {
-  if (activeEntry.value) await deleteSession(activeEntry.value);
+  if (activeEntry.value) {
+    await deleteSession(activeEntry.value);
+  }
 }
 
 const sentinel = ref<HTMLElement | null>(null);
@@ -220,9 +232,13 @@ onMounted(async () => {
   await refreshDateIndex();
 
   observer = new IntersectionObserver((entries) => {
-    if (entries[0]?.isIntersecting) void loadMore();
+    if (entries[0]?.isIntersecting) {
+      void loadMore();
+    }
   });
-  if (sentinel.value) observer.observe(sentinel.value);
+  if (sentinel.value) {
+    observer.observe(sentinel.value);
+  }
 });
 
 onUnmounted(() => {

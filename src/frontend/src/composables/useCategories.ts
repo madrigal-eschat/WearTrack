@@ -22,13 +22,17 @@ const categories = ref<Category[]>([]);
 
 async function loadCategories(): Promise<void> {
   const res = await apiFetch('/api/categories');
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
   categories.value = await res.json();
 }
 
 async function loadCategoryStats(id: number): Promise<CategoryStats> {
   const res = await apiFetch(`/api/categories/${id}/stats`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
   return res.json();
 }
 
@@ -62,13 +66,17 @@ async function updateCategory(
   }
   const updated: Category = await res.json();
   const idx = categories.value.findIndex((c) => c.id === id);
-  if (idx !== -1) categories.value[idx] = updated;
+  if (idx !== -1) {
+    categories.value[idx] = updated;
+  }
   return updated;
 }
 
 async function deleteCategory(id: number): Promise<void> {
   const res = await apiFetch(`/api/categories/${id}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
   categories.value = categories.value.filter((c) => c.id !== id);
 }
 

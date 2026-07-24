@@ -11,8 +11,14 @@ export function formatDuration(seconds: number): string {
   const plural = (n: number, unit: string) =>
     `${n} ${unit}${n === 1 ? '' : 's'}`;
 
-  if (s >= 86400) return plural(Math.round(s / 86400), 'day');
-  if (s >= 3600) return plural(Math.round(s / 3600), 'hour');
-  if (s >= 60) return plural(Math.round(s / 60), 'minute');
+  if (s >= 86400) {
+    return plural(Math.round(s / 86400), 'day');
+  }
+  if (s >= 3600) {
+    return plural(Math.round(s / 3600), 'hour');
+  }
+  if (s >= 60) {
+    return plural(Math.round(s / 60), 'minute');
+  }
   return plural(s, 'second');
 }

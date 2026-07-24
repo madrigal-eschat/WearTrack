@@ -22,12 +22,18 @@ export function useNotifications() {
   let cachedPublicKey: string | null = null;
 
   async function init() {
-    if (!isSupported) return;
+    if (!isSupported) {
+      return;
+    }
     permission.value = Notification.permission;
     const res = await apiFetch('/api/notifications/vapid-public-key');
-    if (!res.ok) return;
+    if (!res.ok) {
+      return;
+    }
     const { publicKey } = (await res.json()) as { publicKey: string | null };
-    if (!publicKey) return;
+    if (!publicKey) {
+      return;
+    }
     cachedPublicKey = publicKey;
     isConfigured.value = true;
     const reg = await navigator.serviceWorker.ready;
@@ -36,10 +42,14 @@ export function useNotifications() {
   }
 
   async function enable(): Promise<void> {
-    if (!isSupported || !isConfigured.value || !cachedPublicKey) return;
+    if (!isSupported || !isConfigured.value || !cachedPublicKey) {
+      return;
+    }
     const perm = await Notification.requestPermission();
     permission.value = perm;
-    if (perm !== 'granted') return;
+    if (perm !== 'granted') {
+      return;
+    }
     const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
@@ -50,15 +60,21 @@ export function useNotifications() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(sub.toJSON()),
     });
-    if (res.ok) isSubscribed.value = true;
+    if (res.ok) {
+      isSubscribed.value = true;
+    }
   }
 
   async function disable(): Promise<void> {
-    if (!isSupported) return;
+    if (!isSupported) {
+      return;
+    }
     try {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
-      if (sub) await sub.unsubscribe();
+      if (sub) {
+        await sub.unsubscribe();
+      }
     } catch {
       // Proceed to delete server-side subscription regardless
     }
@@ -66,7 +82,9 @@ export function useNotifications() {
     isSubscribed.value = false;
   }
 
-  onMounted(() => { void init(); });
+  onMounted(() => {
+    void init();
+  });
 
   return {
     isSupported,

@@ -130,7 +130,9 @@ onMounted(async () => {
 
 function onToggleEdit(item: Item) {
   editingItemId.value = editingItemId.value === item.id ? null : item.id;
-  if (editingItemId.value !== null) showItemForm.value = false;
+  if (editingItemId.value !== null) {
+    showItemForm.value = false;
+  }
 }
 
 interface ItemFormData {

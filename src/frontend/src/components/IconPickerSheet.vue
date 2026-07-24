@@ -160,11 +160,15 @@ function scrollToCategory(cat: string) {
 
 function setupObserver() {
   observer?.disconnect();
-  if (!gridEl.value) return;
+  if (!gridEl.value) {
+    return;
+  }
   observer = new IntersectionObserver(
     (entries) => {
       const visible = entries.filter((e) => e.isIntersecting);
-      if (!visible.length) return;
+      if (!visible.length) {
+        return;
+      }
       visible.sort(
         (a, b) => a.boundingClientRect.top - b.boundingClientRect.top,
       );
@@ -182,7 +186,9 @@ function setupObserver() {
     },
   );
   for (const el of Object.values(headingEls)) {
-    if (el) observer.observe(el);
+    if (el) {
+      observer.observe(el);
+    }
   }
 }
 
@@ -196,8 +202,12 @@ watch(
       observer = null;
       // Clear element maps — pills may not fire null-ref callbacks if
       // hidden when sheet closes
-      for (const key of Object.keys(headingEls)) headingEls[key] = null;
-      for (const key of Object.keys(pillEls)) pillEls[key] = null;
+      for (const key of Object.keys(headingEls)) {
+        headingEls[key] = null;
+      }
+      for (const key of Object.keys(pillEls)) {
+        pillEls[key] = null;
+      }
     } else {
       nextTick(() => setupObserver());
     }

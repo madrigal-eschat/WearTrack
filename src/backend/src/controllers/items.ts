@@ -8,28 +8,33 @@ export const router = new Hono();
 
 // Helper validation functions for PATCH /:id
 function validateName(value: unknown): string {
-  if (typeof value !== 'string')
+  if (typeof value !== 'string') {
     throw new ValidationError('name must be a string');
+  }
   return value;
 }
 
 function validateCategoryId(value: unknown): number {
-  if (typeof value !== 'number')
+  if (typeof value !== 'number') {
     throw new ValidationError('category_id must be a number');
-  if (!categoryStore.find(value))
+  }
+  if (!categoryStore.find(value)) {
     throw new ValidationError(`Category ${value} does not exist`);
+  }
   return value;
 }
 
 function validateColor(value: unknown): string {
-  if (typeof value !== 'string')
+  if (typeof value !== 'string') {
     throw new ValidationError('color must be a string');
+  }
   return value;
 }
 
 function validateDifficultyMultiplier(value: unknown): number {
-  if (typeof value !== 'number')
+  if (typeof value !== 'number') {
     throw new ValidationError('difficulty_multiplier must be a number');
+  }
   return value;
 }
 
@@ -37,14 +42,20 @@ function buildUpdates(
   body: Record<string, unknown>,
 ): Parameters<typeof itemStore.update>[1] {
   const updates: Parameters<typeof itemStore.update>[1] = {};
-  if ('name' in body) updates.name = validateName(body.name);
-  if ('category_id' in body)
+  if ('name' in body) {
+    updates.name = validateName(body.name);
+  }
+  if ('category_id' in body) {
     updates.category_id = validateCategoryId(body.category_id);
-  if ('color' in body) updates.color = validateColor(body.color);
-  if ('difficulty_multiplier' in body)
+  }
+  if ('color' in body) {
+    updates.color = validateColor(body.color);
+  }
+  if ('difficulty_multiplier' in body) {
     updates.difficulty_multiplier = validateDifficultyMultiplier(
       body.difficulty_multiplier,
     );
+  }
   return updates;
 }
 
@@ -62,7 +73,9 @@ router.get('/', (c) => {
 // avoid shadowing
 router.get('/:id/stats/history', (c) => {
   const id = Number(c.req.param('id'));
-  if (!itemStore.find(id)) throw new NotFoundError(`Item ${id} not found`);
+  if (!itemStore.find(id)) {
+    throw new NotFoundError(`Item ${id} not found`);
+  }
 
   const unit = c.req.query('unit') ?? 'month';
   if (unit !== 'month' && unit !== 'week') {
@@ -75,7 +88,9 @@ router.get('/:id/stats/history', (c) => {
 // GET /api/items/:id/stats — must be before /:id to avoid shadowing
 router.get('/:id/stats', (c) => {
   const id = Number(c.req.param('id'));
-  if (!itemStore.find(id)) throw new NotFoundError(`Item ${id} not found`);
+  if (!itemStore.find(id)) {
+    throw new NotFoundError(`Item ${id} not found`);
+  }
 
   const stats = statsStore.findForItem(id);
   return c.json(
@@ -92,7 +107,9 @@ router.get('/:id/stats', (c) => {
 router.get('/:id', (c) => {
   const id = Number(c.req.param('id'));
   const item = itemStore.find(id);
-  if (!item) throw new NotFoundError(`Item ${id} not found`);
+  if (!item) {
+    throw new NotFoundError(`Item ${id} not found`);
+  }
   return c.json(item);
 });
 
@@ -101,12 +118,15 @@ router.post('/', async (c) => {
   const body = await c.req.json();
   const { name, category_id, color, difficulty_multiplier } = body;
 
-  if (!name || typeof name !== 'string')
+  if (!name || typeof name !== 'string') {
     throw new ValidationError('name is required');
-  if (typeof category_id !== 'number')
+  }
+  if (typeof category_id !== 'number') {
     throw new ValidationError('category_id must be a number');
-  if (!color || typeof color !== 'string')
+  }
+  if (!color || typeof color !== 'string') {
     throw new ValidationError('color is required');
+  }
 
   if (!categoryStore.find(category_id)) {
     throw new ValidationError(`Category ${category_id} does not exist`);
@@ -130,7 +150,9 @@ router.post('/', async (c) => {
 router.patch('/:id', async (c) => {
   const id = Number(c.req.param('id'));
   const existing = itemStore.find(id);
-  if (!existing) throw new NotFoundError(`Item ${id} not found`);
+  if (!existing) {
+    throw new NotFoundError(`Item ${id} not found`);
+  }
 
   const body = await c.req.json();
   const updates = buildUpdates(body);
@@ -146,7 +168,9 @@ router.patch('/:id', async (c) => {
 router.delete('/:id', (c) => {
   const id = Number(c.req.param('id'));
   const existing = itemStore.find(id);
-  if (!existing) throw new NotFoundError(`Item ${id} not found`);
+  if (!existing) {
+    throw new NotFoundError(`Item ${id} not found`);
+  }
   itemStore.delete(id);
   return c.body(null, 204);
 });

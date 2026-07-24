@@ -32,13 +32,17 @@ async function loadItems(categoryId?: number): Promise<void> {
       ? `/api/items?category_id=${categoryId}`
       : '/api/items';
   const res = await apiFetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
   items.value = await res.json();
 }
 
 async function loadItemStats(id: number): Promise<ItemStats> {
   const res = await apiFetch(`/api/items/${id}/stats`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
   return res.json();
 }
 
@@ -47,7 +51,9 @@ async function loadHistory(
   unit: 'month' | 'week' = 'month',
 ): Promise<HistoryEntry[]> {
   const res = await apiFetch(`/api/items/${id}/stats/history?unit=${unit}`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
   return res.json();
 }
 
@@ -78,13 +84,17 @@ async function updateItem(id: number, data: ItemUpdate): Promise<Item> {
   }
   const updated: Item = await res.json();
   const idx = items.value.findIndex((i) => i.id === id);
-  if (idx !== -1) items.value[idx] = updated;
+  if (idx !== -1) {
+    items.value[idx] = updated;
+  }
   return updated;
 }
 
 async function deleteItem(id: number): Promise<void> {
   const res = await apiFetch(`/api/items/${id}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
   items.value = items.value.filter((i) => i.id !== id);
 }
 

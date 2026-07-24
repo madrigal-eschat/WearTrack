@@ -12,7 +12,9 @@ export function useNow(): Ref<number> {
   });
 
   onUnmounted(() => {
-    if (timer !== null) clearInterval(timer);
+    if (timer !== null) {
+      clearInterval(timer);
+    }
   });
 
   return now;

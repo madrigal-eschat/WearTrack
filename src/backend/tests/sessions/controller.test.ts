@@ -811,8 +811,9 @@ describe('session_day_index population', () => {
     const active = injury.find(
       (i: { healed_at: number | null }) => i.healed_at === null,
     );
-    if (active)
+    if (active) {
       await app.request(`${INJURIES}/${active.id}/heal`, { method: 'POST' });
+    }
   });
 });
 

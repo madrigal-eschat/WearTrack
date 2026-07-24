@@ -19,7 +19,9 @@ function publishEvent(
   payload: unknown,
 ): void {
   const config = mqttConfigStore.get();
-  if (!config.enabled) return;
+  if (!config.enabled) {
+    return;
+  }
   const slug = slugify(categoryName);
   publish(`${config.topic_prefix}/${slug}/${event}`, payload, {
     retain: false,

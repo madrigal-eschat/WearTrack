@@ -70,7 +70,9 @@ const router = useRouter();
 const { needsRefresh } = useVersionCheck();
 
 function navigate(path: string): void {
-  if (needsRefresh.value) { window.location.reload(); return; }
+  if (needsRefresh.value) {
+    window.location.reload(); return;
+  }
   void router.push(path);
 }
 </script>

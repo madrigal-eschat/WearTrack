@@ -111,7 +111,9 @@ onMounted(async () => {
 
 function onToggleAddForm() {
   showCatForm.value = !showCatForm.value;
-  if (showCatForm.value) editingCategoryId.value = null;
+  if (showCatForm.value) {
+    editingCategoryId.value = null;
+  }
 }
 
 function onToggleEdit(id: number) {

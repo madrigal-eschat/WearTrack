@@ -21,7 +21,9 @@ router.get('/', (c) => {
 router.get('/:id', (c) => {
   const id = Number(c.req.param('id'));
   const injury = injuryStore.find(id);
-  if (!injury) throw new NotFoundError(`Injury ${id} not found`);
+  if (!injury) {
+    throw new NotFoundError(`Injury ${id} not found`);
+  }
   return c.json(injury);
 });
 
@@ -34,11 +36,14 @@ router.post('/', async (c) => {
   const body = await c.req.json();
   const { item_id, wear_seconds } = body;
 
-  if (typeof item_id !== 'number')
+  if (typeof item_id !== 'number') {
     throw new ValidationError('item_id must be a number');
+  }
 
   const item = itemStore.find(item_id);
-  if (!item) throw new NotFoundError(`Item ${item_id} not found`);
+  if (!item) {
+    throw new NotFoundError(`Item ${item_id} not found`);
+  }
 
   if (injuryStore.hasActive(item_id)) {
     throw new ValidationError(`Item ${item_id} already has an active injury`);
@@ -74,9 +79,12 @@ router.post('/', async (c) => {
 router.post('/:id/heal', (c) => {
   const id = Number(c.req.param('id'));
   const injury = injuryStore.find(id);
-  if (!injury) throw new NotFoundError(`Injury ${id} not found`);
-  if (injury.healed_at !== null)
+  if (!injury) {
+    throw new NotFoundError(`Injury ${id} not found`);
+  }
+  if (injury.healed_at !== null) {
     throw new ValidationError(`Injury ${id} is already healed`);
+  }
 
   injuryStore.heal(injury.item_id);
 

@@ -69,9 +69,13 @@ async function notify<E extends Exclude<EventName, 'poller_tick'>>(
   payload: EventPayloads[E],
 ): Promise<void> {
   const subscription = notificationStore.getSubscription();
-  if (!subscription) return;
+  if (!subscription) {
+    return;
+  }
   const copy = copyFor(event, payload);
-  if (!copy) return;
+  if (!copy) {
+    return;
+  }
   try {
     await send(subscription, {
       title: copy.title,
@@ -104,7 +108,9 @@ export function startScheduler(): void {
   // Guard against double-registration: a second call would attach a
   // duplicate set of eventBus listeners and cause every notification to
   // be sent twice.
-  if (started) return;
+  if (started) {
+    return;
+  }
   started = true;
   for (const event of NOTIFICATION_EVENTS) {
     eventBus.on(event, (payload) => {

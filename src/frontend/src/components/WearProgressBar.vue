@@ -64,8 +64,12 @@ const props = withDefaults(
 );
 
 const barColor = computed(() => {
-  if (props.mode === 'rest') return '#d1d5db';
-  if (props.mode === 'decay') return '#111827';
+  if (props.mode === 'rest') {
+    return '#d1d5db';
+  }
+  if (props.mode === 'decay') {
+    return '#111827';
+  }
   return props.color;
 });
 
@@ -79,7 +83,9 @@ const SPARKLE_COUNTS = [0, 0, 6, 20, 28];
 function generateSparkles(
   n: number,
 ): { left: number; top: number; delay: number }[] {
-  if (n === 0) return [];
+  if (n === 0) {
+    return [];
+  }
   const tops = [0, 15, 30, 45, 60];
   return Array.from({ length: n }, (_, i) => ({
     left: Math.round(i * (96 / (n - 1)) * 10) / 10,

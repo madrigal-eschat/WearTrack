@@ -17,8 +17,9 @@ router.get('/', (c) => {
 // GET /api/categories/:id/stats — must be before /:id to avoid shadowing
 router.get('/:id/stats', (c) => {
   const id = Number(c.req.param('id'));
-  if (!categoryStore.find(id))
+  if (!categoryStore.find(id)) {
     throw new NotFoundError(`Category ${id} not found`);
+  }
 
   const stats = statsStore.findForCategory(id);
   return c.json(
@@ -40,7 +41,9 @@ router.get('/:id/stats', (c) => {
 router.get('/:id', (c) => {
   const id = Number(c.req.param('id'));
   const category = categoryStore.find(id);
-  if (!category) throw new NotFoundError(`Category ${id} not found`);
+  if (!category) {
+    throw new NotFoundError(`Category ${id} not found`);
+  }
   return c.json(category);
 });
 
@@ -55,7 +58,9 @@ router.post('/', async (c) => {
 router.patch('/:id', async (c) => {
   const id = Number(c.req.param('id'));
   const existing = categoryStore.find(id);
-  if (!existing) throw new NotFoundError(`Category ${id} not found`);
+  if (!existing) {
+    throw new NotFoundError(`Category ${id} not found`);
+  }
 
   const body = await c.req.json();
   const category = new UpdateCategoryCommand(existing, body).run();
@@ -66,7 +71,9 @@ router.patch('/:id', async (c) => {
 router.delete('/:id', (c) => {
   const id = Number(c.req.param('id'));
   const existing = categoryStore.find(id);
-  if (!existing) throw new NotFoundError(`Category ${id} not found`);
+  if (!existing) {
+    throw new NotFoundError(`Category ${id} not found`);
+  }
   categoryStore.delete(id);
   return c.body(null, 204);
 });

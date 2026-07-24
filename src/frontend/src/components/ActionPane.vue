@@ -245,7 +245,9 @@ async function loadRecentSessions(categoryId: number) {
   const res = await apiFetch(
     `/api/sessions?category_id=${categoryId}&limit=20`,
   );
-  if (!res.ok) return;
+  if (!res.ok) {
+    return;
+  }
   const sessions: { item_id: number }[] = await res.json();
   // already newest-first per session-store.findAll ORDER BY started_at DESC
   recentSessionsByCategory[categoryId] = sessions;
@@ -256,23 +258,33 @@ async function loadRecentSessions(categoryId: number) {
  * (newest first).
  */
 function trailingRunLength(sessions: { item_id: number }[]): number {
-  if (sessions.length === 0) return 0;
+  if (sessions.length === 0) {
+    return 0;
+  }
   const mostRecent = sessions[0].item_id;
   let count = 0;
   for (const s of sessions) {
-    if (s.item_id !== mostRecent) break;
+    if (s.item_id !== mostRecent) {
+      break;
+    }
     count++;
   }
   return count;
 }
 
 function forcedItemId(entry: CurrentEntry): number | null {
-  if (entry.category.type !== 'rotation') return null;
+  if (entry.category.type !== 'rotation') {
+    return null;
+  }
   const sessions = recentSessionsByCategory[entry.category.id];
-  if (!sessions || sessions.length === 0) return null;
+  if (!sessions || sessions.length === 0) {
+    return null;
+  }
   const mostRecent = sessions[0].item_id;
   const runLength = trailingRunLength(sessions);
-  if (runLength < entry.category.consecutive_wear_days) return mostRecent;
+  if (runLength < entry.category.consecutive_wear_days) {
+    return mostRecent;
+  }
   return null;
 }
 
@@ -282,7 +294,9 @@ function isLocked(entry: CurrentEntry): boolean {
 
 function forcedItemName(entry: CurrentEntry): string {
   const id = forcedItemId(entry);
-  if (id === null) return '';
+  if (id === null) {
+    return '';
+  }
   return (
     itemsForCategory(entry.category.id).find((i) => i.id === id)?.name ?? ''
   );
@@ -342,11 +356,16 @@ function onWearClick(entry: CurrentEntry) {
   if (isLocked(entry)) {
     if (restRemainingSeconds(entry, forcedItemId(entry)) > 0) {
       showRestWarning(entry);
-    } else onWear(entry, forcedItemId(entry) ?? undefined);
+    } else {
+      onWear(entry, forcedItemId(entry) ?? undefined);
+    }
     return;
   }
-  if (restRemainingSeconds(entry) > 0) showRestWarning(entry);
-  else onWear(entry);
+  if (restRemainingSeconds(entry) > 0) {
+    showRestWarning(entry);
+  } else {
+    onWear(entry);
+  }
 }
 
 onMounted(async () => {
@@ -371,19 +390,25 @@ function elapsed(session: Session): string {
 
 /** Denominator for the bar: max when set, else target. */
 function barCeiling(entry: CurrentEntry): number {
-  if (!entry.session) return 0;
+  if (!entry.session) {
+    return 0;
+  }
   const max = maxWearSeconds(entry.session);
   return max ?? targetWearSeconds(entry.session);
 }
 
 function maxWear(entry: CurrentEntry): string {
-  if (!entry.session) return '';
+  if (!entry.session) {
+    return '';
+  }
   const max = maxWearSeconds(entry.session);
   return max === null ? '—' : formatDuration(max);
 }
 
 function targetLabel(entry: CurrentEntry): string {
-  if (!entry.session) return '';
+  if (!entry.session) {
+    return '';
+  }
   return formatDuration(targetWearSeconds(entry.session));
 }
 
@@ -392,18 +417,26 @@ function remainingSecondsFor(session: Session): number | null {
 }
 
 function remainingLabel(entry: CurrentEntry): string {
-  if (!entry.session) return '';
+  if (!entry.session) {
+    return '';
+  }
   const remaining = remainingSecondsFor(entry.session);
-  if (remaining !== null) return formatDuration(remaining);
+  if (remaining !== null) {
+    return formatDuration(remaining);
+  }
   return maxWearSeconds(entry.session) === null
     ? 'Target reached'
     : 'Overdue';
 }
 
 function isOverdue(entry: CurrentEntry): boolean {
-  if (!entry.session) return false;
+  if (!entry.session) {
+    return false;
+  }
   const max = maxWearSeconds(entry.session);
-  if (max === null) return false;
+  if (max === null) {
+    return false;
+  }
   return sessionSeconds(entry.session) >= max;
 }
 
@@ -412,12 +445,18 @@ function isOverdue(entry: CurrentEntry): boolean {
  * seconds (lap mechanic).
  */
 function barFillFraction(entry: CurrentEntry): number {
-  if (!entry.session) return 0;
+  if (!entry.session) {
+    return 0;
+  }
   const max = maxWearSeconds(entry.session);
   const target = targetWearSeconds(entry.session);
   const elapsed = sessionSeconds(entry.session);
-  if (max === null) return lapFillFraction(elapsed, target);
-  if (max <= 0) return 0;
+  if (max === null) {
+    return lapFillFraction(elapsed, target);
+  }
+  if (max <= 0) {
+    return 0;
+  }
   return Math.min(elapsed / max, 1);
 }
 
@@ -426,16 +465,24 @@ function barFillFraction(entry: CurrentEntry): number {
  * (wrap mode has no fixed marker).
  */
 function targetMarkerFraction(entry: CurrentEntry): number | null {
-  if (!entry.session) return null;
+  if (!entry.session) {
+    return null;
+  }
   const max = maxWearSeconds(entry.session);
-  if (max === null || max <= 0) return null;
+  if (max === null || max <= 0) {
+    return null;
+  }
   return Math.min(targetWearSeconds(entry.session) / max, 1);
 }
 
 /** Completed laps this session (null-max categories only; 0 otherwise). */
 function lapCountFor(entry: CurrentEntry): number {
-  if (!entry.session) return 0;
-  if (maxWearSeconds(entry.session) !== null) return 0;
+  if (!entry.session) {
+    return 0;
+  }
+  if (maxWearSeconds(entry.session) !== null) {
+    return 0;
+  }
   return lapCount(
     sessionSeconds(entry.session),
     targetWearSeconds(entry.session),
@@ -443,15 +490,27 @@ function lapCountFor(entry: CurrentEntry): number {
 }
 
 function rowBg(entry: CurrentEntry): string {
-  if (!entry.session) return '';
+  if (!entry.session) {
+    return '';
+  }
   const max = maxWearSeconds(entry.session);
-  if (max === null) return '';
+  if (max === null) {
+    return '';
+  }
   const ceiling = barCeiling(entry);
-  if (ceiling <= 0) return '';
+  if (ceiling <= 0) {
+    return '';
+  }
   const remaining = 1 - sessionSeconds(entry.session) / ceiling;
-  if (remaining <= 0) return 'bg-red-100';
-  if (remaining <= 0.05) return 'bg-orange-100';
-  if (remaining <= 0.10) return 'bg-yellow-100';
+  if (remaining <= 0) {
+    return 'bg-red-100';
+  }
+  if (remaining <= 0.05) {
+    return 'bg-orange-100';
+  }
+  if (remaining <= 0.10) {
+    return 'bg-yellow-100';
+  }
   return '';
 }
 
@@ -464,7 +523,9 @@ function selectedItemData(
   itemIdOverride?: number | null,
 ): ItemWithLastSession | null {
   const id = itemIdOverride ?? selectedItem[entry.category.id];
-  if (!id) return null;
+  if (!id) {
+    return null;
+  }
   return entry.items.find((i) => i.item_id === id) ?? null;
 }
 
@@ -481,7 +542,9 @@ function idleMax(
   itemIdOverride?: number | null,
 ): string {
   const item = selectedItemData(entry, itemIdOverride);
-  if (!item || item.expected_max === null) return '';
+  if (!item || item.expected_max === null) {
+    return '';
+  }
   return formatDuration(item.expected_max);
 }
 
@@ -490,7 +553,9 @@ function restRemainingSeconds(
   itemIdOverride?: number | null,
 ): number {
   const item = selectedItemData(entry, itemIdOverride);
-  if (!item || item.ended_at === null || item.rest_seconds === null) return 0;
+  if (!item || item.ended_at === null || item.rest_seconds === null) {
+    return 0;
+  }
   return Math.max(
     0,
     Math.ceil(item.ended_at + item.rest_seconds - now.value / 1000),
@@ -503,14 +568,20 @@ function restTotalSeconds(entry: CurrentEntry): number {
 }
 
 function dailyRestRemainingSeconds(entry: CurrentEntry): number {
-  if (entry.resting_until === null) return 0;
+  if (entry.resting_until === null) {
+    return 0;
+  }
   return Math.max(0, entry.resting_until - Math.floor(now.value / 1000));
 }
 
 function dailyRestTotalSeconds(entry: CurrentEntry): number {
-  if (entry.resting_until === null) return 0;
+  if (entry.resting_until === null) {
+    return 0;
+  }
   const sessionStart = entry.items[0]?.started_at;
-  if (sessionStart === null || sessionStart === undefined) return 0;
+  if (sessionStart === null || sessionStart === undefined) {
+    return 0;
+  }
   return Math.max(0, entry.resting_until - sessionStart);
 }
 
@@ -550,7 +621,9 @@ function decayFillFractionFor(entry: CurrentEntry): number {
 }
 
 function decayTimeLeftLabel(entry: CurrentEntry): string {
-  if (entry.decay_full_time === null) return '';
+  if (entry.decay_full_time === null) {
+    return '';
+  }
   return shortDuration(
     decayTimeLeft(Math.floor(now.value / 1000), entry.decay_full_time),
   );
@@ -567,7 +640,9 @@ function formatDecayDate(unixSeconds: number): string {
 
 async function onWear(entry: CurrentEntry, itemIdOverride?: number) {
   const itemId = itemIdOverride ?? selectedItem[entry.category.id];
-  if (!itemId) return;
+  if (!itemId) {
+    return;
+  }
   try {
     await startSession(itemId);
     if (entry.category.type === 'rotation') {
@@ -580,7 +655,9 @@ async function onWear(entry: CurrentEntry, itemIdOverride?: number) {
 }
 
 async function onStop(entry: CurrentEntry) {
-  if (!entry.session) return;
+  if (!entry.session) {
+    return;
+  }
   try {
     await endSession(entry.session.id);
     if (entry.category.type === 'rotation') {

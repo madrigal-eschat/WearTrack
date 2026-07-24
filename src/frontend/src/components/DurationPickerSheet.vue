@@ -149,14 +149,22 @@ const drag = {
 };
 
 function colEl(col: Col): HTMLElement | null {
-  if (col === 'days')    return daysEl.value;
-  if (col === 'hours')   return hoursEl.value;
+  if (col === 'days')    {
+    return daysEl.value;
+  }
+  if (col === 'hours')   {
+    return hoursEl.value;
+  }
   return minutesEl.value;
 }
 
 function colCount(col: Col): number {
-  if (col === 'days')  return DAY_COUNT;
-  if (col === 'hours') return HOUR_COUNT;
+  if (col === 'days')  {
+    return DAY_COUNT;
+  }
+  if (col === 'hours') {
+    return HOUR_COUNT;
+  }
   return MIN_COUNT;
 }
 
@@ -195,21 +203,33 @@ function initScroll() {
   curHours.value   = h;
   curMinutes.value = m;
   nextTick(() => {
-    if (daysEl.value)    daysEl.value.scrollTop    = (DAY_COUNT  + d) * ITEM_H;
-    if (hoursEl.value)   hoursEl.value.scrollTop   = (HOUR_COUNT + h) * ITEM_H;
-    if (minutesEl.value) minutesEl.value.scrollTop = (MIN_COUNT  + m) * ITEM_H;
+    if (daysEl.value)    {
+      daysEl.value.scrollTop    = (DAY_COUNT  + d) * ITEM_H;
+    }
+    if (hoursEl.value)   {
+      hoursEl.value.scrollTop   = (HOUR_COUNT + h) * ITEM_H;
+    }
+    if (minutesEl.value) {
+      minutesEl.value.scrollTop = (MIN_COUNT  + m) * ITEM_H;
+    }
   });
 }
 
 function doWrap(col: Col) {
   const el = colEl(col);
   const count = colCount(col);
-  if (!el) return;
+  if (!el) {
+    return;
+  }
   const index = Math.round(el.scrollTop / ITEM_H);
   const value = ((index % count) + count) % count;
-  if (col === 'days')    curDays.value    = value;
-  else if (col === 'hours')   curHours.value   = value;
-  else                        curMinutes.value = value;
+  if (col === 'days')    {
+    curDays.value    = value;
+  } else if (col === 'hours')   {
+    curHours.value   = value;
+  } else                        {
+    curMinutes.value = value;
+  }
   if (index < count || index >= count * 2) {
     // Out of the middle third: jump by a whole period (instant, invisible —
     // the same value stays centred) to keep the infinite loop going.
@@ -233,16 +253,24 @@ function onScroll(col: Col) {
 // ── Mouse drag-to-scroll ───────────────────────────────────────────────
 
 function onDragMove(e: MouseEvent) {
-  if (!drag.active) return;
+  if (!drag.active) {
+    return;
+  }
   const el = colEl(drag.col);
-  if (!el) return;
+  if (!el) {
+    return;
+  }
   const dy = drag.startY - e.clientY;
-  if (Math.abs(dy) > 3) drag.moved = true;
+  if (Math.abs(dy) > 3) {
+    drag.moved = true;
+  }
   el.scrollTop = drag.startScrollTop + dy;
   // Track instantaneous velocity for the release flick.
   const now = performance.now();
   const dt = now - drag.lastT;
-  if (dt > 0) drag.velocity = (drag.lastY - e.clientY) / dt;
+  if (dt > 0) {
+    drag.velocity = (drag.lastY - e.clientY) / dt;
+  }
   drag.lastY = e.clientY;
   drag.lastT = now;
   e.preventDefault();
@@ -267,7 +295,9 @@ function onDragEnd() {
 
 function onColumnMouseDown(col: Col, e: MouseEvent) {
   const el = colEl(col);
-  if (!el) return;
+  if (!el) {
+    return;
+  }
   drag.active = true;
   drag.col = col;
   drag.startY = e.clientY;
@@ -287,9 +317,13 @@ function onColumnMouseDown(col: Col, e: MouseEvent) {
 // ── Click-to-select ────────────────────────────────────────────────────
 
 function onItemClick(col: Col, e: MouseEvent) {
-  if (drag.moved) return;
+  if (drag.moved) {
+    return;
+  }
   const el = colEl(col);
-  if (!el) return;
+  if (!el) {
+    return;
+  }
   const item = e.currentTarget as HTMLElement;
   const containerRect = el.getBoundingClientRect();
   const itemRect = item.getBoundingClientRect();

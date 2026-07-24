@@ -11,7 +11,9 @@ test.describe('Category management', () => {
   });
 
   test.afterEach(async ({ page }) => {
-    if (!createdName) return;
+    if (!createdName) {
+      return;
+    }
     // Clean up any category this test created.
     await page.goto('/items');
     const row = page.locator('li').filter({ hasText: createdName }).first();
@@ -128,7 +130,9 @@ test.describe('Category management', () => {
       const el = document.querySelector(
         '[data-testid="hours-col"]',
       ) as HTMLElement | null;
-      if (!el) return false;
+      if (!el) {
+        return false;
+      }
       return el.scrollTop >= 24 * 44 && el.scrollTop < 2 * 24 * 44;
     }, { timeout: 2000 });
 

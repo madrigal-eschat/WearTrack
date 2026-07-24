@@ -6,7 +6,9 @@ import { slugify } from './events.js';
 
 function publishDiscovery(): void {
   const config = mqttConfigStore.get();
-  if (!config.enabled || !config.ha_discovery_enabled) return;
+  if (!config.enabled || !config.ha_discovery_enabled) {
+    return;
+  }
 
   for (const category of categoryStore.findAll()) {
     const slug = slugify(category.name);

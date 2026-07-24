@@ -44,7 +44,9 @@ async function loadLeaderboard(type: LeaderboardType): Promise<void> {
   loading.value = true;
   try {
     const res = await apiFetch(`/api/leaderboards/${type}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
     leaderboard.value = await res.json();
     activeType.value = type;
   } finally {
