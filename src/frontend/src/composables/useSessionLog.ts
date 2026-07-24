@@ -32,14 +32,18 @@ function buildQuery(before?: number): string {
   if (itemFilter.value !== null) {
     params.set('item_id', String(itemFilter.value));
   }
-  if (before !== undefined) params.set('before', String(before));
+  if (before !== undefined) {
+    params.set('before', String(before));
+  }
   params.set('limit', String(LIMIT));
   return params.toString();
 }
 
 async function fetchPage(before?: number): Promise<SessionLogEntry[]> {
   const res = await apiFetch(`/api/sessions?${buildQuery(before)}`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
   return res.json();
 }
 
@@ -55,7 +59,9 @@ async function loadInitial(before?: number): Promise<void> {
 }
 
 async function loadMore(): Promise<void> {
-  if (!hasMore.value || loading.value || sessions.value.length === 0) return;
+  if (!hasMore.value || loading.value || sessions.value.length === 0) {
+    return;
+  }
   loading.value = true;
   try {
     const last = sessions.value.at(-1)!;
@@ -132,9 +138,13 @@ async function deleteSession(session: SessionLogEntry): Promise<void> {
   const res = await apiFetch(`/api/sessions/${session.id}`, {
     method: 'DELETE',
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
   sessions.value = sessions.value.filter((s) => s.id !== session.id);
-  if (lastEdited.value?.sessionId === session.id) lastEdited.value = null;
+  if (lastEdited.value?.sessionId === session.id) {
+    lastEdited.value = null;
+  }
 }
 
 export function useSessionLog() {

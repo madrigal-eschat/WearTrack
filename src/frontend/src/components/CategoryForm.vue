@@ -236,7 +236,9 @@ function onDurationPicked(seconds: number) {
 }
 
 function addBand() {
-  if (catForm.bandCount >= 5) return;
+  if (catForm.bandCount >= 5) {
+    return;
+  }
   const last =
     catForm.crossoverPoints[catForm.crossoverPoints.length - 1] ?? 0;
   catForm.crossoverPoints.push(last + 3600);
@@ -244,13 +246,17 @@ function addBand() {
 }
 
 function removeBand() {
-  if (catForm.bandCount <= 1) return;
+  if (catForm.bandCount <= 1) {
+    return;
+  }
   catForm.crossoverPoints.pop();
   catForm.bandCount--;
 }
 
 function onSubmit() {
-  if (!catForm.name || !catForm.icon) return;
+  if (!catForm.name || !catForm.icon) {
+    return;
+  }
   emit('submit', {
     name: catForm.name,
     icon: catForm.icon,

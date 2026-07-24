@@ -5,7 +5,9 @@ import { apiFetch } from '../utils/apiFetch.js';
 export async function fetchVersion(): Promise<string | null> {
   try {
     const res = await apiFetch('/api/version');
-    if (!res.ok) return null;
+    if (!res.ok) {
+      return null;
+    }
     const { version } = await res.json() as { version: string };
     return version;
   } catch {
@@ -20,7 +22,9 @@ export function useVersionCheck(): { needsRefresh: Ref<boolean> } {
 
   async function check(): Promise<void> {
     const version = await fetchVersion();
-    if (version === null) return;
+    if (version === null) {
+      return;
+    }
     if (initialVersion === null) {
       initialVersion = version;
     } else if (version !== initialVersion) {
@@ -29,8 +33,12 @@ export function useVersionCheck(): { needsRefresh: Ref<boolean> } {
   }
 
   function startPolling(): void {
-    if (pollTimer !== null) return;
-    pollTimer = setInterval(() => { void check(); }, 30_000);
+    if (pollTimer !== null) {
+      return;
+    }
+    pollTimer = setInterval(() => {
+      void check();
+    }, 30_000);
   }
 
   function stopPolling(): void {

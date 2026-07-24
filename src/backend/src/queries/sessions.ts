@@ -87,8 +87,9 @@ export class CurrentSessionsQuery {
     );
     const itemsByCategory = new Map<number, ItemWithLastSession[]>();
     for (const item of allItems) {
-      if (!itemsByCategory.has(item.category_id))
+      if (!itemsByCategory.has(item.category_id)) {
         itemsByCategory.set(item.category_id, []);
+      }
       itemsByCategory.get(item.category_id)!.push(item);
     }
 

@@ -130,7 +130,9 @@ watch(
 );
 
 function onSubmit() {
-  if (!form.name || !form.category_id) return;
+  if (!form.name || !form.category_id) {
+    return;
+  }
   emit('submit', {
     name: form.name,
     color: form.color,

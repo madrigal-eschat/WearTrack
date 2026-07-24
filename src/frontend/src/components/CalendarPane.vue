@@ -97,8 +97,12 @@ function dayBadges(day: DayEntry): DayBadge[] {
   const badges: DayBadge[] = [];
   for (const session of day.sessions) {
     const item = items.value.find((i) => i.id === session.item_id);
-    if (!item) continue;
-    if (seen.has(item.category_id)) continue;
+    if (!item) {
+      continue;
+    }
+    if (seen.has(item.category_id)) {
+      continue;
+    }
     seen.add(item.category_id);
     const category = categories.value.find((c) => c.id === item.category_id);
     badges.push({

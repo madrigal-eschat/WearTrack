@@ -131,7 +131,9 @@ class StatsStore {
     const stats = db
       .prepare('SELECT * FROM category_stats WHERE category_id = ?')
       .get(categoryId) as CategoryStats | undefined;
-    if (!stats) return undefined;
+    if (!stats) {
+      return undefined;
+    }
     const { item_count } = db
       .prepare('SELECT COUNT(*) AS item_count FROM items WHERE category_id = ?')
       .get(categoryId) as { item_count: number };
@@ -158,7 +160,9 @@ class StatsStore {
     const stats = db
       .prepare('SELECT * FROM category_stats WHERE category_id = ?')
       .get(categoryId) as CategoryStats | undefined;
-    if (!stats) return;
+    if (!stats) {
+      return;
+    }
 
     const duration = session.ended_at - session.started_at;
 

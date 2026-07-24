@@ -129,11 +129,15 @@ void initMqtt();
 
 const mqttHost = computed({
   get: () => mqttConfig.value.host ?? '',
-  set: (v: string) => { mqttConfig.value.host = v === '' ? null : v; },
+  set: (v: string) => {
+    mqttConfig.value.host = v === '' ? null : v;
+  },
 });
 const mqttUsername = computed({
   get: () => mqttConfig.value.username ?? '',
-  set: (v: string) => { mqttConfig.value.username = v === '' ? null : v; },
+  set: (v: string) => {
+    mqttConfig.value.username = v === '' ? null : v;
+  },
 });
 
 const statusColor = computed(() => ({
