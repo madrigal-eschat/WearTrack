@@ -102,18 +102,18 @@ describe('PUT /api/mqtt/config', () => {
 
   it('leaves the stored password unchanged when password is explicitly null',
     async () => {
-    await app.request(`${MQTT}/config`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: 'secret' }),
+      await app.request(`${MQTT}/config`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: 'secret' }),
+      });
+      const res = await app.request(`${MQTT}/config`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: null }),
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.hasPassword).toBe(true);
     });
-    const res = await app.request(`${MQTT}/config`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: null }),
-    });
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.hasPassword).toBe(true);
-  });
 });

@@ -115,18 +115,18 @@ export class CurrentSessionsQuery {
       cat.type === 'duration'
         ? computeDecay(previous, cat, now)
         : {
-            decay_start_time: null,
-            decay_state: 'none' as const,
-            decay_full_time: null,
-          };
+          decay_start_time: null,
+          decay_state: 'none' as const,
+          decay_full_time: null,
+        };
     const streak_count = statsStore.findForCategory(cat.id)?.streak_count ?? 0;
 
     const rotationAvailableIds =
       cat.type === 'rotation'
         ? rotationAvailability(
-            itemStore.findAll(cat.id).map((i) => i.id),
-            sessionStore.findRecentInCategory(cat.id, 100),
-          )
+          itemStore.findAll(cat.id).map((i) => i.id),
+          sessionStore.findRecentInCategory(cat.id, 100),
+        )
         : new Set(categoryItems.map((i) => i.item_id));
 
     const restingUntil =
