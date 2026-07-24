@@ -1,5 +1,5 @@
-import mqtt, { type MqttClient } from 'mqtt';
-import { mqttConfigStore } from './config-store.js';
+import mqtt, { type MqttClient } from 'mqtt'
+import { mqttConfigStore } from './config-store.js'
 
 export type ConnectionStatus =
   'disconnected' | 'connecting' | 'connected' | 'error';
@@ -11,44 +11,44 @@ export interface ConnectConfig {
   password: string | null;
 }
 
-let client: MqttClient | null = null;
-let status: ConnectionStatus = 'disconnected';
+let client: MqttClient | null = null
+let status: ConnectionStatus = 'disconnected'
 
 export function getStatus(): ConnectionStatus {
-  return status;
+  return status
 }
 
 export function disconnect(): void {
   if (client) {
-    client.end(true);
-    client = null;
+    client.end(true)
+    client = null
   }
-  status = 'disconnected';
+  status = 'disconnected'
 }
 
 export function connect(config: ConnectConfig): void {
-  disconnect();
-  status = 'connecting';
+  disconnect()
+  status = 'connecting'
   const thisClient = mqtt.connect(`mqtt://${config.host}:${config.port}`, {
     username: config.username ?? undefined,
     password: config.password ?? undefined,
-  });
-  client = thisClient;
+  })
+  client = thisClient
   thisClient.on('connect', () => {
     if (client === thisClient) {
-      status = 'connected';
+      status = 'connected'
     }
-  });
+  })
   thisClient.on('close', () => {
     if (client === thisClient) {
-      status = 'disconnected';
+      status = 'disconnected'
     }
-  });
+  })
   thisClient.on('error', () => {
     if (client === thisClient) {
-      status = 'error';
+      status = 'error'
     }
-  });
+  })
 }
 
 export function publish(
@@ -57,28 +57,28 @@ export function publish(
   opts: { retain?: boolean } = {},
 ): void {
   if (!client) {
-    return;
+    return
   }
   client.publish(topic, JSON.stringify(payload), {
     qos: 0,
     retain: opts.retain ?? false,
-  });
+  })
 }
 
 export function reloadFromConfig(): void {
-  const config = mqttConfigStore.get();
+  const config = mqttConfigStore.get()
   if (config.enabled && config.host) {
     connect({
       host: config.host,
       port: config.port,
       username: config.username,
       password: config.password,
-    });
+    })
   } else {
-    disconnect();
+    disconnect()
   }
 }
 
 export function initMqtt(): void {
-  reloadFromConfig();
+  reloadFromConfig()
 }

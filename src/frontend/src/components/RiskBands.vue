@@ -56,20 +56,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { bandNamesForCount, bandColorsForCount } from '../utils/riskLevels.js';
-import { shortDuration } from '../utils/formatDuration.js';
+import { computed } from 'vue'
+import { bandNamesForCount, bandColorsForCount } from '../utils/riskLevels.js'
+import { shortDuration } from '../utils/formatDuration.js'
 
 const props = defineProps<{
   bandCount: number;
   crossoverPoints: number[];
-}>();
+}>()
 defineEmits<{
   'add-band': [];
   'remove-band': [];
   'edit-crossover': [index: number];
-}>();
+}>()
 
-const bandNames = computed(() => bandNamesForCount(props.bandCount));
-const bandColors = computed(() => bandColorsForCount(props.bandCount));
+const bandNames = computed(() => bandNamesForCount(props.bandCount))
+const bandColors = computed(() => bandColorsForCount(props.bandCount))
 </script>

@@ -71,20 +71,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { Icon } from '@iconify/vue';
-import { kList, kListItem, kButton, kBlock } from 'konsta/vue';
-import { useCategories } from '../composables/useCategories.js';
-import { useItems } from '../composables/useItems.js';
-import { useToast } from '../composables/useToast.js';
+import { ref, onMounted } from 'vue'
+import { Icon } from '@iconify/vue'
+import { kList, kListItem, kButton, kBlock } from 'konsta/vue'
+import { useCategories } from '../composables/useCategories.js'
+import { useItems } from '../composables/useItems.js'
+import { useToast } from '../composables/useToast.js'
 import {
   categoryToFormState,
   formStateToApiPayload,
-} from '../utils/categoryForm.js';
-import type { CategoryFormState } from './CategoryForm.vue';
-import FormSectionHeader from './FormSectionHeader.vue';
-import CategoryForm from './CategoryForm.vue';
-import DeleteButton from './DeleteButton.vue';
+} from '../utils/categoryForm.js'
+import type { CategoryFormState } from './CategoryForm.vue'
+import FormSectionHeader from './FormSectionHeader.vue'
+import CategoryForm from './CategoryForm.vue'
+import DeleteButton from './DeleteButton.vue'
 
 const {
   categories,
@@ -92,64 +92,64 @@ const {
   createCategory,
   updateCategory,
   deleteCategory,
-} = useCategories();
-const { loadItems } = useItems();
-const { showError } = useToast();
+} = useCategories()
+const { loadItems } = useItems()
+const { showError } = useToast()
 
-const loading = ref(true);
-const showCatForm = ref(false);
-const editingCategoryId = ref<number | null>(null);
+const loading = ref(true)
+const showCatForm = ref(false)
+const editingCategoryId = ref<number | null>(null)
 
 onMounted(async () => {
   try {
-    await loadCategories();
+    await loadCategories()
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-});
+})
 
 
 function onToggleAddForm() {
-  showCatForm.value = !showCatForm.value;
+  showCatForm.value = !showCatForm.value
   if (showCatForm.value) {
-    editingCategoryId.value = null;
+    editingCategoryId.value = null
   }
 }
 
 function onToggleEdit(id: number) {
   if (editingCategoryId.value === id) {
-    editingCategoryId.value = null;
+    editingCategoryId.value = null
   } else {
-    editingCategoryId.value = id;
-    showCatForm.value = false;
+    editingCategoryId.value = id
+    showCatForm.value = false
   }
 }
 
 async function onAddCategory(data: CategoryFormState) {
   try {
-    await createCategory(formStateToApiPayload(data));
-    showCatForm.value = false;
+    await createCategory(formStateToApiPayload(data))
+    showCatForm.value = false
   } catch (e) {
-    showError(String(e));
+    showError(String(e))
   }
 }
 
 async function onSaveCategory(id: number, data: CategoryFormState) {
   try {
-    await updateCategory(id, formStateToApiPayload(data));
-    editingCategoryId.value = null;
+    await updateCategory(id, formStateToApiPayload(data))
+    editingCategoryId.value = null
   } catch (e) {
-    showError(String(e));
+    showError(String(e))
   }
 }
 
 async function onConfirmDeleteCategory(id: number) {
   try {
-    await deleteCategory(id);
+    await deleteCategory(id)
   } catch (e) {
-    showError(String(e));
-    return;
+    showError(String(e))
+    return
   }
-  await loadItems().catch(() => {});
+  await loadItems().catch(() => {})
 }
 </script>

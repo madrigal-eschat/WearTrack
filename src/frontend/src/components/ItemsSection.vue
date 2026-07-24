@@ -93,18 +93,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { Icon } from '@iconify/vue';
-import { kList, kListItem, kButton } from 'konsta/vue';
-import { useItems } from '../composables/useItems.js';
-import type { Item } from '../composables/useWear.js';
-import { useCategories } from '../composables/useCategories.js';
-import { useToast } from '../composables/useToast.js';
-import ColorCircle from './ColorCircle.vue';
-import FormSectionHeader from './FormSectionHeader.vue';
-import SectionTitle from './SectionTitle.vue';
-import ItemForm from './ItemForm.vue';
-import DeleteButton from './DeleteButton.vue';
+import { ref, onMounted } from 'vue'
+import { Icon } from '@iconify/vue'
+import { kList, kListItem, kButton } from 'konsta/vue'
+import { useItems } from '../composables/useItems.js'
+import type { Item } from '../composables/useWear.js'
+import { useCategories } from '../composables/useCategories.js'
+import { useToast } from '../composables/useToast.js'
+import ColorCircle from './ColorCircle.vue'
+import FormSectionHeader from './FormSectionHeader.vue'
+import SectionTitle from './SectionTitle.vue'
+import ItemForm from './ItemForm.vue'
+import DeleteButton from './DeleteButton.vue'
 
 const {
   loadItems,
@@ -112,26 +112,26 @@ const {
   updateItem,
   deleteItem,
   itemsForCategory,
-} = useItems();
-const { categories } = useCategories();
-const { showError } = useToast();
+} = useItems()
+const { categories } = useCategories()
+const { showError } = useToast()
 
-const loading = ref(true);
-const showItemForm = ref(false);
-const editingItemId = ref<number | null>(null);
+const loading = ref(true)
+const showItemForm = ref(false)
+const editingItemId = ref<number | null>(null)
 
 onMounted(async () => {
   try {
-    await loadItems();
+    await loadItems()
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-});
+})
 
 function onToggleEdit(item: Item) {
-  editingItemId.value = editingItemId.value === item.id ? null : item.id;
+  editingItemId.value = editingItemId.value === item.id ? null : item.id
   if (editingItemId.value !== null) {
-    showItemForm.value = false;
+    showItemForm.value = false
   }
 }
 
@@ -144,27 +144,27 @@ interface ItemFormData {
 
 async function onAddItem(data: ItemFormData) {
   try {
-    await createItem(data);
-    showItemForm.value = false;
+    await createItem(data)
+    showItemForm.value = false
   } catch (e) {
-    showError(String(e));
+    showError(String(e))
   }
 }
 
 async function onSaveItem(id: number, data: ItemFormData) {
   try {
-    await updateItem(id, data);
-    editingItemId.value = null;
+    await updateItem(id, data)
+    editingItemId.value = null
   } catch (e) {
-    showError(String(e));
+    showError(String(e))
   }
 }
 
 async function onConfirmDeleteItem(id: number) {
   try {
-    await deleteItem(id);
+    await deleteItem(id)
   } catch (e) {
-    showError(String(e));
+    showError(String(e))
   }
 }
 </script>

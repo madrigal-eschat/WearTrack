@@ -37,9 +37,9 @@
 </template>
 
 <script setup lang="ts">
-import DurationTrigger from './DurationTrigger.vue';
-import NumberField from './NumberField.vue';
-import RiskBands from './RiskBands.vue';
+import DurationTrigger from './DurationTrigger.vue'
+import NumberField from './NumberField.vue'
+import RiskBands from './RiskBands.vue'
 
 defineProps<{
   hasMaxWear: boolean;
@@ -49,11 +49,11 @@ defineProps<{
   defaultHalfLifeDays: number;
   bandCount: number;
   crossoverPoints: number[];
-}>();
+}>()
 defineEmits<{
   'update:breakDecayHalfLifeDays': [value: number];
   'open-duration-picker': [target: 'minRest' | 'grace' | number];
   'add-band': [];
   'remove-band': [];
-}>();
+}>()
 </script>

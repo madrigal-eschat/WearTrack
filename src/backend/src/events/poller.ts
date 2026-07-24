@@ -1,11 +1,11 @@
-import { categoryStore } from '../db/stores/category-store.js';
-import { sessionStore } from '../db/stores/session-store.js';
-import { computeDecay } from '../db/calculations.js';
-import { eventBus } from './bus.js';
-import { eventPollerStore, type EventPollerRow } from './store.js';
+import { categoryStore } from '../db/stores/category-store.js'
+import { sessionStore } from '../db/stores/session-store.js'
+import { computeDecay } from '../db/calculations.js'
+import { eventBus } from './bus.js'
+import { eventPollerStore, type EventPollerRow } from './store.js'
 
 function nowSeconds(): number {
-  return Math.floor(Date.now() / 1000);
+  return Math.floor(Date.now() / 1000)
 }
 
 function defaultRow(categoryId: number): EventPollerRow {
@@ -20,26 +20,26 @@ function defaultRow(categoryId: number): EventPollerRow {
     overtime_warning_30_notified: 0,
     overtime_warning_5_notified: 0,
     overtime_notified: 0,
-  };
+  }
 }
 
 export function tick(now: number = nowSeconds()): void {
-  const categories = categoryStore.findAll();
-  const openSessions = sessionStore.findOpenWithItemData();
-  const openByCategory = new Map(openSessions.map((s) => [s.category_id, s]));
+  const categories = categoryStore.findAll()
+  const openSessions = sessionStore.findOpenWithItemData()
+  const openByCategory = new Map(openSessions.map((s) => [s.category_id, s]))
 
   for (const category of categories) {
-    const previous = sessionStore.findLastEndedInCategory(category.id) ?? null;
-    const session = openByCategory.get(category.id) ?? null;
-    const stored = eventPollerStore.get(category.id);
-    const isFirstRun = stored === undefined;
-    const row: EventPollerRow = stored ?? defaultRow(category.id);
-    const shouldEmit = !isFirstRun;
+    const previous = sessionStore.findLastEndedInCategory(category.id) ?? null
+    const session = openByCategory.get(category.id) ?? null
+    const stored = eventPollerStore.get(category.id)
+    const isFirstRun = stored === undefined
+    const row: EventPollerRow = stored ?? defaultRow(category.id)
+    const shouldEmit = !isFirstRun
 
     if (previous && !session) {
-      const restEnd = previous.ended_at + previous.rest_seconds;
-      const resting = now < restEnd ? 1 : 0;
-      const decay = computeDecay(previous, category, now);
+      const restEnd = previous.ended_at + previous.rest_seconds
+      const resting = now < restEnd ? 1 : 0
+      const decay = computeDecay(previous, category, now)
 
       if (shouldEmit && row.resting === 0 && resting === 1) {
         eventBus.emit('rest_start', {
@@ -47,7 +47,7 @@ export function tick(now: number = nowSeconds()): void {
           category_name: category.name,
           timestamp: now,
           rest_seconds: previous.rest_seconds,
-        });
+        })
       }
       if (shouldEmit && row.resting === 1 && resting === 0) {
         eventBus.emit('rest_end', {
@@ -56,13 +56,13 @@ export function tick(now: number = nowSeconds()): void {
           timestamp: now,
           rest_seconds: previous.rest_seconds,
           elapsed_rest_seconds: now - previous.ended_at,
-        });
+        })
       }
       if (resting === 1 && row.resting === 0) {
-        row.halfway_notified = 0;
-        row.decay_soon_notified = 0;
+        row.halfway_notified = 0
+        row.decay_soon_notified = 0
       }
-      row.resting = resting;
+      row.resting = resting
 
       if (
         shouldEmit &&
@@ -75,7 +75,7 @@ export function tick(now: number = nowSeconds()): void {
           timestamp: now,
           decay_state: decay.decay_state as 'decaying' | 'fully_decayed',
           decay_full_time: decay.decay_full_time!,
-        });
+        })
       }
       if (
         shouldEmit &&
@@ -87,16 +87,16 @@ export function tick(now: number = nowSeconds()): void {
           category_name: category.name,
           timestamp: now,
           decay_state: 'fully_decayed',
-        });
+        })
       }
-      row.decay_state = decay.decay_state;
+      row.decay_state = decay.decay_state
 
-      const decayStart = decay.decay_start_time!;
-      const halfway = Math.floor((restEnd + decayStart) / 2);
-      const decaySoonFire = decayStart - 3600;
+      const decayStart = decay.decay_start_time!
+      const halfway = Math.floor((restEnd + decayStart) / 2)
+      const decaySoonFire = decayStart - 3600
       const decaySoonSuppressed =
         decaySoonFire < restEnd + 3600 ||
-        Math.abs(decaySoonFire - halfway) < 1800;
+        Math.abs(decaySoonFire - halfway) < 1800
 
       if (row.halfway_notified === 0 && now >= halfway) {
         if (shouldEmit) {
@@ -105,9 +105,9 @@ export function tick(now: number = nowSeconds()): void {
             category_name: category.name,
             timestamp: now,
             decay_start_time: decayStart,
-          });
+          })
         }
-        row.halfway_notified = 1;
+        row.halfway_notified = 1
       }
 
       if (
@@ -120,19 +120,19 @@ export function tick(now: number = nowSeconds()): void {
             category_id: category.id,
             category_name: category.name,
             timestamp: now,
-          });
+          })
         }
-        row.decay_soon_notified = 1;
+        row.decay_soon_notified = 1
       }
     }
 
     if (session) {
       if (row.last_session_id !== session.id) {
-        row.last_session_id = session.id;
-        row.target_met_notified = 0;
-        row.overtime_warning_30_notified = 0;
-        row.overtime_warning_5_notified = 0;
-        row.overtime_notified = 0;
+        row.last_session_id = session.id
+        row.target_met_notified = 0
+        row.overtime_warning_30_notified = 0
+        row.overtime_warning_5_notified = 0
+        row.overtime_notified = 0
       }
 
       if (
@@ -145,17 +145,17 @@ export function tick(now: number = nowSeconds()): void {
             category_name: category.name,
             timestamp: now,
             session_id: session.id,
-          });
+          })
         }
-        row.target_met_notified = 1;
+        row.target_met_notified = 1
       }
 
       if (session.max_wear_seconds !== null) {
-        const fire30 = session.started_at + session.max_wear_seconds - 1800;
-        const fire5 = session.started_at + session.max_wear_seconds - 300;
-        const fireOvertime = session.started_at + session.max_wear_seconds;
-        const suppressed30 = fire30 <= session.started_at + 300;
-        const suppressed5 = fire5 <= session.started_at + 300;
+        const fire30 = session.started_at + session.max_wear_seconds - 1800
+        const fire5 = session.started_at + session.max_wear_seconds - 300
+        const fireOvertime = session.started_at + session.max_wear_seconds
+        const suppressed30 = fire30 <= session.started_at + 300
+        const suppressed5 = fire5 <= session.started_at + 300
 
         if (
           !suppressed30 &&
@@ -168,9 +168,9 @@ export function tick(now: number = nowSeconds()): void {
               category_name: category.name,
               timestamp: now,
               session_id: session.id,
-            });
+            })
           }
-          row.overtime_warning_30_notified = 1;
+          row.overtime_warning_30_notified = 1
         }
         if (
           !suppressed5 &&
@@ -183,9 +183,9 @@ export function tick(now: number = nowSeconds()): void {
               category_name: category.name,
               timestamp: now,
               session_id: session.id,
-            });
+            })
           }
-          row.overtime_warning_5_notified = 1;
+          row.overtime_warning_5_notified = 1
         }
         if (row.overtime_notified === 0 && now >= fireOvertime) {
           if (shouldEmit) {
@@ -194,22 +194,22 @@ export function tick(now: number = nowSeconds()): void {
               category_name: category.name,
               timestamp: now,
               session_id: session.id,
-            });
+            })
           }
-          row.overtime_notified = 1;
+          row.overtime_notified = 1
         }
       }
     }
 
-    eventPollerStore.upsert(row);
+    eventPollerStore.upsert(row)
   }
 
-  eventBus.emit('poller_tick', { timestamp: now });
+  eventBus.emit('poller_tick', { timestamp: now })
 }
 
 export function startEventsPoller(): void {
-  tick();
+  tick()
   if (process.env.NODE_ENV !== 'test') {
-    setInterval(() => tick(), 30_000);
+    setInterval(() => tick(), 30_000)
   }
 }

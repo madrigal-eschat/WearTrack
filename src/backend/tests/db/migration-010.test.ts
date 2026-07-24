@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeAll } from 'vitest';
-import { dbExport } from '../../src/db/index.js';
-import { runMigrations } from '../../src/db/migrations/index.js';
+import { describe, it, expect, beforeAll } from 'vitest'
+import { dbExport } from '../../src/db/index.js'
+import { runMigrations } from '../../src/db/migrations/index.js'
 
 beforeAll(() => {
-  runMigrations();
-});
+  runMigrations()
+})
 
 describe('migration 010', () => {
   it('creates mqtt_config table with all columns', () => {
@@ -12,7 +12,7 @@ describe('migration 010', () => {
       dbExport.prepare('PRAGMA table_info(mqtt_config)').all() as Array<{
         name: string;
       }>
-    ).map((r) => r.name);
+    ).map((r) => r.name)
     expect(cols).toEqual(
       expect.arrayContaining([
         'id',
@@ -24,8 +24,8 @@ describe('migration 010', () => {
         'topic_prefix',
         'ha_discovery_enabled',
       ]),
-    );
-  });
+    )
+  })
 
   it('only allows a single row (id = 1)', () => {
     dbExport
@@ -35,7 +35,7 @@ describe('migration 010', () => {
           topic_prefix, ha_discovery_enabled)
        VALUES (1, 0, NULL, 1883, NULL, NULL, 'weartrack', 0)`,
       )
-      .run();
+      .run()
     expect(() =>
       dbExport
         .prepare(
@@ -45,6 +45,6 @@ describe('migration 010', () => {
          VALUES (2, 0, NULL, 1883, NULL, NULL, 'weartrack', 0)`,
         )
         .run(),
-    ).toThrow();
-  });
-});
+    ).toThrow()
+  })
+})

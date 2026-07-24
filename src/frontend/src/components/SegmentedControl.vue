@@ -21,8 +21,8 @@
 defineProps<{
   options: ReadonlyArray<{ value: T; label: string }>;
   modelValue: T;
-}>();
-defineEmits<{ 'update:modelValue': [value: T] }>();
+}>()
+defineEmits<{ 'update:modelValue': [value: T] }>()
 </script>
 
 <style scoped>

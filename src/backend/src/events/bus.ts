@@ -1,4 +1,4 @@
-import { EventEmitter } from 'node:events';
+import { EventEmitter } from 'node:events'
 
 export interface CategoryContext {
   category_id: number;
@@ -73,17 +73,17 @@ export interface EventPayloads {
 export type EventName = keyof EventPayloads;
 
 class TypedEventBus {
-  private emitter = new EventEmitter();
+  private emitter = new EventEmitter()
 
   emit<E extends EventName>(event: E, payload: EventPayloads[E]): void {
     for (const listener of this.emitter.listeners(event)) {
       try {
-        (listener as (payload: EventPayloads[E]) => void)(payload);
+        (listener as (payload: EventPayloads[E]) => void)(payload)
       } catch (error) {
         console.error(
           `[eventBus] listener for event "${event}" threw an error:`,
           error,
-        );
+        )
       }
     }
   }
@@ -92,8 +92,8 @@ class TypedEventBus {
     event: E,
     listener: (payload: EventPayloads[E]) => void,
   ): void {
-    this.emitter.on(event, listener);
+    this.emitter.on(event, listener)
   }
 }
 
-export const eventBus = new TypedEventBus();
+export const eventBus = new TypedEventBus()

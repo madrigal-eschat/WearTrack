@@ -14,11 +14,11 @@ export function computeEditableRange(
   session: { id: number; started_at: number; ended_at: number },
   lastEdited: LastEdited | null,
 ): { min: number; max: number } {
-  const isLastEdited = lastEdited?.sessionId === session.id;
+  const isLastEdited = lastEdited?.sessionId === session.id
   return {
     min: session.started_at,
     max: isLastEdited && lastEdited
       ? lastEdited.originalEndedAt
       : session.ended_at,
-  };
+  }
 }

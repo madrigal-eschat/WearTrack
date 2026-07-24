@@ -1,4 +1,4 @@
-import { request } from '@playwright/test';
+import { request } from '@playwright/test'
 
 /**
  * Runs once before the entire Playwright suite.
@@ -8,10 +8,10 @@ import { request } from '@playwright/test';
 export default async function globalSetup() {
   const ctx = await request.newContext({
     baseURL: process.env.BASE_URL ?? 'http://localhost:3000',
-  });
-  const res = await ctx.post('/api/__reset');
+  })
+  const res = await ctx.post('/api/__reset')
   if (!res.ok()) {
-    throw new Error(`DB reset failed: ${res.status()} ${await res.text()}`);
+    throw new Error(`DB reset failed: ${res.status()} ${await res.text()}`)
   }
-  await ctx.dispose();
+  await ctx.dispose()
 }

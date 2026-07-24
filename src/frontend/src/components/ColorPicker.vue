@@ -85,42 +85,42 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
-import { SWATCHES, buildOklch } from '../utils/colors.js';
+import { ref, watch } from 'vue'
+import { SWATCHES, buildOklch } from '../utils/colors.js'
 
-const props = defineProps<{ modelValue: string }>();
-const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
+const props = defineProps<{ modelValue: string }>()
+const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
 
-const opened = ref(false);
-const showAdvanced = ref(false);
+const opened = ref(false)
+const showAdvanced = ref(false)
 
-const hue = ref(240);
-const chroma = ref(0.15);
+const hue = ref(240)
+const chroma = ref(0.15)
 
 watch(
   () => props.modelValue,
   (val) => {
-    const m = val.match(/oklch\([\d.]+ ([\d.]+) ([\d.]+)\)/);
+    const m = val.match(/oklch\([\d.]+ ([\d.]+) ([\d.]+)\)/)
     if (m) {
-      chroma.value = parseFloat(m[1]);
-      hue.value = parseFloat(m[2]);
+      chroma.value = parseFloat(m[1])
+      hue.value = parseFloat(m[2])
     }
   },
   { immediate: true }
-);
+)
 
 function select(color: string) {
-  emit('update:modelValue', color);
-  opened.value = false;
+  emit('update:modelValue', color)
+  opened.value = false
 }
 
 function onHueInput(e: Event) {
-  hue.value = parseFloat((e.target as HTMLInputElement).value);
-  emit('update:modelValue', buildOklch(chroma.value, hue.value));
+  hue.value = parseFloat((e.target as HTMLInputElement).value)
+  emit('update:modelValue', buildOklch(chroma.value, hue.value))
 }
 
 function onChromaInput(e: Event) {
-  chroma.value = parseFloat((e.target as HTMLInputElement).value);
-  emit('update:modelValue', buildOklch(chroma.value, hue.value));
+  chroma.value = parseFloat((e.target as HTMLInputElement).value)
+  emit('update:modelValue', buildOklch(chroma.value, hue.value))
 }
 </script>

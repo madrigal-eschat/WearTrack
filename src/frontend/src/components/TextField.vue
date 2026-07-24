@@ -31,6 +31,6 @@ defineProps<{
   modelValue: string;
   placeholder?: string;
   type?: string;
-}>();
-defineEmits<{ 'update:modelValue': [value: string] }>();
+}>()
+defineEmits<{ 'update:modelValue': [value: string] }>()
 </script>

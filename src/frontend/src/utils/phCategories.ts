@@ -3,13 +3,13 @@ export type PhCategories = Record<string, PhIconEntry[]>;
 
 const WEIGHT_SUFFIXES = [
   '-bold', '-fill', '-light', '-thin', '-duotone',
-] as const;
+] as const
 
 function getOrCreateBucket(r: PhCategories, cat: string): PhIconEntry[] {
   if (!r[cat]) {
-    r[cat] = [];
+    r[cat] = []
   } // nosemgrep: gitlab.eslint.detect-object-injection
-  return r[cat]; // nosemgrep: gitlab.eslint.detect-object-injection
+  return r[cat] // nosemgrep: gitlab.eslint.detect-object-injection
 }
 
 /**
@@ -22,17 +22,17 @@ function getOrCreateBucket(r: PhCategories, cat: string): PhIconEntry[] {
 export function buildPhCategories(
   icons: Array<{ name: string; categories: string[]; tags: string[] }>,
 ): PhCategories {
-  const result: PhCategories = {};
+  const result: PhCategories = {}
   for (const icon of icons) {
     if (WEIGHT_SUFFIXES.some((s) => icon.name.endsWith(s))) {
-      continue;
+      continue
     }
     for (const cat of icon.categories) {
-      const bucket = getOrCreateBucket(result, cat);
-      bucket.push({ id: `ph:${icon.name}`, tags: icon.tags });
+      const bucket = getOrCreateBucket(result, cat)
+      bucket.push({ id: `ph:${icon.name}`, tags: icon.tags })
     }
   }
-  return result;
+  return result
 }
 
 /**
@@ -46,23 +46,23 @@ export function filterIcons(
   categories: PhCategories,
   query: string,
 ): PhIconEntry[] {
-  const q = query.toLowerCase().trim();
+  const q = query.toLowerCase().trim()
   if (!q) {
-    return [];
+    return []
   }
-  const seen = new Set<string>();
-  const results: PhIconEntry[] = [];
+  const seen = new Set<string>()
+  const results: PhIconEntry[] = []
   for (const entries of Object.values(categories)) {
     for (const entry of entries) {
       if (seen.has(entry.id)) {
-        continue;
+        continue
       }
-      const name = entry.id.slice(3); // strip 'ph:' prefix (always 3 chars)
+      const name = entry.id.slice(3) // strip 'ph:' prefix (always 3 chars)
       if (name.includes(q) || entry.tags.some((t) => t.includes(q))) {
-        results.push(entry);
-        seen.add(entry.id);
+        results.push(entry)
+        seen.add(entry.id)
       }
     }
   }
-  return results;
+  return results
 }

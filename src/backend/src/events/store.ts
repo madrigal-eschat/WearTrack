@@ -1,5 +1,5 @@
-import db from '../db/index.js';
-import type { DecayState } from '../db/calculations.js';
+import db from '../db/index.js'
+import type { DecayState } from '../db/calculations.js'
 
 export interface EventPollerRow {
   category_id: number;
@@ -18,7 +18,7 @@ class EventPollerStore {
   get(categoryId: number): EventPollerRow | undefined {
     return db
       .prepare('SELECT * FROM event_poller_state WHERE category_id = ?')
-      .get(categoryId) as EventPollerRow | undefined;
+      .get(categoryId) as EventPollerRow | undefined
   }
 
   upsert(row: EventPollerRow): void {
@@ -42,8 +42,8 @@ class EventPollerStore {
          overtime_warning_30_notified = excluded.overtime_warning_30_notified,
          overtime_warning_5_notified = excluded.overtime_warning_5_notified,
          overtime_notified = excluded.overtime_notified`,
-    ).run(row);
+    ).run(row)
   }
 }
 
-export const eventPollerStore = new EventPollerStore();
+export const eventPollerStore = new EventPollerStore()

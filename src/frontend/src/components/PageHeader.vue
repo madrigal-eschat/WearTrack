@@ -15,9 +15,9 @@
 </template>
 
 <script setup lang="ts">
-import { ChevronLeftIcon } from '@heroicons/vue/24/solid';
-import SectionTitle from './SectionTitle.vue';
+import { ChevronLeftIcon } from '@heroicons/vue/24/solid'
+import SectionTitle from './SectionTitle.vue'
 
-defineProps<{ title: string; showBack?: boolean }>();
-defineEmits<{ back: [] }>();
+defineProps<{ title: string; showBack?: boolean }>()
+defineEmits<{ back: [] }>()
 </script>

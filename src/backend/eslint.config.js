@@ -1,4 +1,4 @@
-import tseslint from 'typescript-eslint';
+import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
   ...tseslint.configs.recommended,
@@ -9,6 +9,7 @@ export default tseslint.config(
       curly: ['error', 'all'],
       'brace-style': ['error', '1tbs', { allowSingleLine: false }],
       indent: ['error', 2],
+      semi: ['error', 'never'],
     },
   },
   {
@@ -17,4 +18,4 @@ export default tseslint.config(
       complexity: ['error', 10],
     },
   },
-);
+)

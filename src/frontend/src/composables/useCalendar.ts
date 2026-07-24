@@ -1,6 +1,6 @@
-import { ref, computed } from 'vue';
-import type { Session } from './useWear.js';
-import { apiFetch } from '../utils/apiFetch.js';
+import { ref, computed } from 'vue'
+import type { Session } from './useWear.js'
+import { apiFetch } from '../utils/apiFetch.js'
 
 export interface DayEntry {
   date: Date;
@@ -13,34 +13,34 @@ export interface DayEntry {
 }
 
 function startOfWeek(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay(); // 0 = Sun
-  const diff = (day === 0 ? -6 : 1) - day; // Monday-first
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
+  const d = new Date(date)
+  const day = d.getDay() // 0 = Sun
+  const diff = (day === 0 ? -6 : 1) - day // Monday-first
+  d.setDate(d.getDate() + diff)
+  d.setHours(0, 0, 0, 0)
+  return d
 }
 
 // Module-level state shared across all component instances
-const weekStart = ref<Date>(startOfWeek(new Date()));
-const sessions = ref<Session[]>([]);
+const weekStart = ref<Date>(startOfWeek(new Date()))
+const sessions = ref<Session[]>([])
 
-const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 const weekDays = computed<DayEntry[]>(() => {
-  const today = new Date();
+  const today = new Date()
   return DAY_LABELS.map((label, i) => {
-    const date = new Date(weekStart.value);
-    date.setDate(date.getDate() + i);
-    const dayStart = Math.floor(date.getTime() / 1000);
-    const dayEnd = dayStart + 86400;
+    const date = new Date(weekStart.value)
+    date.setDate(date.getDate() + i)
+    const dayStart = Math.floor(date.getTime() / 1000)
+    const dayEnd = dayStart + 86400
 
     const daySessions = sessions.value.filter(
       (s) =>
         s.started_at >= dayStart &&
         s.started_at < dayEnd &&
         s.ended_at !== null,
-    );
+    )
 
     return {
       date,
@@ -53,42 +53,42 @@ const weekDays = computed<DayEntry[]>(() => {
       ),
       sessionCount: daySessions.length,
       sessions: daySessions,
-    };
-  });
-});
+    }
+  })
+})
 
 async function loadWeekSessions(): Promise<void> {
-  const from = Math.floor(weekStart.value.getTime() / 1000);
-  const to = from + 7 * 86400;
+  const from = Math.floor(weekStart.value.getTime() / 1000)
+  const to = from + 7 * 86400
   // Fetch all sessions; filter client-side (API has no date range filter)
-  const res = await apiFetch('/api/sessions');
+  const res = await apiFetch('/api/sessions')
   if (!res.ok) {
-    throw new Error(`HTTP ${res.status}`);
+    throw new Error(`HTTP ${res.status}`)
   }
-  const all: Session[] = await res.json();
-  sessions.value = all.filter((s) => s.started_at >= from && s.started_at < to);
+  const all: Session[] = await res.json()
+  sessions.value = all.filter((s) => s.started_at >= from && s.started_at < to)
 }
 
 function prevWeek(): void {
-  const d = new Date(weekStart.value);
-  d.setDate(d.getDate() - 7);
-  weekStart.value = d;
-  loadWeekSessions();
+  const d = new Date(weekStart.value)
+  d.setDate(d.getDate() - 7)
+  weekStart.value = d
+  loadWeekSessions()
 }
 
 function nextWeek(): void {
-  const d = new Date(weekStart.value);
-  d.setDate(d.getDate() + 7);
-  weekStart.value = d;
-  loadWeekSessions();
+  const d = new Date(weekStart.value)
+  d.setDate(d.getDate() + 7)
+  weekStart.value = d
+  loadWeekSessions()
 }
 
 function formatWeekRange(): string {
-  const end = new Date(weekStart.value);
-  end.setDate(end.getDate() + 6);
+  const end = new Date(weekStart.value)
+  end.setDate(end.getDate() + 6)
   const fmt = (d: Date) =>
-    d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-  return `${fmt(weekStart.value)} – ${fmt(end)}`;
+    d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  return `${fmt(weekStart.value)} – ${fmt(end)}`
 }
 
 export function useCalendar() {
@@ -99,5 +99,5 @@ export function useCalendar() {
     prevWeek,
     nextWeek,
     formatWeekRange,
-  };
+  }
 }

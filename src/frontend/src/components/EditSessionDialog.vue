@@ -35,17 +35,17 @@
 </template>
 
 <script setup lang="ts">
-import { kDialog, kDialogButton } from 'konsta/vue';
-import { formatDuration } from '../utils/formatDuration.js';
+import { kDialog, kDialogButton } from 'konsta/vue'
+import { formatDuration } from '../utils/formatDuration.js'
 
 defineProps<{
   open: boolean;
   durationMinutes: number;
   maxMinutes: number;
-}>();
+}>()
 defineEmits<{
   'update:open': [value: boolean];
   'update:durationMinutes': [value: number];
   save: [];
-}>();
+}>()
 </script>

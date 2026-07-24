@@ -54,26 +54,26 @@
 </template>
 
 <script setup lang="ts">
-import { useRoute, useRouter } from 'vue-router';
-import { kApp, kTabbar, kTabbarLink } from 'konsta/vue';
+import { useRoute, useRouter } from 'vue-router'
+import { kApp, kTabbar, kTabbarLink } from 'konsta/vue'
 import {
   HomeIcon,
   Squares2X2Icon as ItemsIcon,
   ChartBarIcon,
   ClockIcon,
-} from '@heroicons/vue/24/solid';
-import Toast from './components/Toast.vue';
-import { useVersionCheck } from './composables/useVersionCheck.js';
+} from '@heroicons/vue/24/solid'
+import Toast from './components/Toast.vue'
+import { useVersionCheck } from './composables/useVersionCheck.js'
 
-const route = useRoute();
-const router = useRouter();
-const { needsRefresh } = useVersionCheck();
+const route = useRoute()
+const router = useRouter()
+const { needsRefresh } = useVersionCheck()
 
 function navigate(path: string): void {
   if (needsRefresh.value) {
-    window.location.reload(); return;
+    window.location.reload(); return
   }
-  void router.push(path);
+  void router.push(path)
 }
 </script>
 

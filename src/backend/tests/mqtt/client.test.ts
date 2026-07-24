@@ -1,27 +1,27 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('mqtt', () => ({
   default: {
     connect: vi.fn(() => ({ on: vi.fn(), publish: vi.fn(), end: vi.fn() })),
   },
-}));
+}))
 
-import mqtt from 'mqtt';
+import mqtt from 'mqtt'
 import {
   connect,
   disconnect,
   publish,
   getStatus,
-} from '../../src/mqtt/client.js';
+} from '../../src/mqtt/client.js'
 
 function fakeClientAt(callIndex: number) {
-  return vi.mocked(mqtt.connect).mock.results[callIndex]!.value;
+  return vi.mocked(mqtt.connect).mock.results[callIndex]!.value
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
-  disconnect();
-});
+  vi.clearAllMocks()
+  disconnect()
+})
 
 describe('mqtt client', () => {
   it('connects with the given host/port and sets status to connecting', () => {
@@ -30,13 +30,13 @@ describe('mqtt client', () => {
       port: 1883,
       username: null,
       password: null,
-    });
+    })
     expect(mqtt.connect).toHaveBeenCalledWith(
       'mqtt://broker.local:1883',
       expect.objectContaining({ username: undefined, password: undefined }),
-    );
-    expect(getStatus()).toBe('connecting');
-  });
+    )
+    expect(getStatus()).toBe('connecting')
+  })
 
   it('passes username/password through when set', () => {
     connect({
@@ -44,12 +44,12 @@ describe('mqtt client', () => {
       port: 1883,
       username: 'alice',
       password: 'secret',
-    });
+    })
     expect(mqtt.connect).toHaveBeenCalledWith(
       'mqtt://broker.local:1883',
       expect.objectContaining({ username: 'alice', password: 'secret' }),
-    );
-  });
+    )
+  })
 
   it('updates status to connected when the client emits connect', () => {
     connect({
@@ -57,14 +57,14 @@ describe('mqtt client', () => {
       port: 1883,
       username: null,
       password: null,
-    });
-    const fakeClient = fakeClientAt(0);
+    })
+    const fakeClient = fakeClientAt(0)
     const connectHandler = fakeClient.on.mock.calls.find(
       ([event]: [string]) => event === 'connect',
-    )![1];
-    connectHandler();
-    expect(getStatus()).toBe('connected');
-  });
+    )![1]
+    connectHandler()
+    expect(getStatus()).toBe('connected')
+  })
 
   it('updates status to error when the client emits error', () => {
     connect({
@@ -72,14 +72,14 @@ describe('mqtt client', () => {
       port: 1883,
       username: null,
       password: null,
-    });
-    const fakeClient = fakeClientAt(0);
+    })
+    const fakeClient = fakeClientAt(0)
     const errorHandler = fakeClient.on.mock.calls.find(
       ([event]: [string]) => event === 'error',
-    )![1];
-    errorHandler(new Error('boom'));
-    expect(getStatus()).toBe('error');
-  });
+    )![1]
+    errorHandler(new Error('boom'))
+    expect(getStatus()).toBe('error')
+  })
 
   it(
     'publish() sends JSON with qos 0 by default and does nothing ' +
@@ -90,27 +90,27 @@ describe('mqtt client', () => {
         port: 1883,
         username: null,
         password: null,
-      });
-      const fakeClient = fakeClientAt(0);
-      disconnect();
-      publish('weartrack/gloves/session_start', { event: 'session_start' });
-      expect(fakeClient.publish).not.toHaveBeenCalled();
+      })
+      const fakeClient = fakeClientAt(0)
+      disconnect()
+      publish('weartrack/gloves/session_start', { event: 'session_start' })
+      expect(fakeClient.publish).not.toHaveBeenCalled()
 
       connect({
         host: 'broker.local',
         port: 1883,
         username: null,
         password: null,
-      });
-      const secondFakeClient = fakeClientAt(1);
-      publish('weartrack/gloves/session_start', { event: 'session_start' });
+      })
+      const secondFakeClient = fakeClientAt(1)
+      publish('weartrack/gloves/session_start', { event: 'session_start' })
       expect(secondFakeClient.publish).toHaveBeenCalledWith(
         'weartrack/gloves/session_start',
         JSON.stringify({ event: 'session_start' }),
         { qos: 0, retain: false },
-      );
+      )
     },
-  );
+  )
 
   it('publish() honors the retain option', () => {
     connect({
@@ -118,15 +118,15 @@ describe('mqtt client', () => {
       port: 1883,
       username: null,
       password: null,
-    });
-    const fakeClient = fakeClientAt(0);
-    publish('weartrack/gloves/state', { event: 'x' }, { retain: true });
+    })
+    const fakeClient = fakeClientAt(0)
+    publish('weartrack/gloves/state', { event: 'x' }, { retain: true })
     expect(fakeClient.publish).toHaveBeenCalledWith(
       'weartrack/gloves/state',
       JSON.stringify({ event: 'x' }),
       { qos: 0, retain: true },
-    );
-  });
+    )
+  })
 
   it('disconnect() ends the client and sets status to disconnected', () => {
     connect({
@@ -134,12 +134,12 @@ describe('mqtt client', () => {
       port: 1883,
       username: null,
       password: null,
-    });
-    const fakeClient = fakeClientAt(0);
-    disconnect();
-    expect(fakeClient.end).toHaveBeenCalledWith(true);
-    expect(getStatus()).toBe('disconnected');
-  });
+    })
+    const fakeClient = fakeClientAt(0)
+    disconnect()
+    expect(fakeClient.end).toHaveBeenCalledWith(true)
+    expect(getStatus()).toBe('disconnected')
+  })
 
   it(
     'does not let a stale (superseded) client overwrite status set by ' +
@@ -151,8 +151,8 @@ describe('mqtt client', () => {
         port: 1883,
         username: null,
         password: null,
-      });
-      const clientA = fakeClientAt(0);
+      })
+      const clientA = fakeClientAt(0)
 
       // Before A finishes connecting, connect() is called again ->
       // disconnect()s A and creates B.
@@ -161,26 +161,26 @@ describe('mqtt client', () => {
         port: 1883,
         username: null,
         password: null,
-      });
-      const clientB = fakeClientAt(1);
-      expect(getStatus()).toBe('connecting');
+      })
+      const clientB = fakeClientAt(1)
+      expect(getStatus()).toBe('connecting')
 
       // A's socket fires a delayed 'connect' event after being superseded.
       const staleConnectHandler = clientA.on.mock.calls.find(
         ([event]: [string]) => event === 'connect',
-      )![1];
-      staleConnectHandler();
+      )![1]
+      staleConnectHandler()
 
       // B is still just 'connecting' (its own handler hasn't fired
       // yet) and must not have been clobbered by A's stale event.
-      expect(getStatus()).toBe('connecting');
+      expect(getStatus()).toBe('connecting')
 
       // Sanity check: B's own handler still works correctly.
       const bConnectHandler = clientB.on.mock.calls.find(
         ([event]: [string]) => event === 'connect',
-      )![1];
-      bConnectHandler();
-      expect(getStatus()).toBe('connected');
+      )![1]
+      bConnectHandler()
+      expect(getStatus()).toBe('connected')
     },
-  );
-});
+  )
+})

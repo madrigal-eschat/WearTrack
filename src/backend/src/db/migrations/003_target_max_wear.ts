@@ -1,4 +1,4 @@
-import { dbExport } from '../index.js';
+import { dbExport } from '../index.js'
 
 export default function runMigration003() {
   dbExport.exec(`
@@ -27,5 +27,5 @@ export default function runMigration003() {
       CAST(max_wear_seconds * 2 / 3 AS INTEGER);
     ALTER TABLE sessions RENAME COLUMN calculated_rest_seconds
       TO rest_seconds;
-  `);
+  `)
 }

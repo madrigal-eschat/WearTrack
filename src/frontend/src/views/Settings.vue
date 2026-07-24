@@ -100,45 +100,45 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useRouter } from 'vue-router';
-import { kPage, kList, kListItem, kToggle } from 'konsta/vue';
-import { useNotifications } from '../composables/useNotifications.js';
-import { useMqtt } from '../composables/useMqtt.js';
-import PageHeader from '../components/PageHeader.vue';
-import FormCard from '../components/FormCard.vue';
-import TextField from '../components/TextField.vue';
-import NumberField from '../components/NumberField.vue';
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { kPage, kList, kListItem, kToggle } from 'konsta/vue'
+import { useNotifications } from '../composables/useNotifications.js'
+import { useMqtt } from '../composables/useMqtt.js'
+import PageHeader from '../components/PageHeader.vue'
+import FormCard from '../components/FormCard.vue'
+import TextField from '../components/TextField.vue'
+import NumberField from '../components/NumberField.vue'
 
-const router = useRouter();
+const router = useRouter()
 const {
   isSupported,
   isConfigured,
   isSubscribed,
   enable,
   disable,
-} = useNotifications();
+} = useNotifications()
 const {
   config: mqttConfig,
   password: mqttPassword,
   init: initMqtt,
   save: saveMqtt,
-} = useMqtt();
+} = useMqtt()
 
-void initMqtt();
+void initMqtt()
 
 const mqttHost = computed({
   get: () => mqttConfig.value.host ?? '',
   set: (v: string) => {
-    mqttConfig.value.host = v === '' ? null : v;
+    mqttConfig.value.host = v === '' ? null : v
   },
-});
+})
 const mqttUsername = computed({
   get: () => mqttConfig.value.username ?? '',
   set: (v: string) => {
-    mqttConfig.value.username = v === '' ? null : v;
+    mqttConfig.value.username = v === '' ? null : v
   },
-});
+})
 
 const statusColor = computed(() => ({
   'text-green-600': mqttConfig.value.status === 'connected',
@@ -146,17 +146,17 @@ const statusColor = computed(() => ({
   'text-gray-400':
     mqttConfig.value.status === 'disconnected' ||
     mqttConfig.value.status === 'connecting',
-}));
+}))
 
 async function onToggle() {
   if (isSubscribed.value) {
-    await disable();
+    await disable()
   } else {
-    await enable();
+    await enable()
   }
 }
 
 async function onSaveMqtt() {
-  await saveMqtt();
+  await saveMqtt()
 }
 </script>

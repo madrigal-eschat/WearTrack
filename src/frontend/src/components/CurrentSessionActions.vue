@@ -58,8 +58,8 @@
 </template>
 
 <script setup lang="ts">
-import { kButton } from 'konsta/vue';
-import type { CurrentEntry } from '../composables/useWear.js';
+import { kButton } from 'konsta/vue'
+import type { CurrentEntry } from '../composables/useWear.js'
 
 defineProps<{
   entry: CurrentEntry;
@@ -82,11 +82,11 @@ defineProps<{
    */
   itemRestRemaining: number;
   itemRotationAvailable: (itemId: number) => boolean;
-}>();
+}>()
 defineEmits<{
   'update:selectedItemId': [value: number | null];
   stop: [];
   'choose-something-else': [];
   wear: [];
-}>();
+}>()
 </script>

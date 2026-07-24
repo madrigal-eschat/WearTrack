@@ -1,5 +1,5 @@
-import tseslint from 'typescript-eslint';
-import pluginVue from 'eslint-plugin-vue';
+import tseslint from 'typescript-eslint'
+import pluginVue from 'eslint-plugin-vue'
 
 export default tseslint.config(
   ...tseslint.configs.recommended,
@@ -25,7 +25,8 @@ export default tseslint.config(
       curly: ['error', 'all'],
       'brace-style': ['error', '1tbs', { allowSingleLine: false }],
       indent: ['error', 2],
+      semi: ['error', 'never'],
     },
   },
   { ignores: ['node_modules/', 'dist/'] },
-);
+)
