@@ -80,7 +80,9 @@ async function fetchCurrent() {
   loading.value = true;
   try {
     const res = await apiFetch('/api/sessions/current');
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
     currentSessions.value = await res.json();
   } catch (e) {
     error.value = String(e);
@@ -125,7 +127,9 @@ async function reportInjury(
   wearSeconds?: number,
 ): Promise<void> {
   const body: Record<string, unknown> = { item_id: itemId };
-  if (wearSeconds !== undefined) body.wear_seconds = wearSeconds;
+  if (wearSeconds !== undefined) {
+    body.wear_seconds = wearSeconds;
+  }
   const res = await apiFetch('/api/injuries', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -145,7 +149,9 @@ export function useWear() {
     pollTimer = setInterval(fetchCurrent, 60_000);
   });
   onUnmounted(() => {
-    if (pollTimer !== null) clearInterval(pollTimer);
+    if (pollTimer !== null) {
+      clearInterval(pollTimer);
+    }
   });
 
   return {

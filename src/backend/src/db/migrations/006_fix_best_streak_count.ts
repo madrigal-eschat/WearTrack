@@ -38,7 +38,9 @@ export default function runMigration006() {
         }
       }
       streakCount += 1;
-      if (streakCount > bestCount) bestCount = streakCount;
+      if (streakCount > bestCount) {
+        bestCount = streakCount;
+      }
       prev = s;
     }
 

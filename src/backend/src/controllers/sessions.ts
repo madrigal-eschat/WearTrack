@@ -48,7 +48,9 @@ router.get('/dates', (c) => {
 router.get('/:id', (c) => {
   const id = Number(c.req.param('id'));
   const session = sessionStore.find(id);
-  if (!session) throw new NotFoundError(`Session ${id} not found`);
+  if (!session) {
+    throw new NotFoundError(`Session ${id} not found`);
+  }
   return c.json(session);
 });
 
@@ -63,9 +65,12 @@ router.post('/start', async (c) => {
 router.post('/:id/end', async (c) => {
   const id = Number(c.req.param('id'));
   const session = sessionStore.find(id);
-  if (!session) throw new NotFoundError(`Session ${id} not found`);
-  if (session.ended_at !== null)
+  if (!session) {
+    throw new NotFoundError(`Session ${id} not found`);
+  }
+  if (session.ended_at !== null) {
     throw new ValidationError(`Session ${id} is already ended`);
+  }
 
   const body = (await c.req.json().catch(() => ({}))) as { ended_at?: number };
   if (body.ended_at !== undefined && typeof body.ended_at !== 'number') {
@@ -73,7 +78,9 @@ router.post('/:id/end', async (c) => {
   }
 
   const item = itemStore.find(session.item_id);
-  if (!item) throw new NotFoundError(`Item ${session.item_id} not found`);
+  if (!item) {
+    throw new NotFoundError(`Item ${session.item_id} not found`);
+  }
 
   const category = categoryStore.findRaw(item.category_id)!;
   const endTs =
@@ -87,9 +94,12 @@ router.post('/:id/end', async (c) => {
 router.patch('/:id', async (c) => {
   const id = Number(c.req.param('id'));
   const session = sessionStore.find(id);
-  if (!session) throw new NotFoundError(`Session ${id} not found`);
-  if (session.ended_at === null)
+  if (!session) {
+    throw new NotFoundError(`Session ${id} not found`);
+  }
+  if (session.ended_at === null) {
     throw new ValidationError(`Session ${id} has not ended yet`);
+  }
 
   const body = (await c.req.json().catch(() => ({}))) as {
     ended_at?: number;
@@ -106,11 +116,14 @@ router.patch('/:id', async (c) => {
       'ended_at or duration_seconds (number) is required',
     );
   }
-  if (newEndedAt <= session.started_at)
+  if (newEndedAt <= session.started_at) {
     throw new ValidationError('ended_at must be after started_at');
+  }
 
   const item = itemStore.find(session.item_id);
-  if (!item) throw new NotFoundError(`Item ${session.item_id} not found`);
+  if (!item) {
+    throw new NotFoundError(`Item ${session.item_id} not found`);
+  }
   const category = categoryStore.findRaw(item.category_id)!;
 
   const updated = sessionStore.updateEnd(session, category, newEndedAt);
@@ -121,10 +134,14 @@ router.patch('/:id', async (c) => {
 router.delete('/:id', (c) => {
   const id = Number(c.req.param('id'));
   const session = sessionStore.find(id);
-  if (!session) throw new NotFoundError(`Session ${id} not found`);
+  if (!session) {
+    throw new NotFoundError(`Session ${id} not found`);
+  }
 
   const item = itemStore.find(session.item_id);
-  if (!item) throw new NotFoundError(`Item ${session.item_id} not found`);
+  if (!item) {
+    throw new NotFoundError(`Item ${session.item_id} not found`);
+  }
   const category = categoryStore.findRaw(item.category_id)!;
 
   sessionStore.remove(session, category);

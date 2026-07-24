@@ -61,7 +61,9 @@ export function riskLevelFor(
   for (const level of levels) {
     const aboveLower = level.lower === null || elapsed > level.lower;
     const belowUpper = level.upper === null || elapsed <= level.upper;
-    if (aboveLower && belowUpper) return level;
+    if (aboveLower && belowUpper) {
+      return level;
+    }
   }
   return null;
 }
@@ -95,9 +97,13 @@ export function rotationAvailability(
   let usedThisCycle = new Set<number>();
 
   for (const session of [...recentSessions].reverse()) {
-    if (!active.has(session.item_id)) continue;
+    if (!active.has(session.item_id)) {
+      continue;
+    }
     usedThisCycle.add(session.item_id);
-    if (usedThisCycle.size === active.size) usedThisCycle = new Set();
+    if (usedThisCycle.size === active.size) {
+      usedThisCycle = new Set();
+    }
   }
 
   return new Set([...active].filter((id) => !usedThisCycle.has(id)));
@@ -117,12 +123,18 @@ export function isConsecutiveLockEligible(
   itemId: number,
   consecutiveWearDays: number,
 ): boolean {
-  if (recentSessions.length === 0) return false;
-  if (recentSessions[0].item_id !== itemId) return false;
+  if (recentSessions.length === 0) {
+    return false;
+  }
+  if (recentSessions[0].item_id !== itemId) {
+    return false;
+  }
 
   let runLength = 0;
   for (const session of recentSessions) {
-    if (session.item_id !== itemId) break;
+    if (session.item_id !== itemId) {
+      break;
+    }
     runLength++;
   }
 
@@ -197,7 +209,9 @@ function decayValue(
   days: number,
 ): number {
   let v = value;
-  for (let day = 0; day < days; day++) v = decayOneDay(v, floor, lossFraction);
+  for (let day = 0; day < days; day++) {
+    v = decayOneDay(v, floor, lossFraction);
+  }
   return v;
 }
 
@@ -297,10 +311,13 @@ export function computeSessionStart(
   // Never go below what the first session would give (with the same
   // difficulty modifier).
   target = Math.max(target, dm * category.initial_target_wear_duration_seconds);
-  if (max !== null)
+  if (max !== null) {
     max = Math.max(max, dm * category.initial_max_wear_duration_seconds!);
+  }
 
-  if (injuryActive) ({ target, max } = applyInjury(target, max));
+  if (injuryActive) {
+    ({ target, max } = applyInjury(target, max));
+  }
 
   return {
     target: Math.floor(target),
@@ -350,12 +367,13 @@ export function computeDecay(
   decay_state: DecayState;
   decay_full_time: number | null;
 } {
-  if (!previous)
+  if (!previous) {
     return {
       decay_start_time: null,
       decay_state: 'none',
       decay_full_time: null,
     };
+  }
 
   const decayStartTime =
     previous.ended_at + previous.rest_seconds + category.break_grace_time;
@@ -402,7 +420,9 @@ function daysUntilFullyDecayed(
   initial: number,
   multiplier: number,
 ): number {
-  if (previousTarget <= 0 || multiplier <= 0 || multiplier >= 1) return 0;
+  if (previousTarget <= 0 || multiplier <= 0 || multiplier >= 1) {
+    return 0;
+  }
   const lossFraction = 1 - multiplier;
   let target = previousTarget + initial;
   let days = 0;
@@ -430,7 +450,9 @@ export function computeRest(
   const maxIsSet = category.initial_max_wear_duration_seconds !== null;
   rest = Math.max(rest, maxIsSet ? category.minimum_rest : 0);
 
-  if (injuryActive) rest *= 1.5;
+  if (injuryActive) {
+    rest *= 1.5;
+  }
 
   return Math.floor(rest);
 }

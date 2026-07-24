@@ -6,6 +6,8 @@ export default tseslint.config(
   {
     rules: {
       'max-len': ['error', { code: 80 }],
+      curly: ['error', 'all'],
+      'brace-style': ['error', '1tbs', { allowSingleLine: false }],
     },
   },
   {

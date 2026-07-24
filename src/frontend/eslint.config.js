@@ -22,6 +22,8 @@ export default tseslint.config(
         { template: 200, skipBlankLines: true },
       ],
       'max-len': ['error', { code: 80 }],
+      curly: ['error', 'all'],
+      'brace-style': ['error', '1tbs', { allowSingleLine: false }],
     },
   },
   { ignores: ['node_modules/', 'dist/'] },

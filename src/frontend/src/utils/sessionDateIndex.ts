@@ -75,7 +75,9 @@ export function buildDateIndex(
   // itself is the weekly/monthly seam and belongs to the monthly tier.
   const seenWeeks = new Set<string>();
   for (const d of dayDates) {
-    if (d <= weeklyStart || d >= dailyStart) continue;
+    if (d <= weeklyStart || d >= dailyStart) {
+      continue;
+    }
     seenWeeks.add(toDayString(startOfWeekUTC(d)));
   }
   for (const key of [...seenWeeks].sort().reverse()) {
@@ -92,7 +94,9 @@ export function buildDateIndex(
   // Monthly tier: months for days in [monthlyStart, weeklyStart]
   const seenMonths = new Set<string>();
   for (const d of dayDates) {
-    if (d < monthlyStart || d > weeklyStart) continue;
+    if (d < monthlyStart || d > weeklyStart) {
+      continue;
+    }
     const month = String(d.getUTCMonth() + 1).padStart(2, '0');
     seenMonths.add(`${d.getUTCFullYear()}-${month}`);
   }
@@ -108,7 +112,9 @@ export function buildDateIndex(
   // Yearly tier: days older than monthlyStart
   const seenYears = new Set<number>();
   for (const d of dayDates) {
-    if (d >= monthlyStart) continue;
+    if (d >= monthlyStart) {
+      continue;
+    }
     seenYears.add(d.getUTCFullYear());
   }
   for (const y of [...seenYears].sort().reverse()) {

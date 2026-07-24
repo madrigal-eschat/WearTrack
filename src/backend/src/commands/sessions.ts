@@ -19,8 +19,9 @@ export class StartSessionCommand {
 
   private validateInput(): { itemId: number; startedAt: number | undefined } {
     const { item_id, started_at } = this.body;
-    if (typeof item_id !== 'number')
+    if (typeof item_id !== 'number') {
       throw new ValidationError('item_id must be a number');
+    }
     if (started_at !== undefined && typeof started_at !== 'number') {
       throw new ValidationError('started_at must be a Unix timestamp (number)');
     }
@@ -32,7 +33,9 @@ export class StartSessionCommand {
     category: Category,
     itemId: number,
   ): void {
-    if (category.type !== 'rotation') return;
+    if (category.type !== 'rotation') {
+      return;
+    }
 
     const dayStart = startOfTodayLocal(nowSeconds());
     if (
@@ -61,7 +64,9 @@ export class StartSessionCommand {
     const { itemId, startedAt } = this.validateInput();
 
     const item = itemStore.find(itemId);
-    if (!item) throw new NotFoundError(`Item ${itemId} not found`);
+    if (!item) {
+      throw new NotFoundError(`Item ${itemId} not found`);
+    }
 
     const conflict = sessionStore.findOpenInCategory(item.category_id);
     if (conflict) {
