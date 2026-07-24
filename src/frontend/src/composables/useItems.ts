@@ -1,6 +1,6 @@
-import { ref } from 'vue';
-import type { Item } from './useWear.js';
-import { apiFetch } from '../utils/apiFetch.js';
+import { ref } from 'vue'
+import type { Item } from './useWear.js'
+import { apiFetch } from '../utils/apiFetch.js'
 
 export interface ItemStats {
   item_id: number;
@@ -24,37 +24,37 @@ export type ItemCreate = {
 export type ItemUpdate = Partial<ItemCreate>;
 
 // Module-level state shared across all component instances
-const items = ref<Item[]>([]);
+const items = ref<Item[]>([])
 
 async function loadItems(categoryId?: number): Promise<void> {
   const url =
     categoryId !== undefined
       ? `/api/items?category_id=${categoryId}`
-      : '/api/items';
-  const res = await apiFetch(url);
+      : '/api/items'
+  const res = await apiFetch(url)
   if (!res.ok) {
-    throw new Error(`HTTP ${res.status}`);
+    throw new Error(`HTTP ${res.status}`)
   }
-  items.value = await res.json();
+  items.value = await res.json()
 }
 
 async function loadItemStats(id: number): Promise<ItemStats> {
-  const res = await apiFetch(`/api/items/${id}/stats`);
+  const res = await apiFetch(`/api/items/${id}/stats`)
   if (!res.ok) {
-    throw new Error(`HTTP ${res.status}`);
+    throw new Error(`HTTP ${res.status}`)
   }
-  return res.json();
+  return res.json()
 }
 
 async function loadHistory(
   id: number,
   unit: 'month' | 'week' = 'month',
 ): Promise<HistoryEntry[]> {
-  const res = await apiFetch(`/api/items/${id}/stats/history?unit=${unit}`);
+  const res = await apiFetch(`/api/items/${id}/stats/history?unit=${unit}`)
   if (!res.ok) {
-    throw new Error(`HTTP ${res.status}`);
+    throw new Error(`HTTP ${res.status}`)
   }
-  return res.json();
+  return res.json()
 }
 
 async function createItem(data: ItemCreate): Promise<Item> {
@@ -62,14 +62,14 @@ async function createItem(data: ItemCreate): Promise<Item> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
-  });
+  })
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? `HTTP ${res.status}`);
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.error ?? `HTTP ${res.status}`)
   }
-  const item: Item = await res.json();
-  items.value.push(item);
-  return item;
+  const item: Item = await res.json()
+  items.value.push(item)
+  return item
 }
 
 async function updateItem(id: number, data: ItemUpdate): Promise<Item> {
@@ -77,29 +77,29 @@ async function updateItem(id: number, data: ItemUpdate): Promise<Item> {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
-  });
+  })
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? `HTTP ${res.status}`);
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.error ?? `HTTP ${res.status}`)
   }
-  const updated: Item = await res.json();
-  const idx = items.value.findIndex((i) => i.id === id);
+  const updated: Item = await res.json()
+  const idx = items.value.findIndex((i) => i.id === id)
   if (idx !== -1) {
-    items.value[idx] = updated;
+    items.value[idx] = updated
   }
-  return updated;
+  return updated
 }
 
 async function deleteItem(id: number): Promise<void> {
-  const res = await apiFetch(`/api/items/${id}`, { method: 'DELETE' });
+  const res = await apiFetch(`/api/items/${id}`, { method: 'DELETE' })
   if (!res.ok) {
-    throw new Error(`HTTP ${res.status}`);
+    throw new Error(`HTTP ${res.status}`)
   }
-  items.value = items.value.filter((i) => i.id !== id);
+  items.value = items.value.filter((i) => i.id !== id)
 }
 
 function itemsForCategory(categoryId: number): Item[] {
-  return items.value.filter((i) => i.category_id === categoryId);
+  return items.value.filter((i) => i.category_id === categoryId)
 }
 
 export function useItems() {
@@ -112,5 +112,5 @@ export function useItems() {
     updateItem,
     deleteItem,
     itemsForCategory,
-  };
+  }
 }

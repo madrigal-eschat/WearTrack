@@ -25,12 +25,12 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
-import { kPage } from 'konsta/vue';
-import { Cog6ToothIcon } from '@heroicons/vue/24/solid';
-import PageHeader from '../components/PageHeader.vue';
-import ActionPane from '../components/ActionPane.vue';
-import CalendarPane from '../components/CalendarPane.vue';
+import { useRouter } from 'vue-router'
+import { kPage } from 'konsta/vue'
+import { Cog6ToothIcon } from '@heroicons/vue/24/solid'
+import PageHeader from '../components/PageHeader.vue'
+import ActionPane from '../components/ActionPane.vue'
+import CalendarPane from '../components/CalendarPane.vue'
 
-const router = useRouter();
+const router = useRouter()
 </script>

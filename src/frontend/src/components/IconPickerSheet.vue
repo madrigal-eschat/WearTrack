@@ -104,90 +104,90 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onUnmounted } from 'vue';
-import { kSheet, kToolbar } from 'konsta/vue';
-import SectionTitle from './SectionTitle.vue';
-import IconGrid from './IconGrid.vue';
-import type { PhCategories } from '../utils/phCategories.js';
-import { filterIcons } from '../utils/phCategories.js';
-import categoriesData from '../generated/ph-categories.json';
+import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
+import { kSheet, kToolbar } from 'konsta/vue'
+import SectionTitle from './SectionTitle.vue'
+import IconGrid from './IconGrid.vue'
+import type { PhCategories } from '../utils/phCategories.js'
+import { filterIcons } from '../utils/phCategories.js'
+import categoriesData from '../generated/ph-categories.json'
 
-const props = defineProps<{ modelValue: string; open: boolean }>();
+const props = defineProps<{ modelValue: string; open: boolean }>()
 const emit = defineEmits<{
   'update:modelValue': [value: string];
   'update:open': [value: boolean];
-}>();
+}>()
 
-const query = ref('');
-const activeCategory = ref('');
-const gridEl = ref<HTMLElement | null>(null);
+const query = ref('')
+const activeCategory = ref('')
+const gridEl = ref<HTMLElement | null>(null)
 
 // Non-reactive element maps — Vue doesn't need to track individual el
 // references
-const headingEls: Record<string, HTMLElement | null> = {};
-const pillEls: Record<string, HTMLElement | null> = {};
+const headingEls: Record<string, HTMLElement | null> = {}
+const pillEls: Record<string, HTMLElement | null> = {}
 
-let observer: IntersectionObserver | null = null;
+let observer: IntersectionObserver | null = null
 
 const categoryNames = computed(() =>
   Object.keys(categoriesData as PhCategories),
-);
+)
 
 const searchResults = computed(() =>
   filterIcons(categoriesData as PhCategories, query.value),
-);
+)
 
 function setHeadingRef(cat: string, el: unknown) {
-  headingEls[cat] = el as HTMLElement | null;
+  headingEls[cat] = el as HTMLElement | null
 }
 
 function setPillRef(cat: string, el: unknown) {
-  pillEls[cat] = el as HTMLElement | null;
+  pillEls[cat] = el as HTMLElement | null
 }
 
 function select(id: string) {
-  emit('update:modelValue', id);
-  emit('update:open', false);
+  emit('update:modelValue', id)
+  emit('update:open', false)
 }
 
 function close() {
-  emit('update:open', false);
+  emit('update:open', false)
 }
 
 function scrollToCategory(cat: string) {
-  headingEls[cat]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  headingEls[cat]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 function setupObserver() {
-  observer?.disconnect();
+  observer?.disconnect()
   if (!gridEl.value) {
-    return;
+    return
   }
   observer = new IntersectionObserver(
     (entries) => {
-      const visible = entries.filter((e) => e.isIntersecting);
+      const visible = entries.filter((e) => e.isIntersecting)
       if (!visible.length) {
-        return;
+        return
       }
       visible.sort(
         (a, b) => a.boundingClientRect.top - b.boundingClientRect.top,
-      );
-      const cat = (visible[0].target as HTMLElement).dataset.category ?? '';
-      activeCategory.value = cat;
+      )
+      const cat = (visible[0].target as HTMLElement).dataset.category ?? ''
+      activeCategory.value = cat
       pillEls[cat]?.scrollIntoView({
         behavior: 'smooth',
         inline: 'nearest',
         block: 'nearest',
-      });
+      })
     },
     {
       root: gridEl.value,
       threshold: 0.1,
     },
-  );
+  )
   for (const el of Object.values(headingEls)) {
     if (el) {
-      observer.observe(el);
+      observer.observe(el)
     }
   }
 }
@@ -196,28 +196,28 @@ watch(
   () => props.open,
   (val) => {
     if (!val) {
-      query.value = '';
-      activeCategory.value = '';
-      observer?.disconnect();
-      observer = null;
+      query.value = ''
+      activeCategory.value = ''
+      observer?.disconnect()
+      observer = null
       // Clear element maps — pills may not fire null-ref callbacks if
       // hidden when sheet closes
       for (const key of Object.keys(headingEls)) {
-        headingEls[key] = null;
+        headingEls[key] = null
       }
       for (const key of Object.keys(pillEls)) {
-        pillEls[key] = null;
+        pillEls[key] = null
       }
     } else {
-      nextTick(() => setupObserver());
+      nextTick(() => setupObserver())
     }
   },
-);
+)
 
 // Guard against navigating away while the picker is open (watch won't
 // fire in that case)
 onUnmounted(() => {
-  observer?.disconnect();
-  observer = null;
-});
+  observer?.disconnect()
+  observer = null
+})
 </script>

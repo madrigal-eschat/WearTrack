@@ -1,4 +1,4 @@
-import { dbExport } from '../index.js';
+import { dbExport } from '../index.js'
 
 export default function runMigration010() {
   dbExport.exec(`
@@ -12,5 +12,5 @@ export default function runMigration010() {
       topic_prefix         TEXT NOT NULL DEFAULT 'weartrack',
       ha_discovery_enabled INTEGER NOT NULL DEFAULT 0
     );
-  `);
+  `)
 }

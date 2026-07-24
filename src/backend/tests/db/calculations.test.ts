@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest'
 import {
   restWeight,
   riskLevelFor,
@@ -10,7 +10,7 @@ import {
   startOfTodayLocal,
   startOfNextLocalMidnight,
   type Category,
-} from '../../src/db/calculations.js';
+} from '../../src/db/calculations.js'
 
 const cat: Category = {
   id: 1,
@@ -29,37 +29,37 @@ const cat: Category = {
   break_grace_time: 86400,
   type: 'duration',
   consecutive_wear_days: 1,
-};
-const item = { difficulty_multiplier: 1 };
+}
+const item = { difficulty_multiplier: 1 }
 
 describe('restWeight', () => {
-  it('is 0 for a single band', () => expect(restWeight(0, 1)).toBe(0));
+  it('is 0 for a single band', () => expect(restWeight(0, 1)).toBe(0))
   it('runs 0..2 across bands', () => {
-    expect(restWeight(0, 3)).toBe(0);
-    expect(restWeight(1, 3)).toBe(1);
-    expect(restWeight(2, 3)).toBe(2);
-  });
-});
+    expect(restWeight(0, 3)).toBe(0)
+    expect(restWeight(1, 3)).toBe(1)
+    expect(restWeight(2, 3)).toBe(2)
+  })
+})
 
 describe('riskLevelFor', () => {
   it('finds the band for an elapsed time', () => {
-    expect(riskLevelFor(1800, cat)?.text).toBe('Low');
-    expect(riskLevelFor(5000, cat)?.text).toBe('Med');
-    expect(riskLevelFor(9000, cat)?.text).toBe('High');
-  });
+    expect(riskLevelFor(1800, cat)?.text).toBe('Low')
+    expect(riskLevelFor(5000, cat)?.text).toBe('Med')
+    expect(riskLevelFor(9000, cat)?.text).toBe('High')
+  })
   it('attaches rest_weight by position', () => {
-    expect(riskLevelFor(1800, cat)?.rest_weight).toBe(0);
-    expect(riskLevelFor(9000, cat)?.rest_weight).toBe(2);
-  });
-});
+    expect(riskLevelFor(1800, cat)?.rest_weight).toBe(0)
+    expect(riskLevelFor(9000, cat)?.rest_weight).toBe(2)
+  })
+})
 
 describe('computeSessionStart', () => {
   it('first session uses difficulty * initial', () => {
     expect(computeSessionStart(cat, item, null, 0, false)).toEqual({
       target: 900,
       max: 1800,
-    });
-  });
+    })
+  })
 
   it('first session applies difficulty modifier (1/1.5)', () => {
     const r = computeSessionStart(
@@ -68,10 +68,10 @@ describe('computeSessionStart', () => {
       null,
       0,
       false,
-    );
-    expect(r.target).toBe(Math.floor(900 / 1.5));
-    expect(r.max).toBe(Math.floor(1800 / 1.5));
-  });
+    )
+    expect(r.target).toBe(Math.floor(900 / 1.5))
+    expect(r.max).toBe(Math.floor(1800 / 1.5))
+  })
 
   it('after rest, grows by difficulty * (prev + initial)', () => {
     const prev = {
@@ -80,11 +80,11 @@ describe('computeSessionStart', () => {
       ended_at: 0,
       started_at: -100,
       rest_seconds: 100,
-    };
+    }
     // earliest_start = 100; start at 200 (>= earliest, <= latest 100+86400)
-    const r = computeSessionStart(cat, item, prev, 200, false);
-    expect(r).toEqual({ target: 1800, max: 3600 });
-  });
+    const r = computeSessionStart(cat, item, prev, 200, false)
+    expect(r).toEqual({ target: 1800, max: 3600 })
+  })
 
   it('inside rest period halves prev target/max', () => {
     // prev values high enough that halved result (1000, 2000) stays above
@@ -95,11 +95,11 @@ describe('computeSessionStart', () => {
       ended_at: 0,
       started_at: -100,
       rest_seconds: 500,
-    };
+    }
     // start < earliest_start(500)
-    const r = computeSessionStart(cat, item, prev, 100, false);
-    expect(r).toEqual({ target: 1000, max: 2000 });
-  });
+    const r = computeSessionStart(cat, item, prev, 100, false)
+    expect(r).toEqual({ target: 1000, max: 2000 })
+  })
 
   it('past grace applies floored daily decay', () => {
     const prev = {
@@ -108,31 +108,31 @@ describe('computeSessionStart', () => {
       ended_at: 0,
       started_at: -100,
       rest_seconds: 0,
-    };
+    }
     // latest_start = 0 + 0 + 86400. Start 2 days past latest_start =>
     // days_since_grace = 2
-    const start = 86400 + 2 * 86400;
-    const r = computeSessionStart(cat, item, prev, start, false);
+    const start = 86400 + 2 * 86400
+    const r = computeSessionStart(cat, item, prev, start, false)
     // grown target=1800, max=3600 (dm=1 * (prev + initial)). Each day's loss is
     // floored at initial (900/1800), so both reach the floor on day 1 already:
     // day1: target loss = max(0.09*1800, 900) = 900 -> target 900
     // day1: max loss    = max(0.09*3600, 1800) = 1800 -> max 1800
-    expect(r.target).toBe(900);
-    expect(r.max).toBe(1800);
-  });
+    expect(r.target).toBe(900)
+    expect(r.max).toBe(1800)
+  })
 
   it('active injury halves the result', () => {
-    const r = computeSessionStart(cat, item, null, 0, true);
-    expect(r).toEqual({ target: 450, max: 900 });
-  });
+    const r = computeSessionStart(cat, item, null, 0, true)
+    expect(r).toEqual({ target: 450, max: 900 })
+  })
 
   it('null category max yields null max throughout', () => {
-    const noMax = { ...cat, initial_max_wear_duration_seconds: null };
+    const noMax = { ...cat, initial_max_wear_duration_seconds: null }
     expect(computeSessionStart(noMax, item, null, 0, false)).toEqual({
       target: 900,
       max: null,
-    });
-  });
+    })
+  })
 
   it(
     'floors target and max at initial values when halving inside rest ' +
@@ -146,15 +146,15 @@ describe('computeSessionStart', () => {
         ended_at: 0,
         started_at: -100,
         rest_seconds: 500,
-      };
+      }
       // start inside rest period → halved: target=50, max=100 — both below
       // initial (900/1800)
-      const r = computeSessionStart(cat, item, prev, 100, false);
-      expect(r.target).toBe(900);
-      expect(r.max).toBe(1800);
+      const r = computeSessionStart(cat, item, prev, 100, false)
+      expect(r.target).toBe(900)
+      expect(r.max).toBe(1800)
     },
-  );
-});
+  )
+})
 
 describe(
   'computeSessionStart — floored break decay reaches floor in bounded ' +
@@ -163,7 +163,7 @@ describe(
     const noMaxCat: Category = {
       ...cat,
       initial_max_wear_duration_seconds: null,
-    };
+    }
 
     it(
       'matches the day-by-day worked example (5000 -> 900 over 5 ' + 'days)',
@@ -174,18 +174,18 @@ describe(
           ended_at: 0,
           started_at: -100,
           rest_seconds: 0,
-        };
-        const start = 86400 + 5 * 86400; // 5 days past grace
-        const r = computeSessionStart(noMaxCat, item, prev, start, false);
+        }
+        const start = 86400 + 5 * 86400 // 5 days past grace
+        const r = computeSessionStart(noMaxCat, item, prev, start, false)
         // grown target = 1 * (4100 + 900) = 5000
         // day1: loss=max(450,900)=900 -> 4100
         // day2: loss=max(369,900)=900 -> 3200
         // day3: loss=max(288,900)=900 -> 2300
         // day4: loss=max(207,900)=900 -> 1400
         // day5: loss=max(126,900)=900 -> 900 (floor)
-        expect(r.target).toBe(900);
+        expect(r.target).toBe(900)
       },
-    );
+    )
 
     it('never overshoots below the floor for very long gaps', () => {
       const prev = {
@@ -194,11 +194,11 @@ describe(
         ended_at: 0,
         started_at: -100,
         rest_seconds: 0,
-      };
-      const start = 86400 + 1000 * 86400; // 1000 days past grace
-      const r = computeSessionStart(noMaxCat, item, prev, start, false);
-      expect(r.target).toBe(900);
-    });
+      }
+      const start = 86400 + 1000 * 86400 // 1000 days past grace
+      const r = computeSessionStart(noMaxCat, item, prev, start, false)
+      expect(r.target).toBe(900)
+    })
 
     it(
       'applies the same floored decay to max independently, for ' +
@@ -210,20 +210,20 @@ describe(
           ended_at: 0,
           started_at: -100,
           rest_seconds: 0,
-        };
-        const start = 86400 + 5 * 86400;
-        const r = computeSessionStart(cat, item, prev, start, false);
+        }
+        const start = 86400 + 5 * 86400
+        const r = computeSessionStart(cat, item, prev, start, false)
         // grown target = 4100+900 = 5000 -> floors to 900 by day 5 (see worked
         // example above)
         // grown max = 8200+1800 = 10000 -> day1:8200 day2:6400 day3:4600
         // day4:2800
         // day5: floor 1800
-        expect(r.target).toBe(900);
-        expect(r.max).toBe(1800);
+        expect(r.target).toBe(900)
+        expect(r.max).toBe(1800)
       },
-    );
+    )
   },
-);
+)
 
 describe('lapCount', () => {
   it('floors elapsed/target', () => {
@@ -233,9 +233,9 @@ describe('lapCount', () => {
       ended_at: 350,
       started_at: 0,
       rest_seconds: 0,
-    };
-    expect(lapCount(prev)).toBe(3);
-  });
+    }
+    expect(lapCount(prev)).toBe(3)
+  })
 
   it('is 0 when elapsed is less than one target', () => {
     const prev = {
@@ -244,10 +244,10 @@ describe('lapCount', () => {
       ended_at: 50,
       started_at: 0,
       rest_seconds: 0,
-    };
-    expect(lapCount(prev)).toBe(0);
-  });
-});
+    }
+    expect(lapCount(prev)).toBe(0)
+  })
+})
 
 describe(
   'computeSessionStart — lap carry-over (null-max categories ' + 'only)',
@@ -256,7 +256,7 @@ describe(
       ...cat,
       initial_max_wear_duration_seconds: null,
       initial_target_wear_duration_seconds: 50,
-    };
+    }
 
     it(
       'adds floor(lapCount/2) * previous.target on the normal-growth ' +
@@ -270,15 +270,15 @@ describe(
           ended_at: 1000,
           started_at: 650,
           rest_seconds: 0,
-        };
+        }
         // earliest_start = 1000; start at 1000 (>= earliest, <= latest
         // 1000+86400)
         // => normal-growth branch
-        const r = computeSessionStart(noMaxCat, item, prev, 1000, false);
+        const r = computeSessionStart(noMaxCat, item, prev, 1000, false)
         // target = 1 * (100 + 50 + 1*100) = 250
-        expect(r).toEqual({ target: 250, max: null });
+        expect(r).toEqual({ target: 250, max: null })
       },
-    );
+    )
 
     it(
       'adds the same carry-over on the early-restart branch, scaled by ' +
@@ -292,15 +292,15 @@ describe(
           ended_at: 1000,
           started_at: 550,
           rest_seconds: 500,
-        };
+        }
         // earliest_start = 1500; start at 1000 (< earliest_start) =>
         // early-restart
         // branch
-        const r = computeSessionStart(noMaxCat, item, prev, 1000, false);
+        const r = computeSessionStart(noMaxCat, item, prev, 1000, false)
         // target = (1/2) * (100 + 2*100) = 150
-        expect(r).toEqual({ target: 150, max: null });
+        expect(r).toEqual({ target: 150, max: null })
       },
-    );
+    )
 
     it('never applies a lap carry-over to max-set categories', () => {
       // same shape as the normal-growth test above, but on `cat` (max is set)
@@ -310,14 +310,14 @@ describe(
         ended_at: 1000,
         started_at: 650,
         rest_seconds: 0,
-      };
-      const r = computeSessionStart(cat, item, prev, 1000, false);
+      }
+      const r = computeSessionStart(cat, item, prev, 1000, false)
       // unaffected by lapCount(=3) despite elapsed(350) > target(100) —
       // `cat` has a max set
-      expect(r).toEqual({ target: 1000, max: 3600 });
-    });
+      expect(r).toEqual({ target: 1000, max: 3600 })
+    })
   },
-);
+)
 
 describe(
   'computeSessionStart — difficulty modifier now applied on the ' +
@@ -332,34 +332,34 @@ describe(
           ended_at: 0,
           started_at: -100,
           rest_seconds: 500,
-        };
-        const hardItem = { difficulty_multiplier: 2 }; // dm = 1/2 = 0.5
+        }
+        const hardItem = { difficulty_multiplier: 2 } // dm = 1/2 = 0.5
         // start(100) < earliest_start(500)
-        const r = computeSessionStart(cat, hardItem, prev, 100, false);
+        const r = computeSessionStart(cat, hardItem, prev, 100, false)
         // target = (dm/2) * (2000 + 0) = 500
-        expect(r.target).toBe(500);
+        expect(r.target).toBe(500)
         // max is untouched by this fix: previous.max/2 = 2000 (no difficulty
         // modifier applied to max)
-        expect(r.max).toBe(2000);
+        expect(r.max).toBe(2000)
       },
-    );
+    )
   },
-);
+)
 
 describe('computeDecay', () => {
   const decayCat = {
     break_grace_time: 100,
     break_decay_multiplier: 0.91,
     initial_target_wear_duration_seconds: 900,
-  };
+  }
 
   it('returns none/null when there is no previous session', () => {
     expect(computeDecay(null, decayCat, 10000)).toEqual({
       decay_start_time: null,
       decay_state: 'none',
       decay_full_time: null,
-    });
-  });
+    })
+  })
 
   it(
     'computes decay_start_time and decay_full_time from the previous ' +
@@ -369,17 +369,17 @@ describe('computeDecay', () => {
         ended_at: 0,
         rest_seconds: 50,
         target_wear_seconds: 4100,
-      };
-      const r = computeDecay(previous, decayCat, 0);
-      const decayStart = 0 + 50 + 100; // 150
-      expect(r.decay_start_time).toBe(decayStart);
+      }
+      const r = computeDecay(previous, decayCat, 0)
+      const decayStart = 0 + 50 + 100 // 150
+      expect(r.decay_start_time).toBe(decayStart)
       // (4100+900) decays 5000 -> 4100 -> 3200 -> 2300 -> 1400 -> 900, floor
       // reached after 5 days
       // (same worked example as Task 1's computeSessionStart test)
-      expect(r.decay_full_time).toBe(decayStart + 5 * 86400);
-      expect(r.decay_state).toBe('none');
+      expect(r.decay_full_time).toBe(decayStart + 5 * 86400)
+      expect(r.decay_state).toBe('none')
     },
-  );
+  )
 
   it(
     'is "decaying" once past decay_start_time but before ' + 'decay_full_time',
@@ -388,26 +388,26 @@ describe('computeDecay', () => {
         ended_at: 0,
         rest_seconds: 50,
         target_wear_seconds: 4100,
-      };
-      const decayStart = 150;
+      }
+      const decayStart = 150
       // 3 days into a 5-day decay
-      const r = computeDecay(previous, decayCat, decayStart + 3 * 86400);
-      expect(r.decay_state).toBe('decaying');
+      const r = computeDecay(previous, decayCat, decayStart + 3 * 86400)
+      expect(r.decay_state).toBe('decaying')
     },
-  );
+  )
 
   it('is "fully_decayed" at decay_full_time', () => {
     const previous = {
       ended_at: 0,
       rest_seconds: 50,
       target_wear_seconds: 4100,
-    };
-    const decayStart = 150;
-    const r = computeDecay(previous, decayCat, decayStart + 5 * 86400);
-    expect(r.decay_state).toBe('fully_decayed');
-    expect(r.decay_full_time).toBe(decayStart + 5 * 86400);
-  });
-});
+    }
+    const decayStart = 150
+    const r = computeDecay(previous, decayCat, decayStart + 5 * 86400)
+    expect(r.decay_state).toBe('fully_decayed')
+    expect(r.decay_full_time).toBe(decayStart + 5 * 86400)
+  })
+})
 
 describe('computeRest', () => {
   it(
@@ -417,16 +417,16 @@ describe('computeRest', () => {
       // Low band (weight 0): 1800 * 1 * 2 = 3600, floored to 86400
       expect(computeRest(1800, 1800, cat, riskLevelFor(1800, cat), false)).toBe(
         86400,
-      );
+      )
     },
-  );
+  )
 
   it('high band raises the multiplier', () => {
     // High band weight 2: 9000 * 3 * 2 = 54000, still floored to 86400
     expect(computeRest(9000, 18000, cat, riskLevelFor(9000, cat), false)).toBe(
       86400,
-    );
-  });
+    )
+  })
 
   it('adds 2x penalty for time over max', () => {
     // elapsed 100000 over max 1800: base = 100000*3*2=600000 (high band),
@@ -437,39 +437,39 @@ describe('computeRest', () => {
       cat,
       riskLevelFor(100000, cat),
       false,
-    );
-    expect(rest).toBe(600000 + (100000 - 1800) * 2);
-  });
+    )
+    expect(rest).toBe(600000 + (100000 - 1800) * 2)
+  })
 
   it('no minimum-rest floor when max is null', () => {
-    const noMax = { ...cat, initial_max_wear_duration_seconds: null };
+    const noMax = { ...cat, initial_max_wear_duration_seconds: null }
     // 10 * (1+0) * 2 = 20, no floor applied
     expect(computeRest(10, null, noMax, riskLevelFor(10, noMax), false)).toBe(
       20,
-    );
-  });
+    )
+  })
 
   it('multiplies by 1.5 when injured', () => {
     expect(computeRest(1800, 1800, cat, riskLevelFor(1800, cat), true)).toBe(
       Math.floor(86400 * 1.5),
-    );
-  });
-});
+    )
+  })
+})
 
 describe('rotationAvailability', () => {
   it('all items available when there is no history', () => {
-    const result = rotationAvailability([1, 2, 3], []);
-    expect(result).toEqual(new Set([1, 2, 3]));
-  });
+    const result = rotationAvailability([1, 2, 3], [])
+    expect(result).toEqual(new Set([1, 2, 3]))
+  })
 
   it('excludes items worn since the last reset (partial cycle)', () => {
     // Newest first: C then B were worn; A was not.
     const result = rotationAvailability(
       [1, 2, 3],
       [{ item_id: 3 }, { item_id: 2 }],
-    );
-    expect(result).toEqual(new Set([1]));
-  });
+    )
+    expect(result).toEqual(new Set([1]))
+  })
 
   it(
     'resets to all available once every active item has had a turn ' +
@@ -480,10 +480,10 @@ describe('rotationAvailability', () => {
       const result = rotationAvailability(
         [1, 2, 3],
         [{ item_id: 1 }, { item_id: 3 }, { item_id: 2 }],
-      );
-      expect(result).toEqual(new Set([1, 2, 3]));
+      )
+      expect(result).toEqual(new Set([1, 2, 3]))
     },
-  );
+  )
 
   it(
     'a newly added item (never worn) is immediately available even ' +
@@ -494,10 +494,10 @@ describe('rotationAvailability', () => {
       const result = rotationAvailability(
         [1, 2, 3, 4],
         [{ item_id: 3 }, { item_id: 2 }],
-      );
-      expect(result).toEqual(new Set([1, 4]));
+      )
+      expect(result).toEqual(new Set([1, 4]))
     },
-  );
+  )
 
   it(
     'a removed item drops out of consideration even if it was worn ' +
@@ -508,15 +508,15 @@ describe('rotationAvailability', () => {
       const result = rotationAvailability(
         [1, 2],
         [{ item_id: 3 }, { item_id: 1 }],
-      );
+      )
       // Scan: 3 (not active, skip for seen-tracking purposes but still
       // "consumes"
       // the repeat-stop check only for active items)
       // 1 is active and unseen -> seen={1}. No repeat among active items
       // encountered. seen({1}) != full active set {1,2}.
-      expect(result).toEqual(new Set([2]));
+      expect(result).toEqual(new Set([2]))
     },
-  );
+  )
 
   it(
     'lock scenario: two consecutive sessions of the same item collapse ' +
@@ -527,10 +527,10 @@ describe('rotationAvailability', () => {
       const result = rotationAvailability(
         [1, 2, 3],
         [{ item_id: 1 }, { item_id: 1 }],
-      );
-      expect(result).toEqual(new Set([2, 3]));
+      )
+      expect(result).toEqual(new Set([2, 3]))
     },
-  );
+  )
 
   it(
     'does not spuriously report a full reset when a new cycle starts ' +
@@ -545,11 +545,11 @@ describe('rotationAvailability', () => {
       const result = rotationAvailability(
         [1, 2],
         [{ item_id: 1 }, { item_id: 2 }, { item_id: 1 }],
-      );
-      expect(result).toEqual(new Set([2]));
+      )
+      expect(result).toEqual(new Set([2]))
     },
-  );
-});
+  )
+})
 
 describe('startOfTodayLocal / startOfNextLocalMidnight', () => {
   it(
@@ -557,25 +557,25 @@ describe('startOfTodayLocal / startOfNextLocalMidnight', () => {
       'same day as `now`',
     () => {
       // 2026-07-21 14:30 local
-      const now = Math.floor(new Date(2026, 6, 21, 14, 30, 0).getTime() / 1000);
-      const today = startOfTodayLocal(now);
-      const d = new Date(today * 1000);
-      expect(d.getFullYear()).toBe(2026);
-      expect(d.getMonth()).toBe(6); // July (0-indexed)
-      expect(d.getDate()).toBe(21);
-      expect(d.getHours()).toBe(0);
-      expect(d.getMinutes()).toBe(0);
-      expect(d.getSeconds()).toBe(0);
+      const now = Math.floor(new Date(2026, 6, 21, 14, 30, 0).getTime() / 1000)
+      const today = startOfTodayLocal(now)
+      const d = new Date(today * 1000)
+      expect(d.getFullYear()).toBe(2026)
+      expect(d.getMonth()).toBe(6) // July (0-indexed)
+      expect(d.getDate()).toBe(21)
+      expect(d.getHours()).toBe(0)
+      expect(d.getMinutes()).toBe(0)
+      expect(d.getSeconds()).toBe(0)
     },
-  );
+  )
 
   it('startOfNextLocalMidnight returns midnight the following day', () => {
-    const now = Math.floor(new Date(2026, 6, 21, 14, 30, 0).getTime() / 1000);
-    const next = startOfNextLocalMidnight(now);
-    const d = new Date(next * 1000);
-    expect(d.getDate()).toBe(22);
-    expect(d.getHours()).toBe(0);
-  });
+    const now = Math.floor(new Date(2026, 6, 21, 14, 30, 0).getTime() / 1000)
+    const next = startOfNextLocalMidnight(now)
+    const d = new Date(next * 1000)
+    expect(d.getDate()).toBe(22)
+    expect(d.getHours()).toBe(0)
+  })
 
   it(
     'startOfTodayLocal is idempotent when `now` is already exactly ' +
@@ -583,22 +583,22 @@ describe('startOfTodayLocal / startOfNextLocalMidnight', () => {
     () => {
       const midnight = Math.floor(
         new Date(2026, 6, 21, 0, 0, 0).getTime() / 1000,
-      );
-      expect(startOfTodayLocal(midnight)).toBe(midnight);
+      )
+      expect(startOfTodayLocal(midnight)).toBe(midnight)
     },
-  );
+  )
 
   it(
     'startOfNextLocalMidnight is exactly 24h * N seconds after ' +
       'startOfTodayLocal for a non-DST day',
     () => {
-      const now = Math.floor(new Date(2026, 6, 21, 14, 30, 0).getTime() / 1000);
+      const now = Math.floor(new Date(2026, 6, 21, 14, 30, 0).getTime() / 1000)
       expect(
         startOfNextLocalMidnight(now) - startOfTodayLocal(now),
-      ).toBeGreaterThanOrEqual(23 * 3600);
+      ).toBeGreaterThanOrEqual(23 * 3600)
       expect(
         startOfNextLocalMidnight(now) - startOfTodayLocal(now),
-      ).toBeLessThanOrEqual(25 * 3600);
+      ).toBeLessThanOrEqual(25 * 3600)
     },
-  );
-});
+  )
+})

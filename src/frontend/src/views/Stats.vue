@@ -45,12 +45,12 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed } from 'vue';
-import { kPage, kList, kListItem, kBadge, kBlock } from 'konsta/vue';
-import { Icon } from '@iconify/vue';
-import { useStats } from '../composables/useStats.js';
-import SegmentedControl from '../components/SegmentedControl.vue';
-import PageHeader from '../components/PageHeader.vue';
+import { onMounted, computed } from 'vue'
+import { kPage, kList, kListItem, kBadge, kBlock } from 'konsta/vue'
+import { Icon } from '@iconify/vue'
+import { useStats } from '../composables/useStats.js'
+import SegmentedControl from '../components/SegmentedControl.vue'
+import PageHeader from '../components/PageHeader.vue'
 
 const {
   leaderboard,
@@ -58,34 +58,34 @@ const {
   loading,
   loadLeaderboard,
   LEADERBOARD_TYPES,
-} = useStats();
+} = useStats()
 
-onMounted(() => loadLeaderboard('longest-wear'));
+onMounted(() => loadLeaderboard('longest-wear'))
 
 const activeTypeObj = computed(() =>
   LEADERBOARD_TYPES.find((t) => t.value === activeType.value)
-);
+)
 
 function entryName(entry: Record<string, unknown>): string {
-  return (entry.item_name ?? entry.category_name ?? '—') as string;
+  return (entry.item_name ?? entry.category_name ?? '—') as string
 }
 
 function entrySubtitle(entry: Record<string, unknown>): string {
   if (entry.item_name && entry.category_name) {
-    return `Category: ${entry.category_name}`;
+    return `Category: ${entry.category_name}`
   }
-  return '';
+  return ''
 }
 
 function entryIcon(entry: Record<string, unknown>): string | null {
-  return (entry.category_icon ?? null) as string | null;
+  return (entry.category_icon ?? null) as string | null
 }
 
 function entryColor(entry: Record<string, unknown>): string {
-  return (entry.item_color ?? 'currentColor') as string;
+  return (entry.item_color ?? 'currentColor') as string
 }
 
 function entryBadge(entry: Record<string, unknown>): string {
-  return activeTypeObj.value?.badge(entry) ?? '';
+  return activeTypeObj.value?.badge(entry) ?? ''
 }
 </script>
