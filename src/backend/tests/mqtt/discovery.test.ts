@@ -89,6 +89,7 @@ describe('mqtt discovery', () => {
           unique_id: 'weartrack_1_current_streak',
           state_topic: 'weartrack/winter-gloves/stats',
           value_template: '{{ value_json.streak_count }}',
+          state_class: 'total',
         }),
         { retain: true },
       )
@@ -97,6 +98,7 @@ describe('mqtt discovery', () => {
         expect.objectContaining({
           unique_id: 'weartrack_1_longest_streak',
           value_template: '{{ value_json.best_streak_count }}',
+          state_class: 'total',
         }),
         { retain: true },
       )

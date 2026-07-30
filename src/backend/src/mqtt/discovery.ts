@@ -67,6 +67,7 @@ function publishDiscovery(): void {
       'current_streak',
       'current streak',
       '{{ value_json.streak_count }}',
+      { state_class: 'total' },
     )
     publishStatsSensor(
       config.topic_prefix,
@@ -76,6 +77,7 @@ function publishDiscovery(): void {
       'longest_streak',
       'longest streak',
       '{{ value_json.best_streak_count }}',
+      { state_class: 'total' },
     )
     publishStatsSensor(
       config.topic_prefix,
