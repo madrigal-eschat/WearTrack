@@ -11,7 +11,6 @@ import { router as sessionsRouter } from './controllers/sessions.js'
 import { router as injuriesRouter } from './controllers/injuries.js'
 import { router as leaderboardsRouter } from './controllers/leaderboards.js'
 import { router as notificationsRouter } from './controllers/notifications.js'
-import { router as mqttRouter } from './controllers/mqtt.js'
 import { startScheduler } from './notifications/runner.js'
 import { startEventsPoller } from './events/poller.js'
 import { initMqtt } from './mqtt/client.js'
@@ -51,7 +50,6 @@ if (process.env.NODE_ENV !== 'production' || process.env.E2E_TEST === '1') {
       DELETE FROM categories;
       DELETE FROM push_subscriptions;
       DELETE FROM event_poller_state;
-      DELETE FROM mqtt_config;
     `)
     return c.json({ ok: true })
   })
@@ -63,7 +61,6 @@ app.route('/api/sessions', sessionsRouter)
 app.route('/api/injuries', injuriesRouter)
 app.route('/api/leaderboards', leaderboardsRouter)
 app.route('/api/notifications', notificationsRouter)
-app.route('/api/mqtt', mqttRouter)
 
 if (process.env.FRONTEND_DIST) {
   // Content-hashed bundles are immutable; everything else (index.html,

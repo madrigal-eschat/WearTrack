@@ -10,6 +10,12 @@ services:
       - weartrack-data:/data
     environment:
       - NODE_ENV=production
+      - MQTT_HOST=${MQTT_HOST:-}
+      - MQTT_PORT=${MQTT_PORT:-1883}
+      - MQTT_USER=${MQTT_USER:-}
+      - MQTT_PASS=${MQTT_PASS:-}
+      - MQTT_TOPIC_PREFIX=${MQTT_TOPIC_PREFIX:-weartrack}
+      - MQTT_HOMEASSISTANT_DISCOVERY=${MQTT_HOMEASSISTANT_DISCOVERY:-false}
     restart: unless-stopped
 
 volumes:
