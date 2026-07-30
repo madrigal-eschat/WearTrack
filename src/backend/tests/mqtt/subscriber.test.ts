@@ -14,14 +14,13 @@ const mockPublish = vi.mocked(publish)
 beforeEach(() => {
   vi.clearAllMocks()
   vi.spyOn(mqttConfigStore, 'get').mockReturnValue({
-    id: 1,
-    enabled: 1,
+    enabled: true,
     host: 'broker.local',
     port: 1883,
     username: null,
     password: null,
     topic_prefix: 'weartrack',
-    ha_discovery_enabled: 0,
+    ha_discovery_enabled: false,
   })
   vi.spyOn(itemStore, 'find').mockReturnValue({
     id: 2,
@@ -89,14 +88,13 @@ describe('mqtt subscriber', () => {
 
   it('does not publish when mqtt is disabled', () => {
     vi.mocked(mqttConfigStore.get).mockReturnValue({
-      id: 1,
-      enabled: 0,
+      enabled: false,
       host: 'broker.local',
       port: 1883,
       username: null,
       password: null,
       topic_prefix: 'weartrack',
-      ha_discovery_enabled: 0,
+      ha_discovery_enabled: false,
     })
     eventBus.emit('decay_finish', {
       category_id: 1,

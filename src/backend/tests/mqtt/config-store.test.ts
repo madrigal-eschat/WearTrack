@@ -1,71 +1,55 @@
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
-import { runMigrations } from '../../src/db/migrations/index.js'
-import { dbExport } from '../../src/db/index.js'
+import { describe, it, expect, afterEach } from 'vitest'
 import { mqttConfigStore } from '../../src/mqtt/config-store.js'
 
-beforeAll(() => {
-  runMigrations()
-})
+const ENV_KEYS = [
+  'MQTT_HOST',
+  'MQTT_PORT',
+  'MQTT_USER',
+  'MQTT_PASS',
+  'MQTT_TOPIC_PREFIX',
+  'MQTT_HOMEASSISTANT_DISCOVERY',
+] as const
 
-beforeEach(() => {
-  dbExport.exec('DELETE FROM mqtt_config;')
+afterEach(() => {
+  for (const key of ENV_KEYS) {
+    delete process.env[key]
+  }
 })
 
 describe('mqttConfigStore', () => {
-  it('creates and returns a default disabled row on first get()', () => {
-    const config = mqttConfigStore.get()
-    expect(config).toMatchObject({
-      id: 1,
-      enabled: 0,
+  it('is disabled with defaults when no MQTT_* env vars are set', () => {
+    expect(mqttConfigStore.get()).toEqual({
+      enabled: false,
       host: null,
       port: 1883,
       username: null,
       password: null,
       topic_prefix: 'weartrack',
-      ha_discovery_enabled: 0,
+      ha_discovery_enabled: false,
     })
   })
 
-  it('update() sets provided fields and leaves others unchanged', () => {
-    mqttConfigStore.get()
-    mqttConfigStore.update({ enabled: true, host: 'broker.local', port: 1884 })
-    const config = mqttConfigStore.get()
-    expect(config.enabled).toBe(1)
-    expect(config.host).toBe('broker.local')
-    expect(config.port).toBe(1884)
-    expect(config.topic_prefix).toBe('weartrack')
+  it('reads config from environment variables when set', () => {
+    process.env.MQTT_HOST = '192.168.66.31'
+    process.env.MQTT_PORT = '1884'
+    process.env.MQTT_USER = 'weartrack'
+    process.env.MQTT_PASS = 'secret'
+    process.env.MQTT_TOPIC_PREFIX = 'home'
+    process.env.MQTT_HOMEASSISTANT_DISCOVERY = 'true'
+
+    expect(mqttConfigStore.get()).toEqual({
+      enabled: true,
+      host: '192.168.66.31',
+      port: 1884,
+      username: 'weartrack',
+      password: 'secret',
+      topic_prefix: 'home',
+      ha_discovery_enabled: true,
+    })
   })
 
-  it(
-    'update() with an empty-string password leaves the stored ' +
-      'password unchanged',
-    () => {
-      mqttConfigStore.get()
-      mqttConfigStore.update({ password: 'secret' })
-      mqttConfigStore.update({ password: '' })
-      expect(mqttConfigStore.get().password).toBe('secret')
-    },
-  )
-
-  it(
-    'update() with a non-empty password overwrites the stored password',
-    () => {
-      mqttConfigStore.get()
-      mqttConfigStore.update({ password: 'secret' })
-      mqttConfigStore.update({ password: 'new-secret' })
-      expect(mqttConfigStore.get().password).toBe('new-secret')
-    },
-  )
-
-  it(
-    'update() with a null password leaves the stored password unchanged',
-    () => {
-      mqttConfigStore.get()
-      mqttConfigStore.update({ password: 'secret' })
-      // @ts-expect-error -- exercising a runtime guard against a value the HTTP
-      // boundary isn't statically typed against
-      mqttConfigStore.update({ password: null })
-      expect(mqttConfigStore.get().password).toBe('secret')
-    },
-  )
+  it('is enabled once MQTT_HOST is set, even with no other vars', () => {
+    process.env.MQTT_HOST = 'broker.local'
+    expect(mqttConfigStore.get().enabled).toBe(true)
+  })
 })
