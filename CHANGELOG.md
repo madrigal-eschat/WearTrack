@@ -1,3 +1,16 @@
+# [1.5.0](https://github.com/madrigal-eschat/WearTrack/compare/v1.4.1...v1.5.0) (2026-07-30)
+
+
+### Bug Fixes
+
+* **layout:** make tabbar a flex sibling instead of position:fixed ([9dfb99e](https://github.com/madrigal-eschat/WearTrack/commit/9dfb99e7630decd5b372c47e7701cc0aac6e929c))
+* **mqtt:** mark streak count sensors as state_class total ([7ecf203](https://github.com/madrigal-eschat/WearTrack/commit/7ecf20349f1a1bffa7f625a7a72f8700abfdf9a6))
+
+
+### Features
+
+* **mqtt:** configure via environment variables instead of in-browser UI ([1fee59f](https://github.com/madrigal-eschat/WearTrack/commit/1fee59ffe3a25851b056e9ad55b55cf58a0f5e23))
+
 ## [1.4.1](https://github.com/madrigal-eschat/WearTrack/compare/v1.4.0...v1.4.1) (2026-07-24)
 
 
