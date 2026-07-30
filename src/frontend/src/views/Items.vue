@@ -1,5 +1,5 @@
 <template>
-  <k-page style="padding-bottom: 56px">
+  <k-page>
     <PageHeader title="Items" />
     <CategoriesSection />
     <ItemsSection />

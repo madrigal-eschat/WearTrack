@@ -1,5 +1,5 @@
 <template>
-  <k-page style="padding-bottom: 56px">
+  <k-page>
     <k-navbar title="Welcome to Weartrack" />
     <k-block>
       <p class="text-gray-600 text-center mb-6">
