@@ -1,6 +1,6 @@
 <!-- src/frontend/src/views/Log.vue -->
 <template>
-  <k-page class="flex flex-col" style="padding-bottom: 56px">
+  <k-page class="flex flex-col">
     <PageHeader title="Log" />
     <k-block class="flex gap-2 pb-2">
       <select
