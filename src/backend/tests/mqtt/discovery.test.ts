@@ -5,6 +5,7 @@ vi.mock('../../src/mqtt/client.js', () => ({ publish: vi.fn() }))
 import { eventBus } from '../../src/events/bus.js'
 import { mqttConfigStore } from '../../src/mqtt/config-store.js'
 import { categoryStore } from '../../src/db/stores/category-store.js'
+import { statsStore } from '../../src/db/stores/stats-store.js'
 import { startDiscovery } from '../../src/mqtt/discovery.js'
 import { publish } from '../../src/mqtt/client.js'
 
@@ -26,6 +27,17 @@ beforeEach(() => {
       break_grace_time: 86400,
     },
   ])
+  vi.spyOn(statsStore, 'findForCategory').mockReturnValue({
+    category_id: 1,
+    total_wear_seconds: 7200,
+    session_count: 5,
+    max_single_session_wear_seconds: 1800,
+    streak_wear_seconds: 1800,
+    streak_count: 2,
+    best_streak_wear_seconds: 3600,
+    best_streak_count: 4,
+    item_count: 1,
+  })
   startDiscovery()
 })
 
@@ -35,14 +47,13 @@ describe('mqtt discovery', () => {
       'poller_tick when enabled',
     () => {
       vi.spyOn(mqttConfigStore, 'get').mockReturnValue({
-        id: 1,
-        enabled: 1,
+        enabled: true,
         host: 'broker.local',
         port: 1883,
         username: null,
         password: null,
         topic_prefix: 'weartrack',
-        ha_discovery_enabled: 1,
+        ha_discovery_enabled: true,
       })
       eventBus.emit('poller_tick', { timestamp: 1000 })
       expect(mockPublish).toHaveBeenCalledWith(
@@ -57,16 +68,81 @@ describe('mqtt discovery', () => {
     },
   )
 
+  it(
+    'publishes current streak, longest streak (count + time) and ' +
+      'total worn sensors plus a retained stats payload',
+    () => {
+      vi.spyOn(mqttConfigStore, 'get').mockReturnValue({
+        enabled: true,
+        host: 'broker.local',
+        port: 1883,
+        username: null,
+        password: null,
+        topic_prefix: 'weartrack',
+        ha_discovery_enabled: true,
+      })
+      eventBus.emit('poller_tick', { timestamp: 1000 })
+
+      expect(mockPublish).toHaveBeenCalledWith(
+        'homeassistant/sensor/weartrack_1_current_streak/config',
+        expect.objectContaining({
+          unique_id: 'weartrack_1_current_streak',
+          state_topic: 'weartrack/winter-gloves/stats',
+          value_template: '{{ value_json.streak_count }}',
+        }),
+        { retain: true },
+      )
+      expect(mockPublish).toHaveBeenCalledWith(
+        'homeassistant/sensor/weartrack_1_longest_streak/config',
+        expect.objectContaining({
+          unique_id: 'weartrack_1_longest_streak',
+          value_template: '{{ value_json.best_streak_count }}',
+        }),
+        { retain: true },
+      )
+      expect(mockPublish).toHaveBeenCalledWith(
+        'homeassistant/sensor/weartrack_1_longest_streak_time/config',
+        expect.objectContaining({
+          unique_id: 'weartrack_1_longest_streak_time',
+          value_template: '{{ value_json.best_streak_wear_seconds }}',
+          device_class: 'duration',
+          unit_of_measurement: 's',
+        }),
+        { retain: true },
+      )
+      expect(mockPublish).toHaveBeenCalledWith(
+        'homeassistant/sensor/weartrack_1_total_worn/config',
+        expect.objectContaining({
+          unique_id: 'weartrack_1_total_worn',
+          value_template: '{{ value_json.total_wear_seconds }}',
+          device_class: 'duration',
+          unit_of_measurement: 's',
+        }),
+        { retain: true },
+      )
+      expect(mockPublish).toHaveBeenCalledWith(
+        'weartrack/winter-gloves/stats',
+        {
+          streak_count: 2,
+          streak_wear_seconds: 1800,
+          best_streak_count: 4,
+          best_streak_wear_seconds: 3600,
+          total_wear_seconds: 7200,
+        },
+        { retain: true },
+      )
+    },
+  )
+
   it('publishes nothing when ha_discovery_enabled is false', () => {
     vi.spyOn(mqttConfigStore, 'get').mockReturnValue({
-      id: 1,
-      enabled: 1,
+      enabled: true,
       host: 'broker.local',
       port: 1883,
       username: null,
       password: null,
       topic_prefix: 'weartrack',
-      ha_discovery_enabled: 0,
+      ha_discovery_enabled: false,
     })
     eventBus.emit('poller_tick', { timestamp: 1000 })
     expect(mockPublish).not.toHaveBeenCalled()
@@ -74,14 +150,13 @@ describe('mqtt discovery', () => {
 
   it('publishes nothing when mqtt itself is disabled', () => {
     vi.spyOn(mqttConfigStore, 'get').mockReturnValue({
-      id: 1,
-      enabled: 0,
+      enabled: false,
       host: 'broker.local',
       port: 1883,
       username: null,
       password: null,
       topic_prefix: 'weartrack',
-      ha_discovery_enabled: 1,
+      ha_discovery_enabled: true,
     })
     eventBus.emit('poller_tick', { timestamp: 1000 })
     expect(mockPublish).not.toHaveBeenCalled()
