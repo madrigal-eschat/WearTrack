@@ -1,5 +1,5 @@
 <template>
-  <k-page class="flex flex-col" style="padding-bottom: 56px">
+  <k-page class="flex flex-col">
     <PageHeader title="Home">
       <template #action>
         <button

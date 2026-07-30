@@ -1,5 +1,5 @@
 <template>
-  <k-page style="padding-bottom: 56px">
+  <k-page>
     <PageHeader title="Settings" showBack @back="router.push('/')" />
     <div class="px-4 py-4">
       <p class="text-sm text-gray-500 text-center">

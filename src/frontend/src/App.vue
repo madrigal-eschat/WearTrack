@@ -1,17 +1,14 @@
 <template>
-  <k-app theme="ios" class="h-full">
+  <k-app theme="ios" class="h-full flex flex-1 flex-col overflow-hidden">
     <Toast />
-    <div data-testid="main-content">
+    <div data-testid="main-content" class="grow relative">
       <router-view />
     </div>
     <k-tabbar
       bottom
       labels
       icons
-      class="
-        left-0 right-0 bottom-0 fixed z-30 !bg-white border-t
-        border-gray-200
-      "
+      class="shrink-0 !bg-white border-t border-gray-200"
     >
         <k-tabbar-link
           :active="route.path === '/'"
