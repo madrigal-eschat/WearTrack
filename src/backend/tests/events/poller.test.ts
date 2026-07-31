@@ -598,3 +598,91 @@ describe('events poller tick()', () => {
     },
   )
 })
+
+import { reminderScheduleStore } from
+  '../../src/db/stores/reminder-schedule-store.js'
+import { reminderStateStore } from
+  '../../src/db/stores/reminder-state-store.js'
+
+describe('events poller tick() — reminders', () => {
+  beforeEach(() => {
+    dbExport.exec('DELETE FROM reminder_state; DELETE FROM reminder_schedules;')
+  })
+
+  it(
+    'fires reminder_due once the first interval elapses in an active session',
+    async () => {
+      const { categoryId, itemId } = await setupCategoryAndItem({
+        initial_target_wear_duration_seconds: 1000,
+        initial_max_wear_duration_seconds: null,
+      })
+      const schedule = reminderScheduleStore.create({
+        category_id: categoryId,
+        remind_each_seconds: 1000,
+        text: 'Change strap',
+      })
+      const startRes = await app.request(`${SESSIONS}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: itemId, started_at: 0 }),
+      })
+      const session = await startRes.json()
+
+      tick(0) // baseline tick, no emit yet — matches "no backfire" rule
+
+      const listener = vi.fn()
+      eventBus.on('reminder_due', listener)
+
+      tick(900) // n = ceil(1000/1000) = 1, firstFire = 1000 -> not yet due
+      expect(listener).not.toHaveBeenCalled()
+
+      tick(1000) // now due
+      expect(listener).toHaveBeenCalledWith(
+        expect.objectContaining({
+          category_id: categoryId,
+          session_id: session.id,
+          schedule_id: schedule.id,
+          text: 'Change strap',
+        }),
+      )
+      expect(
+        reminderStateStore.get(session.id, schedule.id)?.fired_count,
+      ).toBe(1)
+
+      listener.mockClear()
+      tick(1500) // still only 1 due (n=1 cap for max case doesn't apply here;
+      // target-only branch: n=1, firstFire=1000, next at 1000+1000=2000)
+      expect(listener).not.toHaveBeenCalled()
+
+      tick(2000)
+      expect(listener).toHaveBeenCalledTimes(1)
+      expect(
+        reminderStateStore.get(session.id, schedule.id)?.fired_count,
+      ).toBe(2)
+    },
+  )
+
+  it(
+    'does not fire reminder_due for a session that already existed on ' +
+      'the first-ever tick',
+    async () => {
+      const { categoryId, itemId } = await setupCategoryAndItem()
+      reminderScheduleStore.create({
+        category_id: categoryId,
+        remind_each_seconds: 60,
+        text: 'Change strap',
+      })
+      const startRes = await app.request(`${SESSIONS}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: itemId, started_at: 0 }),
+      })
+      await startRes.json()
+
+      const listener = vi.fn()
+      eventBus.on('reminder_due', listener)
+      tick(10000) // first-ever tick for this category: baseline only
+      expect(listener).not.toHaveBeenCalled()
+    },
+  )
+})
