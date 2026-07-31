@@ -112,4 +112,25 @@ describe('notifications runner (bus subscriber)', () => {
 
       expect(senderMod.send).toHaveBeenCalledTimes(1)
     })
+
+  it('sends a push notification when reminder_due fires', async () => {
+    startScheduler()
+    eventBus.emit('reminder_due', {
+      category_id: 1,
+      category_name: 'Footwear',
+      timestamp: 100,
+      session_id: 42,
+      schedule_id: 7,
+      text: 'Change your wrist strap',
+    })
+    await new Promise((r) => setTimeout(r, 0))
+    expect(send).toHaveBeenCalledWith(
+      '{"endpoint":"https://x"}',
+      expect.objectContaining({
+        title: 'Maintenance for Footwear',
+        body: 'Change your wrist strap',
+        tag: 'category-1',
+      }),
+    )
+  })
 })
