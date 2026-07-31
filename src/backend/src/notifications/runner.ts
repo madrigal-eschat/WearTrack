@@ -49,6 +49,10 @@ function copyFor<E extends Exclude<EventName, 'poller_tick'>>(
       title: `Stop wearing ${categoryName} now!`,
       body: 'Your session is in overtime',
     }
+  case 'reminder_due': {
+    const p = payload as EventPayloads['reminder_due']
+    return { title: `Maintenance for ${categoryName}`, body: p.text }
+  }
   default:
     return null
   }
@@ -62,6 +66,7 @@ const NOTIFICATION_EVENTS: Array<Exclude<EventName, 'poller_tick'>> = [
   'overtime_warning_30',
   'overtime_warning_5',
   'overtime',
+  'reminder_due',
 ]
 
 async function notify<E extends Exclude<EventName, 'poller_tick'>>(
