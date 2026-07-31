@@ -10,8 +10,8 @@ import runMigration008 from './008_session_day_index.js'
 import runMigration009 from './009_events_bus.js'
 import runMigration010 from './010_mqtt_config.js'
 import runMigration011 from './011_rotation_categories.js'
-import runMigration012 from './012_reminder_schedules.js'
-import runMigration013 from './013_drop_mqtt_config.js'
+import runMigration012 from './012_drop_mqtt_config.js'
+import runMigration013 from './013_reminder_schedules.js'
 
 const migrations: Array<{ version: number; name: string; run: () => void }> = [
   { version: 1, name: '001_initial', run: runMigration001 },
@@ -25,8 +25,8 @@ const migrations: Array<{ version: number; name: string; run: () => void }> = [
   { version: 9, name: '009_events_bus', run: runMigration009 },
   { version: 10, name: '010_mqtt_config', run: runMigration010 },
   { version: 11, name: '011_rotation_categories', run: runMigration011 },
-  { version: 12, name: '012_reminder_schedules', run: runMigration012 },
-  { version: 13, name: '013_drop_mqtt_config', run: runMigration013 },
+  { version: 12, name: '012_drop_mqtt_config', run: runMigration012 },
+  { version: 13, name: '013_reminder_schedules', run: runMigration013 },
 ]
 
 export function runMigrations() {
