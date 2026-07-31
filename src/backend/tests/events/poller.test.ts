@@ -6,6 +6,10 @@ import { eventPollerStore } from '../../src/events/store.js'
 import { tick } from '../../src/events/poller.js'
 import { createCategory, createItem } from '../fixtures.js'
 import app from '../../src/server.js'
+import { reminderScheduleStore } from
+  '../../src/db/stores/reminder-schedule-store.js'
+import { reminderStateStore } from
+  '../../src/db/stores/reminder-state-store.js'
 
 const SESSIONS = '/api/sessions'
 
@@ -598,11 +602,6 @@ describe('events poller tick()', () => {
     },
   )
 })
-
-import { reminderScheduleStore } from
-  '../../src/db/stores/reminder-schedule-store.js'
-import { reminderStateStore } from
-  '../../src/db/stores/reminder-state-store.js'
 
 describe('events poller tick() — reminders', () => {
   beforeEach(() => {
