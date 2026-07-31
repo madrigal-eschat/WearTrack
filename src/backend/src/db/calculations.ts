@@ -456,3 +456,28 @@ export function computeRest(
 
   return Math.floor(rest)
 }
+
+/**
+ * How many reminder occurrences should have fired by `elapsedSeconds` into
+ * a session. No state beyond the session's known durations is needed —
+ * this is why reminders survive a server restart: recompute, don't
+ * schedule.
+ */
+export function computeReminderDueCount(
+  remindEachSeconds: number,
+  targetWearSeconds: number,
+  maxWearSeconds: number | null,
+  elapsedSeconds: number,
+): number {
+  if (maxWearSeconds !== null) {
+    const n = Math.ceil(maxWearSeconds / remindEachSeconds)
+    const interval = maxWearSeconds / n
+    return Math.min(n, Math.floor(elapsedSeconds / interval))
+  }
+  const n = Math.max(1, Math.ceil(targetWearSeconds / remindEachSeconds))
+  const firstFire = targetWearSeconds / n
+  if (elapsedSeconds < firstFire) {
+    return 0
+  }
+  return 1 + Math.floor((elapsedSeconds - firstFire) / remindEachSeconds)
+}
