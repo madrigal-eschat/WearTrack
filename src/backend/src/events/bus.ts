@@ -50,6 +50,12 @@ export interface SessionThresholdEvent extends CategoryContext {
   session_id: number;
 }
 
+export interface ReminderDueEvent extends CategoryContext {
+  session_id: number;
+  schedule_id: number;
+  text: string;
+}
+
 export interface PollerTickEvent {
   timestamp: number;
 }
@@ -67,6 +73,7 @@ export interface EventPayloads {
   overtime_warning_30: SessionThresholdEvent;
   overtime_warning_5: SessionThresholdEvent;
   overtime: SessionThresholdEvent;
+  reminder_due: ReminderDueEvent;
   poller_tick: PollerTickEvent;
 }
 
