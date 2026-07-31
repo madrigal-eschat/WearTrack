@@ -1,6 +1,6 @@
 import { dbExport } from '../index.js'
 
-export default function runMigration012() {
+export default function runMigration013() {
   dbExport.exec(`
     CREATE TABLE reminder_schedules (
       id                  INTEGER PRIMARY KEY AUTOINCREMENT,
