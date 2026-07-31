@@ -9,6 +9,7 @@ import {
   rotationAvailability,
   startOfTodayLocal,
   startOfNextLocalMidnight,
+  computeReminderDueCount,
   type Category,
 } from '../../src/db/calculations.js'
 
@@ -601,4 +602,39 @@ describe('startOfTodayLocal / startOfNextLocalMidnight', () => {
       ).toBeLessThanOrEqual(25 * 3600)
     },
   )
+})
+
+describe('computeReminderDueCount', () => {
+  describe('with a max duration', () => {
+    it('spaces reminders evenly across the max, capped at n', () => {
+      // max=3600, remind_each=1000 -> n=ceil(3600/1000)=4, interval=900
+      expect(computeReminderDueCount(1000, 1500, 3600, 899)).toBe(0)
+      expect(computeReminderDueCount(1000, 1500, 3600, 900)).toBe(1)
+      expect(computeReminderDueCount(1000, 1500, 3600, 1800)).toBe(2)
+      expect(computeReminderDueCount(1000, 1500, 3600, 3600)).toBe(4)
+      expect(computeReminderDueCount(1000, 1500, 3600, 999999)).toBe(4)
+    })
+  })
+
+  describe('without a max duration', () => {
+    it(
+      'fires the first reminder at target/ceil(target/remind_each), ' +
+        'then every remind_each',
+      () => {
+        // target=1500, remind_each=1000 -> n=2, firstFire=750
+        expect(computeReminderDueCount(1000, 1500, null, 749)).toBe(0)
+        expect(computeReminderDueCount(1000, 1500, null, 750)).toBe(1)
+        expect(computeReminderDueCount(1000, 1500, null, 1749)).toBe(1)
+        expect(computeReminderDueCount(1000, 1500, null, 1750)).toBe(2)
+        expect(computeReminderDueCount(1000, 1500, null, 2750)).toBe(3)
+      },
+    )
+
+    it('fires exactly at target when remind_each >= target', () => {
+      // n=max(1, ceil(900/1000))=1, firstFire=900
+      expect(computeReminderDueCount(1000, 900, null, 899)).toBe(0)
+      expect(computeReminderDueCount(1000, 900, null, 900)).toBe(1)
+      expect(computeReminderDueCount(1000, 900, null, 1900)).toBe(2)
+    })
+  })
 })
