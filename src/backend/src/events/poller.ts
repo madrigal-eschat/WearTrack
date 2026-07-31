@@ -1,6 +1,9 @@
 import { categoryStore } from '../db/stores/category-store.js'
 import { sessionStore } from '../db/stores/session-store.js'
-import { computeDecay } from '../db/calculations.js'
+import { computeDecay, computeReminderDueCount } from '../db/calculations.js'
+import { reminderScheduleStore } from
+  '../db/stores/reminder-schedule-store.js'
+import { reminderStateStore } from '../db/stores/reminder-state-store.js'
 import { eventBus } from './bus.js'
 import { eventPollerStore, type EventPollerRow } from './store.js'
 
@@ -197,6 +200,32 @@ export function tick(now: number = nowSeconds()): void {
             })
           }
           row.overtime_notified = 1
+        }
+      }
+
+      const schedules = reminderScheduleStore.findAllForCategory(category.id)
+      for (const schedule of schedules) {
+        const elapsed = now - session.started_at
+        const due = computeReminderDueCount(
+          schedule.remind_each_seconds,
+          session.target_wear_seconds,
+          session.max_wear_seconds,
+          elapsed,
+        )
+        const state = reminderStateStore.get(session.id, schedule.id)
+        const fired = state?.fired_count ?? 0
+        if (due > fired) {
+          if (shouldEmit) {
+            eventBus.emit('reminder_due', {
+              category_id: category.id,
+              category_name: category.name,
+              timestamp: now,
+              session_id: session.id,
+              schedule_id: schedule.id,
+              text: schedule.text,
+            })
+          }
+          reminderStateStore.upsert(session.id, schedule.id, due)
         }
       }
     }
