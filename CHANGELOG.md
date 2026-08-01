@@ -1,3 +1,24 @@
+# [1.6.0](https://github.com/madrigal-eschat/WearTrack/compare/v1.5.0...v1.6.0) (2026-08-01)
+
+
+### Bug Fixes
+
+* **reminders:** address final review findings ([cf0d3e4](https://github.com/madrigal-eschat/WearTrack/commit/cf0d3e4ab5dd6488f40eceb1560de84f8db19f31))
+* **reminders:** correct migration numbering to version 13 to avoid production upgrade breakage ([9a734b9](https://github.com/madrigal-eschat/WearTrack/commit/9a734b90169d6816b159b5e735b6a5c35078657c))
+* **reminders:** guard PATCH /api/reminder-schedules/:id against empty update body ([c03cd85](https://github.com/madrigal-eschat/WearTrack/commit/c03cd855d2c587465150d2b03826e96ce7239b10))
+
+
+### Features
+
+* **reminders:** add /api/reminder-schedules CRUD endpoints ([99314c7](https://github.com/madrigal-eschat/WearTrack/commit/99314c75f77570baf3f3d9a801105e25dbad7c17))
+* **reminders:** add computeReminderDueCount scheduling math ([bf5381e](https://github.com/madrigal-eschat/WearTrack/commit/bf5381e7592d03dea87a7bf2d8b668bc5fc1be4d))
+* **reminders:** add reminder_schedules/reminder_state tables and stores ([37a557b](https://github.com/madrigal-eschat/WearTrack/commit/37a557bdc76888896db7ff678a4bdf8987d18c52))
+* **reminders:** add ReminderSchedulesSheet management UI ([ee37159](https://github.com/madrigal-eschat/WearTrack/commit/ee371592bff2dd80cb891ff478b4e9ebca007785))
+* **reminders:** add useReminderSchedules composable ([2aac674](https://github.com/madrigal-eschat/WearTrack/commit/2aac67468cfa297057a01770a62a5cf0e91c62c8))
+* **reminders:** emit reminder_due events from the poller ([c5b2ddb](https://github.com/madrigal-eschat/WearTrack/commit/c5b2ddbcdcae4a0bdb8c48b3cf4eb1cbb645e4b0))
+* **reminders:** send push notification on reminder_due ([06eb45b](https://github.com/madrigal-eschat/WearTrack/commit/06eb45b2bd2735976d5d7e615f5396326d8c8b82))
+* **reminders:** show reminder count and management button on category rows ([3e693c3](https://github.com/madrigal-eschat/WearTrack/commit/3e693c32aa5557371521dc677686aa9a65270c91))
+
 # [1.5.0](https://github.com/madrigal-eschat/WearTrack/compare/v1.4.1...v1.5.0) (2026-07-30)
 
 
