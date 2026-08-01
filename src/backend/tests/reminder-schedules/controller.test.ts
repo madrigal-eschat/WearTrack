@@ -33,6 +33,11 @@ describe('reminder-schedules controller', () => {
     expect(body[0].text).toBe('Change strap')
   })
 
+  it('GET without category_id returns 400', async () => {
+    const res = await app.request(BASE)
+    expect(res.status).toBe(400)
+  })
+
   it('POST creates a schedule and returns 201', async () => {
     const cat = await (await createCategory()).json()
     const res = await app.request(BASE, {
@@ -48,6 +53,18 @@ describe('reminder-schedules controller', () => {
     const body = await res.json()
     expect(body.id).toBeDefined()
     expect(body.category_id).toBe(cat.id)
+  })
+
+  it('POST returns 400 when category_id is absent', async () => {
+    const res = await app.request(BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        remind_each_seconds: 3600,
+        text: 'Change strap',
+      }),
+    })
+    expect(res.status).toBe(400)
   })
 
   it('POST returns 400 when category_id does not exist', async () => {
@@ -111,6 +128,28 @@ describe('reminder-schedules controller', () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.text).toBe('Change tape')
+  })
+
+  it('PATCH with an empty body returns 200, schedule unchanged', async () => {
+    const cat = await (await createCategory()).json()
+    const createRes = await app.request(BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        category_id: cat.id,
+        remind_each_seconds: 3600,
+        text: 'Change strap',
+      }),
+    })
+    const created = await createRes.json()
+    const res = await app.request(`${BASE}/${created.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body).toEqual(created)
   })
 
   it('PATCH returns 404 for an unknown id', async () => {
