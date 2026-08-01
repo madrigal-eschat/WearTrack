@@ -12,8 +12,12 @@ router.get('/', (c) => {
   if (categoryId === undefined) {
     throw new ValidationError('category_id query param is required')
   }
+  const parsedCategoryId = Number(categoryId)
+  if (Number.isNaN(parsedCategoryId)) {
+    throw new ValidationError('category_id must be a number')
+  }
   return c.json(
-    reminderScheduleStore.findAllForCategory(Number(categoryId)),
+    reminderScheduleStore.findAllForCategory(parsedCategoryId),
   )
 })
 

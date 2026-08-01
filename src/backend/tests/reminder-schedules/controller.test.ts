@@ -38,6 +38,11 @@ describe('reminder-schedules controller', () => {
     expect(res.status).toBe(400)
   })
 
+  it('GET with a non-numeric category_id returns 400', async () => {
+    const res = await app.request(`${BASE}?category_id=abc`)
+    expect(res.status).toBe(400)
+  })
+
   it('POST creates a schedule and returns 201', async () => {
     const cat = await (await createCategory()).json()
     const res = await app.request(BASE, {

@@ -204,8 +204,8 @@ export function tick(now: number = nowSeconds()): void {
       }
 
       const schedules = reminderScheduleStore.findAllForCategory(category.id)
+      const elapsed = now - session.started_at
       for (const schedule of schedules) {
-        const elapsed = now - session.started_at
         const due = computeReminderDueCount(
           schedule.remind_each_seconds,
           session.target_wear_seconds,

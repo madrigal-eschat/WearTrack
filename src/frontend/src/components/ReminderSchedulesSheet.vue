@@ -28,8 +28,7 @@
       <div
         v-if="
           !notifications.isSubscribed.value &&
-          notifications.isConfigured.value &&
-          (schedules.schedules.value[categoryId] ?? []).length === 0
+          notifications.isConfigured.value
         "
         class="
           rounded-lg bg-blue-50 dark:bg-blue-950 p-3 text-sm space-y-2
@@ -81,7 +80,7 @@
         <DurationTrigger
           label="Remind every"
           :displayValue="shortDuration(newIntervalSeconds)"
-          @click="showDurationPicker = true"
+          @click="emit('open-duration-picker', newIntervalSeconds)"
         />
         <TextField
           id="reminder-text"
@@ -118,13 +117,6 @@
         @click="showAddForm = true"
       >+ Add reminder</button>
     </div>
-
-    <DurationPickerSheet
-      :modelValue="newIntervalSeconds"
-      :open="showDurationPicker"
-      @update:modelValue="newIntervalSeconds = $event"
-      @update:open="showDurationPicker = $event"
-    />
   </k-sheet>
 </template>
 
@@ -133,25 +125,30 @@ import { ref } from 'vue'
 import { kSheet, kToolbar } from 'konsta/vue'
 import SectionTitle from './SectionTitle.vue'
 import DurationTrigger from './DurationTrigger.vue'
-import DurationPickerSheet from './DurationPickerSheet.vue'
 import TextField from './TextField.vue'
 import DeleteButton from './DeleteButton.vue'
 import { shortDuration } from '../utils/formatDuration.js'
 import { useReminderSchedules } from '../composables/useReminderSchedules.js'
 import { useNotifications } from '../composables/useNotifications.js'
+import { useToast } from '../composables/useToast.js'
 
 const props = defineProps<{
   categoryId: number;
   categoryName: string;
   open: boolean;
 }>()
-const emit = defineEmits<{ 'update:open': [value: boolean] }>()
+const emit = defineEmits<{
+  'update:open': [value: boolean];
+  'open-duration-picker': [current: number];
+}>()
+
+defineExpose({ setPickedDuration })
 
 const schedules = useReminderSchedules()
 const notifications = useNotifications()
+const { showError } = useToast()
 
 const showAddForm = ref(false)
-const showDurationPicker = ref(false)
 const newIntervalSeconds = ref(3600)
 const newText = ref('')
 
@@ -159,18 +156,30 @@ function close() {
   emit('update:open', false)
 }
 
+function setPickedDuration(value: number) {
+  newIntervalSeconds.value = value
+}
+
 async function onAdd() {
-  await schedules.createSchedule({
-    category_id: props.categoryId,
-    remind_each_seconds: newIntervalSeconds.value,
-    text: newText.value,
-  })
-  newText.value = ''
-  newIntervalSeconds.value = 3600
-  showAddForm.value = false
+  try {
+    await schedules.createSchedule({
+      category_id: props.categoryId,
+      remind_each_seconds: newIntervalSeconds.value,
+      text: newText.value,
+    })
+    newText.value = ''
+    newIntervalSeconds.value = 3600
+    showAddForm.value = false
+  } catch (e) {
+    showError(String(e))
+  }
 }
 
 async function onDelete(id: number) {
-  await schedules.deleteSchedule(props.categoryId, id)
+  try {
+    await schedules.deleteSchedule(props.categoryId, id)
+  } catch (e) {
+    showError(String(e))
+  }
 }
 </script>

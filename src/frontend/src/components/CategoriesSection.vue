@@ -30,7 +30,7 @@
             <template #subtitle>
               <div class="flex items-center gap-2">
                 <span class="text-xs text-gray-400">
-                  {{ (schedules[cat.id] ?? []).length }} reminders scheduled
+                  {{ reminderCountLabel(cat.id) }}
                 </span>
                 <button
                   type="button"
@@ -80,6 +80,7 @@
       </k-block>
     </template>
     <ReminderSchedulesSheet
+      ref="remindersSheetRef"
       v-if="remindersSheetCategoryId !== null"
       :categoryId="remindersSheetCategoryId"
       :categoryName="
@@ -87,6 +88,14 @@
       "
       :open="remindersSheetCategoryId !== null"
       @update:open="(v) => { if (!v) remindersSheetCategoryId = null }"
+      @open-duration-picker="onOpenDurationPicker"
+    />
+    <DurationPickerSheet
+      v-if="remindersSheetCategoryId !== null"
+      :modelValue="reminderDurationPickerValue"
+      :open="reminderDurationPickerOpen"
+      @update:modelValue="onReminderDurationPicked"
+      @update:open="reminderDurationPickerOpen = $event"
     />
   </div>
 </template>
@@ -108,6 +117,7 @@ import CategoryForm from './CategoryForm.vue'
 import DeleteButton from './DeleteButton.vue'
 import { useReminderSchedules } from '../composables/useReminderSchedules.js'
 import ReminderSchedulesSheet from './ReminderSchedulesSheet.vue'
+import DurationPickerSheet from './DurationPickerSheet.vue'
 
 const {
   categories,
@@ -124,6 +134,26 @@ const loading = ref(true)
 const showCatForm = ref(false)
 const editingCategoryId = ref<number | null>(null)
 const remindersSheetCategoryId = ref<number | null>(null)
+const remindersSheetRef = ref<InstanceType<
+  typeof ReminderSchedulesSheet
+> | null>(null)
+const reminderDurationPickerOpen = ref(false)
+const reminderDurationPickerValue = ref(3600)
+
+function reminderCountLabel(categoryId: number): string {
+  const n = (schedules.value[categoryId] ?? []).length
+  return `${n} reminder${n === 1 ? '' : 's'} scheduled`
+}
+
+function onOpenDurationPicker(current: number) {
+  reminderDurationPickerValue.value = current
+  reminderDurationPickerOpen.value = true
+}
+
+function onReminderDurationPicked(value: number) {
+  reminderDurationPickerValue.value = value
+  remindersSheetRef.value?.setPickedDuration(value)
+}
 
 onMounted(async () => {
   try {

@@ -637,4 +637,8 @@ describe('computeReminderDueCount', () => {
       expect(computeReminderDueCount(1000, 900, null, 1900)).toBe(2)
     })
   })
+
+  it('returns 0 when remindEachSeconds is 0', () => {
+    expect(computeReminderDueCount(0, 1500, 3600, 999999)).toBe(0)
+  })
 })
