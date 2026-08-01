@@ -469,6 +469,9 @@ export function computeReminderDueCount(
   maxWearSeconds: number | null,
   elapsedSeconds: number,
 ): number {
+  if (remindEachSeconds <= 0) {
+    return 0
+  }
   if (maxWearSeconds !== null) {
     const n = Math.ceil(maxWearSeconds / remindEachSeconds)
     const interval = maxWearSeconds / n

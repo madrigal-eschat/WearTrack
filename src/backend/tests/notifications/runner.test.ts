@@ -129,7 +129,7 @@ describe('notifications runner (bus subscriber)', () => {
       expect.objectContaining({
         title: 'Maintenance for Footwear',
         body: 'Change your wrist strap',
-        tag: 'category-1',
+        tag: 'category-1-reminder-7',
       }),
     )
   })

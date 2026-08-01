@@ -58,6 +58,17 @@ function copyFor<E extends Exclude<EventName, 'poller_tick'>>(
   }
 }
 
+function tagFor<E extends Exclude<EventName, 'poller_tick'>>(
+  event: E,
+  payload: EventPayloads[E],
+): string {
+  if (event === 'reminder_due') {
+    const p = payload as EventPayloads['reminder_due']
+    return `category-${p.category_id}-reminder-${p.schedule_id}`
+  }
+  return `category-${payload.category_id}`
+}
+
 const NOTIFICATION_EVENTS: Array<Exclude<EventName, 'poller_tick'>> = [
   'rest_end',
   'idle_halfway_reached',
@@ -85,7 +96,7 @@ async function notify<E extends Exclude<EventName, 'poller_tick'>>(
     await send(subscription, {
       title: copy.title,
       body: copy.body,
-      tag: `category-${payload.category_id}`,
+      tag: tagFor(event, payload),
     })
   } catch (e: unknown) {
     const status = (e as { statusCode?: number }).statusCode
