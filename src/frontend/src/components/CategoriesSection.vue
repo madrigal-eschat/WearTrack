@@ -27,6 +27,18 @@
               />
               <span v-else class="text-2xl">{{ cat.icon }}</span>
             </template>
+            <template #subtitle>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-400">
+                  {{ (schedules[cat.id] ?? []).length }} reminders scheduled
+                </span>
+                <button
+                  type="button"
+                  class="text-xs text-blue-500 underline"
+                  @click="remindersSheetCategoryId = cat.id"
+                >Manage Reminders</button>
+              </div>
+            </template>
             <template #after>
               <div class="flex gap-1">
                 <k-button
@@ -67,6 +79,15 @@
         </p>
       </k-block>
     </template>
+    <ReminderSchedulesSheet
+      v-if="remindersSheetCategoryId !== null"
+      :categoryId="remindersSheetCategoryId"
+      :categoryName="
+        categories.find((c) => c.id === remindersSheetCategoryId)?.name ?? ''
+      "
+      :open="remindersSheetCategoryId !== null"
+      @update:open="(v) => { if (!v) remindersSheetCategoryId = null }"
+    />
   </div>
 </template>
 
@@ -85,6 +106,8 @@ import type { CategoryFormState } from './CategoryForm.vue'
 import FormSectionHeader from './FormSectionHeader.vue'
 import CategoryForm from './CategoryForm.vue'
 import DeleteButton from './DeleteButton.vue'
+import { useReminderSchedules } from '../composables/useReminderSchedules.js'
+import ReminderSchedulesSheet from './ReminderSchedulesSheet.vue'
 
 const {
   categories,
@@ -95,14 +118,17 @@ const {
 } = useCategories()
 const { loadItems } = useItems()
 const { showError } = useToast()
+const { schedules, loadSchedules } = useReminderSchedules()
 
 const loading = ref(true)
 const showCatForm = ref(false)
 const editingCategoryId = ref<number | null>(null)
+const remindersSheetCategoryId = ref<number | null>(null)
 
 onMounted(async () => {
   try {
     await loadCategories()
+    await Promise.all(categories.value.map((c) => loadSchedules(c.id)))
   } finally {
     loading.value = false
   }
@@ -127,7 +153,8 @@ function onToggleEdit(id: number) {
 
 async function onAddCategory(data: CategoryFormState) {
   try {
-    await createCategory(formStateToApiPayload(data))
+    const created = await createCategory(formStateToApiPayload(data))
+    await loadSchedules(created.id)
     showCatForm.value = false
   } catch (e) {
     showError(String(e))
