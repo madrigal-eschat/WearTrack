@@ -21,6 +21,14 @@
 
 ### Task 1: Migration + DB stores
 
+> **Post-execution correction:** this task was written against a stale copy
+> of `main` and assumed migration version 12 was free. It was not — `main`
+> already has a released `012_drop_mqtt_config.ts`. The actual migration
+> shipped as **`013_reminder_schedules.ts` / version 13**, with
+> `012_drop_mqtt_config.ts` left untouched. Every `012_reminder_schedules`
+> reference below is historical; do not copy the number when planning
+> migration 014+.
+
 **Files:**
 - Create: `src/backend/src/db/migrations/012_reminder_schedules.ts`
 - Modify: `src/backend/src/db/migrations/index.ts`
