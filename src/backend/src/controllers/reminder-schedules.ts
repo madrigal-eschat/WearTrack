@@ -69,6 +69,10 @@ router.patch('/:id', async (c) => {
     updates.text = body.text
   }
 
+  if (Object.keys(updates).length === 0) {
+    return c.json(existing)
+  }
+
   return c.json(reminderScheduleStore.update(id, updates))
 })
 
