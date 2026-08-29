@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/madrigal-eschat/WearTrack/compare/v1.6.0...v1.6.1) (2026-08-29)
+
+
+### Bug Fixes
+
+* **ci:** correct dependabot.yml yaml and allow dependabot commits in commitlint ([876cb92](https://github.com/madrigal-eschat/WearTrack/commit/876cb92fe006b58903e8fe4e63561b2cd76d4eb5))
+
 # [1.6.0](https://github.com/madrigal-eschat/WearTrack/compare/v1.5.0...v1.6.0) (2026-08-01)
 
 
