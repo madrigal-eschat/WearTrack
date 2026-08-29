@@ -22,7 +22,7 @@ jobs:
       released: ${{ steps.semrel.outputs.released }}
       version: ${{ steps.semrel.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
@@ -48,7 +48,7 @@ jobs:
     if: needs.release.outputs.released == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
       - name: Set up Docker Buildx
