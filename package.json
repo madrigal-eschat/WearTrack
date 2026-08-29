@@ -12,7 +12,7 @@
     "e2e": "npm --prefix src/frontend run test:e2e"
   },
   "devDependencies": {
-    "@commitlint/cli": "^19.5.0",
+    "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^19.5.0",
     "semantic-release": "^24.2.0",
     "@semantic-release/changelog": "^6.0.3",
