@@ -49,8 +49,10 @@ test.describe('Wear sessions', () => {
     const currentRes = await request.get('/api/sessions/current')
     const current = await currentRes.json()
     const entry = current.find(
-      (candidate: { category: { id: number }; session: { id: number } | null }) =>
-        candidate.category.id === categoryId && candidate.session !== null,
+      (candidate: {
+        category: { id: number }
+        session: { id: number } | null
+      }) => candidate.category.id === categoryId && candidate.session !== null,
     )
     if (entry) {
       await request.post(`/api/sessions/${entry.session.id}/end`, {
