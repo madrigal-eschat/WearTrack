@@ -42,8 +42,6 @@ test.describe('Wear sessions', () => {
   })
 
   test.beforeEach(async ({ page, request }) => {
-    await page.goto('/')
-    page.on('dialog', (d) => d.accept())
     // The page lists many categories from other describe blocks/spec files
     // sharing the same dev DB, so clean up this category directly.
     const currentRes = await request.get('/api/sessions/current')
@@ -59,6 +57,8 @@ test.describe('Wear sessions', () => {
         data: {},
       })
     }
+    await page.goto('/')
+    page.on('dialog', (d) => d.accept())
   })
 
   test('shows a Wear button for each item', async ({ page }) => {

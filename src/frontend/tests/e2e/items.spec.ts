@@ -1,8 +1,9 @@
 import { test, expect } from '@playwright/test'
-import { uid } from './helpers.js'
+import { uid, deleteCategoryViaApi } from './helpers.js'
 
 test.describe('Item management', () => {
   let categoryName: string
+  let categoryId: number
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/items')
@@ -16,22 +17,17 @@ test.describe('Item management', () => {
     await page.locator('.overflow-y-auto button').first().click()
     await page.getByTestId('category-form-submit').click()
     await expect(page.getByText(categoryName).first()).toBeVisible()
+    const categories = await page.request
+      .get('/api/categories')
+      .then((r) => r.json())
+    categoryId = categories.find(
+      (category: { name: string; id: number }) =>
+        category.name === categoryName,
+    ).id
   })
 
   test.afterEach(async ({ page }) => {
-    // Clean up the category (cascades to items)
-    const row = page.locator('li').filter({ hasText: categoryName }).first()
-    await row
-      .getByRole('button', { name: 'Delete' })
-      .first()
-      .click()
-      .catch(() => {})
-    // Wait for this row's dialog rather than clicking a hidden confirmation
-    // control while the dialog is still opening.
-    await row
-      .getByTestId('delete-confirm')
-      .click()
-      .catch(() => {})
+    await deleteCategoryViaApi(page, categoryId).catch(() => {})
   })
 
   test('shows Items section', async ({ page }) => {
@@ -166,6 +162,7 @@ test.describe('Item management', () => {
 
 test.describe('Item editing', () => {
   let categoryName: string
+  let categoryId: number
   let itemName: string
 
   test.beforeEach(async ({ page }) => {
@@ -180,6 +177,13 @@ test.describe('Item editing', () => {
     await page.locator('.overflow-y-auto button').first().click()
     await page.getByTestId('category-form-submit').click()
     await expect(page.getByText(categoryName).first()).toBeVisible()
+    const categories = await page.request
+      .get('/api/categories')
+      .then((r) => r.json())
+    categoryId = categories.find(
+      (category: { name: string; id: number }) =>
+        category.name === categoryName,
+    ).id
 
     // Create a fresh item under that category
     itemName = `EditItem-${uid()}`
@@ -190,19 +194,7 @@ test.describe('Item editing', () => {
   })
 
   test.afterEach(async ({ page }) => {
-    // Delete the category (cascades to items)
-    const row = page.locator('li').filter({ hasText: categoryName }).first()
-    await row
-      .getByRole('button', { name: 'Delete' })
-      .first()
-      .click()
-      .catch(() => {})
-    // Wait for this row's dialog rather than clicking a hidden confirmation
-    // control while the dialog is still opening.
-    await row
-      .getByTestId('delete-confirm')
-      .click()
-      .catch(() => {})
+    await deleteCategoryViaApi(page, categoryId).catch(() => {})
   })
 
   test('Edit button opens an inline edit form below the item row', async ({
