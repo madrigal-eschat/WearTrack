@@ -17,7 +17,7 @@
     "@iconify-json/ph": "^1.2.2",
     "@iconify/vue": "^5.0.0",
     "@tailwindcss/vite": "^4.2.4",
-    "konsta": "^5.0.0",
+    "konsta": "^5.4.0",
     "tailwindcss": "^4.2.4",
     "vue": "^3.5.0",
     "workbox-routing": "^7.4.1",
