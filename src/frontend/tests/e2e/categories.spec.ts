@@ -22,12 +22,11 @@ test.describe('Category management', () => {
       .first()
       .click()
       .catch(() => {})
-    // force: true — every row mounts its own (fixed, viewport-centered)
-    // confirm dialog, so an unrelated row's closed dialog can sit in the
-    // hit-test path even though only this row's dialog is visually open.
+    // Wait for this row's dialog rather than clicking a hidden confirmation
+    // control while the dialog is still opening.
     await row
       .getByTestId('delete-confirm')
-      .click({ force: true })
+      .click()
       .catch(() => {})
   })
 
@@ -96,7 +95,7 @@ test.describe('Category management', () => {
     // Delete it
     const row = page.locator('li').filter({ hasText: name }).first()
     await row.getByRole('button', { name: 'Delete' }).first().click()
-    await row.getByTestId('delete-confirm').click({ force: true })
+    await row.getByTestId('delete-confirm').click()
 
     await expect(page.getByText(name).first()).not.toBeVisible()
   })

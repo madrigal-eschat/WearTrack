@@ -41,18 +41,21 @@ test.describe('Wear sessions', () => {
     await request.delete(`/api/categories/${categoryId}`)
   })
 
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, request }) => {
     await page.goto('/')
     page.on('dialog', (d) => d.accept())
-    // Stop any active session left from a previous test in THIS category only —
-    // the page now lists many categories from other describe blocks/spec files
-    // sharing the same dev DB, so an unscoped "first Stop button" can belong to
-    // an unrelated category.
-    // Safe to do because rest_constant_seconds: 0 — no penalty for stopping.
-    const row = page.locator('li', { hasText: categoryName })
-    const stopBtn = row.getByRole('button', { name: /stop/i })
-    if (await stopBtn.isVisible({ timeout: 1500 }).catch(() => false)) {
-      await stopBtn.click()
+    // The page lists many categories from other describe blocks/spec files
+    // sharing the same dev DB, so clean up this category directly.
+    const currentRes = await request.get('/api/sessions/current')
+    const current = await currentRes.json()
+    const entry = current.find(
+      (candidate: { category: { id: number }; session: { id: number } | null }) =>
+        candidate.category.id === categoryId && candidate.session !== null,
+    )
+    if (entry) {
+      await request.post(`/api/sessions/${entry.session.id}/end`, {
+        data: {},
+      })
     }
   })
 
