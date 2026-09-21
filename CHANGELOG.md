@@ -1,3 +1,10 @@
+## [1.6.2](https://github.com/madrigal-eschat/WearTrack/compare/v1.6.1...v1.6.2) (2026-09-21)
+
+
+### Bug Fixes
+
+* use allowed Dependabot merge method ([3f042a8](https://github.com/madrigal-eschat/WearTrack/commit/3f042a8efb3d75b5bf37ccdae45e971629416bc9))
+
 ## [1.6.1](https://github.com/madrigal-eschat/WearTrack/compare/v1.6.0...v1.6.1) (2026-08-29)
 
 
