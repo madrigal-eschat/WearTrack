@@ -24,17 +24,39 @@
           </k-list-item>
         </k-list>
       </div>
+
+      <footer
+        class="mt-8 text-center text-xs text-gray-400"
+        aria-label="Application versions"
+      >
+        <p>Version:</p>
+        <p>
+          Frontend {{ frontendBuildVersion.version }}
+          ({{ frontendBuildVersion.commit }})
+        </p>
+        <p v-if="backendVersion">
+          Backend {{ backendVersion.version }} ({{ backendVersion.commit }})
+        </p>
+        <p v-else>Backend version unavailable</p>
+      </footer>
     </div>
   </k-page>
 </template>
 
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { kPage, kList, kListItem, kToggle } from 'konsta/vue'
 import { useNotifications } from '../composables/useNotifications.js'
+import {
+  fetchBackendVersion,
+  type BackendVersion,
+} from '../composables/useVersionCheck.js'
 import PageHeader from '../components/PageHeader.vue'
+import { frontendBuildVersion } from '../utils/buildVersion.js'
 
 const router = useRouter()
+const backendVersion = ref<BackendVersion | null>(null)
 const {
   isSupported,
   isConfigured,
@@ -50,4 +72,8 @@ async function onToggle() {
     await enable()
   }
 }
+
+onMounted(async () => {
+  backendVersion.value = await fetchBackendVersion()
+})
 </script>
