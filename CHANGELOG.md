@@ -1,3 +1,10 @@
+## [1.6.3](https://github.com/madrigal-eschat/WearTrack/compare/v1.6.2...v1.6.3) (2026-09-22)
+
+
+### Bug Fixes
+
+* **log:** restore edit and delete actions ([2c2e706](https://github.com/madrigal-eschat/WearTrack/commit/2c2e706207caf1d1e94b8ee698b46a700befc0d0))
+
 ## [1.6.2](https://github.com/madrigal-eschat/WearTrack/compare/v1.6.1...v1.6.2) (2026-09-21)
 
 
