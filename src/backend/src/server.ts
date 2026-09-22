@@ -36,8 +36,10 @@ app.get('/api/health', (c) => {
 })
 
 app.get('/api/version', (c) => {
-  const version = process.env.COMMIT_HASH || 'unknown'
-  return c.json({ version })
+  const trimOrUnknown = (value: string | undefined) => value?.trim() || 'unknown'
+  const version = trimOrUnknown(process.env.APP_VERSION)
+  const commit = trimOrUnknown(process.env.COMMIT_HASH)
+  return c.json({ version, commit })
 })
 
 if (process.env.NODE_ENV !== 'production' || process.env.E2E_TEST === '1') {
