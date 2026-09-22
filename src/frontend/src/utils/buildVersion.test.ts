@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeBuildVersion } from './buildVersion.js'
+import { buildFrontendVersion, normalizeBuildVersion } from './buildVersion.js'
+
+describe('buildFrontendVersion', () => {
+  it('derives exported metadata from Vite environment inputs', () => {
+    expect(buildFrontendVersion({
+      VITE_APP_VERSION: '2.0.0',
+      VITE_COMMIT_HASH: 'def5678',
+    })).toEqual({
+      version: '2.0.0',
+      commit: 'def5678',
+    })
+  })
+})
 
 describe('normalizeBuildVersion', () => {
   it('uses the supplied application version and commit hash', () => {
