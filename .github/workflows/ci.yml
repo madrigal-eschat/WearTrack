@@ -60,6 +60,8 @@ jobs:
         # natively and --load it locally for the e2e test below.
         run: |
           docker buildx build --platform linux/amd64 --load -t weartrack:ci \
+            --build-arg APP_VERSION=unknown \
+            --build-arg COMMIT_HASH="${GITHUB_SHA}" \
             --cache-from type=gha,scope=ci \
             --cache-to type=gha,scope=ci,mode=max .
       - name: Push debug image to GHCR (non-main branches only)
