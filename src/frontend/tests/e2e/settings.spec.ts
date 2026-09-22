@@ -33,8 +33,6 @@ test.describe('Settings', () => {
   test(
     'settings page shows push-notification state message',
     async ({ page }) => {
-      await openSettings(page)
-
       // In a test browser (Chromium/WebKit) without a push VAPID
       // key configured on the server, one of three states is expected:
       //   1. "Push notifications are not supported in this browser."
@@ -51,19 +49,31 @@ test.describe('Settings', () => {
         .locator('[class*="toggle"], input[type="checkbox"]')
         .filter({ hasText: '' })
 
-      const anyVisible =
-        (await notSupported
-          .isVisible({ timeout: 2000 })
-          .catch(() => false)) ||
-        (await notConfigured
-          .isVisible({ timeout: 2000 })
-          .catch(() => false)) ||
-        (await toggle
-          .first()
-          .isVisible({ timeout: 500 })
-          .catch(() => false))
+      const browserSupportsPush = await page.evaluate(
+        () =>
+          'Notification' in window &&
+          'PushManager' in window,
+      )
+      const vapidKeyResponse = browserSupportsPush
+        ? page.waitForResponse(
+          (response) =>
+            response.url().endsWith('/api/notifications/vapid-public-key') &&
+            response.request().method() === 'GET',
+        )
+        : undefined
 
-      expect(anyVisible).toBe(true)
+      await openSettings(page)
+      if (vapidKeyResponse) {
+        await vapidKeyResponse
+      }
+
+      if (browserSupportsPush) {
+        // Wait for the async notification initialization before checking the
+        // configured branch; isConfigured starts false.
+        await expect(notConfigured.or(toggle.first())).toBeVisible()
+      } else {
+        await expect(notSupported).toBeVisible()
+      }
     },
   )
 

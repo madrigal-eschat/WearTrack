@@ -96,6 +96,9 @@ jobs:
         working-directory: src/frontend
         env:
           BASE_URL: http://localhost:3000
+          E2E_BUILT_IMAGE_METADATA: 'true'
+          APP_VERSION: unknown
+          COMMIT_HASH: ${{ github.sha }}
         run: npx playwright test
       - name: Stop container
         if: always()
