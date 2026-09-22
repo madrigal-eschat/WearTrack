@@ -1,4 +1,12 @@
+ARG APP_VERSION=unknown
+ARG COMMIT_HASH=unknown
+
 FROM node:26-bookworm AS frontend-build
+
+ARG APP_VERSION
+ARG COMMIT_HASH
+ENV VITE_APP_VERSION=${APP_VERSION}
+ENV VITE_COMMIT_HASH=${COMMIT_HASH}
 
 WORKDIR /frontend
 
@@ -24,6 +32,9 @@ RUN npm ci && npm run build
 
 FROM node:26-bookworm-slim AS production
 
+ARG APP_VERSION
+ARG COMMIT_HASH
+
 WORKDIR /app
 
 COPY --from=backend-build /app/package.json /app/package-lock.json ./
@@ -38,5 +49,7 @@ USER node
 EXPOSE 3000
 
 ENV FRONTEND_DIST=./public
+ENV APP_VERSION=${APP_VERSION}
+ENV COMMIT_HASH=${COMMIT_HASH}
 
 CMD ["node", "dist/src/server.js"]
