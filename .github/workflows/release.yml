@@ -75,5 +75,7 @@ jobs:
             -t "${IMAGE}:latest" \
             -t "${IMAGE}:${MAJOR}" \
             -t "${IMAGE}:${MINOR}" \
+            --build-arg APP_VERSION="${VERSION}" \
+            --build-arg COMMIT_HASH="${GITHUB_SHA}" \
             --cache-from type=gha,scope=ci \
             --push .
