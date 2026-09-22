@@ -2,7 +2,7 @@
   <slot name="trigger" :open="open" />
   <k-dialog :opened="confirmOpen" @backdropclick="confirmOpen = false">
     <template #title>{{ title }}</template>
-    <template #content>{{ message }}</template>
+    {{ message }}
     <template #buttons>
       <k-dialog-button
         data-testid="delete-cancel"

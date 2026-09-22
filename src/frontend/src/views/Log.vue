@@ -66,23 +66,23 @@
     <Actions :opened="actionsOpen" @backdropclick="actionsOpen = false">
       <ActionsGroup>
         <ActionsButton @click="startEdit()">Edit</ActionsButton>
-        <DeleteButton
-          title="Delete session?"
-          message="This cannot be undone."
-          @confirm="performDelete"
-        >
-          <template #trigger="{ open }">
-            <ActionsButton
-              class="text-red-600"
-              @click="actionsOpen = false; open()"
-            >Delete</ActionsButton>
-          </template>
-        </DeleteButton>
+        <ActionsButton
+          class="text-red-600"
+          @click="openDeleteConfirmation"
+        >Delete</ActionsButton>
       </ActionsGroup>
       <ActionsGroup>
         <ActionsButton bold @click="actionsOpen = false">Cancel</ActionsButton>
       </ActionsGroup>
     </Actions>
+
+    <DeleteButton
+      v-if="activeEntry"
+      ref="deleteButton"
+      title="Delete session?"
+      message="This cannot be undone."
+      @confirm="performDelete"
+    />
 
     <EditSessionDialog
       v-if="editTarget"
@@ -97,7 +97,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import {
+  ref, computed, onMounted, onUnmounted, watch, nextTick,
+} from 'vue'
 import {
   kPage, kBlock, kList, Actions, ActionsGroup, ActionsButton,
 } from 'konsta/vue'
@@ -176,6 +178,7 @@ function jumpLabel(entry: DateIndexEntry): string {
 
 const actionsOpen = ref(false)
 const activeEntry = ref<SessionLogEntry | null>(null)
+const deleteButton = ref<{ open: () => void } | null>(null)
 
 function openActions(entry: SessionLogEntry): void {
   activeEntry.value = entry
@@ -200,6 +203,12 @@ function startEdit(): void {
     (editTarget.value.ended_at - editTarget.value.started_at) / 60,
   )
   editOpen.value = true
+}
+
+async function openDeleteConfirmation(): Promise<void> {
+  actionsOpen.value = false
+  await nextTick()
+  deleteButton.value?.open()
 }
 
 async function saveEdit(): Promise<void> {
