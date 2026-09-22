@@ -9,7 +9,9 @@ function normalizeValue(value: string | undefined): string {
   return normalized || 'unknown'
 }
 
-export function normalizeBuildVersion(input: Partial<BuildVersion>): BuildVersion {
+export function normalizeBuildVersion(
+  input: Partial<BuildVersion>,
+): BuildVersion {
   return {
     version: normalizeValue(input.version),
     commit: normalizeValue(input.commit),
