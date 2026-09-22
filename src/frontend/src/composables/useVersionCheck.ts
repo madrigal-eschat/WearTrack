@@ -2,17 +2,36 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import type { Ref } from 'vue'
 import { apiFetch } from '../utils/apiFetch.js'
 
-export async function fetchVersion(): Promise<string | null> {
+export type BackendVersion = {
+  version: string
+  commit: string
+}
+
+export async function fetchBackendVersion(): Promise<BackendVersion | null> {
   try {
     const res = await apiFetch('/api/version')
     if (!res.ok) {
       return null
     }
-    const { version } = await res.json() as { version: string }
-    return version
+    const metadata: unknown = await res.json()
+    if (
+      metadata === null ||
+      typeof metadata !== 'object' ||
+      typeof (metadata as Record<string, unknown>).version !== 'string' ||
+      typeof (metadata as Record<string, unknown>).commit !== 'string'
+    ) {
+      return null
+    }
+    const { version, commit } = metadata as BackendVersion
+    return { version, commit }
   } catch {
     return null
   }
+}
+
+export async function fetchVersion(): Promise<string | null> {
+  const backendVersion = await fetchBackendVersion()
+  return backendVersion?.commit ?? null
 }
 
 export function useVersionCheck(): { needsRefresh: Ref<boolean> } {
