@@ -79,22 +79,34 @@ test.describe('Settings', () => {
   test(
     'built image displays its frontend and backend version metadata',
     async ({ page }) => {
+      const builtImageMetadataEnabled =
+        process.env.E2E_BUILT_IMAGE_METADATA === 'true'
       test.skip(
-        !process.env.BASE_URL,
-        'Version metadata is only configured in the built-image E2E setup.',
+        !builtImageMetadataEnabled,
+        'Set E2E_BUILT_IMAGE_METADATA=true to test built-image metadata.',
       )
 
       await openSettings(page)
 
-      // Build the image with:
+      // Opt in after building the image with:
       //   APP_VERSION=1.2.5 COMMIT_HASH=abcd1234 docker build \
       //     --build-arg APP_VERSION --build-arg COMMIT_HASH -t weartrack:e2e .
-      // Then run this spec with BASE_URL pointing at that container.
+      // Then run this spec with BASE_URL pointing at that container and
+      // E2E_BUILT_IMAGE_METADATA=true. APP_VERSION and COMMIT_HASH may be
+      // overridden to match different metadata supplied to the image.
+      const expectedVersion = process.env.APP_VERSION || '1.2.5'
+      const expectedCommit = process.env.COMMIT_HASH || 'abcd1234'
       await expect(
-        page.getByText('Frontend 1.2.5 (abcd1234)', { exact: true }),
+        page.getByText(
+          `Frontend ${expectedVersion} (${expectedCommit})`,
+          { exact: true },
+        ),
       ).toBeVisible()
       await expect(
-        page.getByText('Backend 1.2.5 (abcd1234)', { exact: true }),
+        page.getByText(
+          `Backend ${expectedVersion} (${expectedCommit})`,
+          { exact: true },
+        ),
       ).toBeVisible()
     },
   )
