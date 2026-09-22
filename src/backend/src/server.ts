@@ -36,9 +36,15 @@ app.get('/api/health', (c) => {
 })
 
 app.get('/api/version', (c) => {
-  const trimOrUnknown = (value: string | undefined) => value?.trim() || 'unknown'
-  const version = trimOrUnknown(process.env.APP_VERSION)
-  const commit = trimOrUnknown(process.env.COMMIT_HASH)
+  const trimOrUnknown = (
+    value: string | undefined,
+  ) => value?.trim() || 'unknown'
+  const version = trimOrUnknown(
+    process.env.APP_VERSION,
+  )
+  const commit = trimOrUnknown(
+    process.env.COMMIT_HASH,
+  )
   return c.json({ version, commit })
 })
 
