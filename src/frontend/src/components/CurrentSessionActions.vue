@@ -1,7 +1,7 @@
 <template>
   <div class="flex gap-2 items-center">
     <template v-if="entry.session !== null">
-      <k-button small outline @click="$emit('stop')">Stop</k-button>
+      <k-button small outline @click="stopAction?.(entry)">Stop</k-button>
     </template>
     <template v-else>
       <div
@@ -67,6 +67,7 @@ defineProps<{
   selectedItemId: number | null;
   locked: boolean;
   forcedItemName: string;
+  stopAction?: (entry: CurrentEntry) => void;
   /**
    * Gates whether the whole locked/dropdown cluster renders at all for
    * rotation categories: the *effective* rest (daily rotation cap), matching
@@ -85,7 +86,6 @@ defineProps<{
 }>()
 defineEmits<{
   'update:selectedItemId': [value: number | null];
-  stop: [];
   'choose-something-else': [];
   wear: [];
 }>()

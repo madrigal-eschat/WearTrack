@@ -48,6 +48,22 @@ describe('sessionStore.end', () => {
       expect(ended.rest_seconds).toBe(86400)
     },
   )
+
+  it('allows correcting start and end timestamps before finalizing', () => {
+    const started = sessionStore.start(1, rawCat(), item, 20_000)
+    const ended = sessionStore.end(started, rawCat(), 20_000 + 600)
+
+    const updated = sessionStore.updateEnd(
+      ended,
+      rawCat(),
+      20_000 + 30,
+      20_000 + 900,
+    )
+
+    expect(updated.started_at).toBe(20_000 + 30)
+    expect(updated.ended_at).toBe(20_000 + 900)
+    expect(updated.rest_seconds).toBe(86400)
+  })
 })
 
 describe('sessionStore rotation category behaviour', () => {

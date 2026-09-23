@@ -107,11 +107,22 @@ async function startSession(itemId: number): Promise<Session> {
   return session
 }
 
-async function endSession(sessionId: number): Promise<Session> {
+async function endSession(
+  sessionId: number,
+  timing?: { startedAt?: number; endedAt?: number },
+): Promise<Session> {
+  const body: Record<string, number> = {}
+  if (timing?.startedAt !== undefined) {
+    body.started_at = timing.startedAt
+  }
+  if (timing?.endedAt !== undefined) {
+    body.ended_at = timing.endedAt
+  }
+
   const res = await apiFetch(`/api/sessions/${sessionId}/end`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({}),
+    body: JSON.stringify(body),
   })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
@@ -120,6 +131,17 @@ async function endSession(sessionId: number): Promise<Session> {
   const session: Session = await res.json()
   await fetchCurrent()
   return session
+}
+
+async function deleteSession(sessionId: number): Promise<void> {
+  const res = await apiFetch(`/api/sessions/${sessionId}`, {
+    method: 'DELETE',
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.error ?? `HTTP ${res.status}`)
+  }
+  await fetchCurrent()
 }
 
 async function reportInjury(
@@ -162,6 +184,7 @@ export function useWear() {
     fetchCurrent,
     startSession,
     endSession,
+    deleteSession,
     reportInjury,
     currentWear,
   }

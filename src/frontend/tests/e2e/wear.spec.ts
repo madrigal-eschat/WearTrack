@@ -97,6 +97,28 @@ test.describe('Wear sessions', () => {
     await stopBtn.waitFor({ timeout: 5000 })
     await stopBtn.click()
 
+    await expect(page.getByText('End session', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Save' }).click()
+
+    await expect(
+      row.getByRole('button', { name: /^wear$/i }),
+    ).toBeVisible({ timeout: 5000 })
+  })
+
+  test('can forget a short active session without creating rest', async ({
+    page,
+  }) => {
+    const row = page.locator('li', { hasText: categoryName })
+    await row.getByRole('button', { name: /^wear$/i }).click()
+
+    const stopBtn = row.getByRole('button', { name: /stop/i })
+    await stopBtn.waitFor({ timeout: 5000 })
+    await stopBtn.click()
+
+    const forgetButton = page.getByRole('button', { name: 'Forget session' })
+    await expect(forgetButton).toBeVisible()
+    await forgetButton.click()
+
     await expect(
       row.getByRole('button', { name: /^wear$/i }),
     ).toBeVisible({ timeout: 5000 })
@@ -155,7 +177,21 @@ test.describe('Wear sessions', () => {
     await expect(page.getByText('Stop wearing')).toBeVisible()
     await expect(page.getByText('Overdue')).toBeVisible()
 
-    await page.getByRole('button', { name: /stop/i }).first().click()
+    // Clean up via the API — clicking Stop now opens the end-session
+    // dialog rather than ending the session immediately.
+    const cleanupRes = await request.get('/api/sessions/current')
+    const cleanupCurrent = (await cleanupRes.json()) as Array<{
+      category: { id: number };
+      session: { id: number } | null;
+    }>
+    const cleanupEntry = cleanupCurrent.find(
+      (e) => e.category.id === categoryId,
+    )
+    if (cleanupEntry?.session) {
+      await request.post(`/api/sessions/${cleanupEntry.session.id}/end`, {
+        data: {},
+      })
+    }
   })
 })
 
@@ -224,14 +260,24 @@ test.describe('Wear session conflict (409)', () => {
     await request.delete(`/api/categories/${categoryId}`)
   })
 
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, request }) => {
+    // End any open sessions from a prior test — via the API, since
+    // clicking Stop now opens the end-session dialog rather than ending
+    // the session immediately.
+    const current = await request
+      .get('/api/sessions/current')
+      .then((r) => r.json()) as Array<{
+      category: { id: number };
+      session: { id: number } | null;
+    }>
+    const entry = current.find((e) => e.category.id === categoryId)
+    if (entry?.session) {
+      await request.post(`/api/sessions/${entry.session.id}/end`, {
+        data: {},
+      })
+    }
     await page.goto('/')
     page.on('dialog', (d) => d.accept())
-    // End any open sessions from a prior test
-    const stopBtn = page.getByRole('button', { name: /stop/i }).first()
-    if (await stopBtn.isVisible({ timeout: 1500 }).catch(() => false)) {
-      await stopBtn.click()
-    }
   })
 
   test(
@@ -264,22 +310,18 @@ test.describe('Wear session conflict (409)', () => {
       const body = await conflictRes.json()
       expect(body.error).toMatch(/already has an open session/i)
 
-      // Stop the open session for cleanup
-      const stopBtn = page.getByRole('button', { name: /stop/i }).first()
-      if (await stopBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await stopBtn.click()
-      } else {
-        // Fallback: end via API
-        const current = await page.request
-          .get('/api/sessions/current')
-          .then((r) => r.json()) as Array<{ session: { id: number } | null }>
-        for (const entry of current) {
-          if (entry.session) {
-            await page.request.post(
-              `/api/sessions/${entry.session.id}/end`,
-              { data: {} },
-            )
-          }
+      // Stop the open session for cleanup — via the API directly, since
+      // clicking Stop now opens the end-session dialog rather than ending
+      // the session immediately.
+      const current = await page.request
+        .get('/api/sessions/current')
+        .then((r) => r.json()) as Array<{ session: { id: number } | null }>
+      for (const entry of current) {
+        if (entry.session) {
+          await page.request.post(
+            `/api/sessions/${entry.session.id}/end`,
+            { data: {} },
+          )
         }
       }
     },
@@ -579,7 +621,20 @@ test.describe('Target reached (null-max, no overdue CTA)', () => {
       await expect(row.getByText('Stop wearing')).not.toBeVisible()
       await expect(row.getByText('Overdue')).not.toBeVisible()
 
-      await row.getByRole('button', { name: /stop/i }).click()
+      // Clean up via the API — clicking Stop now opens the end-session
+      // dialog rather than ending the session immediately.
+      const current = await request
+        .get('/api/sessions/current')
+        .then((r) => r.json()) as Array<{
+        category: { id: number };
+        session: { id: number } | null;
+      }>
+      const entry = current.find((e) => e.category.id === categoryId)
+      if (entry?.session) {
+        await request.post(`/api/sessions/${entry.session.id}/end`, {
+          data: {},
+        })
+      }
     },
   )
 })
@@ -681,7 +736,20 @@ test.describe('Category streak badge', () => {
       await expect(row.getByTestId('streak-badge')).toBeVisible()
       await expect(row.getByTestId('wear-progress-bar')).toBeVisible()
 
-      await row.getByRole('button', { name: /stop/i }).click()
+      // Clean up via the API — clicking Stop now opens the end-session
+      // dialog rather than ending the session immediately.
+      const current = await request
+        .get('/api/sessions/current')
+        .then((r) => r.json()) as Array<{
+        category: { id: number };
+        session: { id: number } | null;
+      }>
+      const entry = current.find((e) => e.category.id === categoryId)
+      if (entry?.session) {
+        await request.post(`/api/sessions/${entry.session.id}/end`, {
+          data: {},
+        })
+      }
     },
   )
 })
