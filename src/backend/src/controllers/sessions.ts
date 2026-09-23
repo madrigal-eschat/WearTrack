@@ -9,6 +9,20 @@ import { CurrentSessionsQuery } from '../queries/sessions.js'
 
 export const router = new Hono()
 
+function parseEndTimingBody(raw: unknown): {
+  startedAt?: number;
+  endedAt?: number;
+} {
+  const body = raw as { started_at?: number; ended_at?: number }
+  if (body.started_at !== undefined && typeof body.started_at !== 'number') {
+    throw new ValidationError('started_at must be a Unix timestamp (number)')
+  }
+  if (body.ended_at !== undefined && typeof body.ended_at !== 'number') {
+    throw new ValidationError('ended_at must be a Unix timestamp (number)')
+  }
+  return { startedAt: body.started_at, endedAt: body.ended_at }
+}
+
 // GET /api/sessions?item_id=&category_id=&before=&limit=
 router.get('/', (c) => {
   const itemId = c.req.query('item_id')
@@ -72,10 +86,9 @@ router.post('/:id/end', async (c) => {
     throw new ValidationError(`Session ${id} is already ended`)
   }
 
-  const body = (await c.req.json().catch(() => ({}))) as { ended_at?: number }
-  if (body.ended_at !== undefined && typeof body.ended_at !== 'number') {
-    throw new ValidationError('ended_at must be a Unix timestamp (number)')
-  }
+  const { startedAt, endedAt } = parseEndTimingBody(
+    await c.req.json().catch(() => ({})),
+  )
 
   const item = itemStore.find(session.item_id)
   if (!item) {
@@ -83,10 +96,14 @@ router.post('/:id/end', async (c) => {
   }
 
   const category = categoryStore.findRaw(item.category_id)!
-  const endTs =
-    typeof body.ended_at === 'number' ? body.ended_at : nowSeconds()
+  const startTs = startedAt ?? session.started_at
+  const endTs = endedAt ?? nowSeconds()
 
-  const updated = sessionStore.end(session, category, endTs)
+  if (endTs < startTs) {
+    throw new ValidationError('ended_at must be after started_at')
+  }
+
+  const updated = sessionStore.end(session, category, endTs, startTs)
   return c.json(updated)
 })
 
@@ -102,21 +119,25 @@ router.patch('/:id', async (c) => {
   }
 
   const body = (await c.req.json().catch(() => ({}))) as {
+    started_at?: number;
     ended_at?: number;
     duration_seconds?: number;
   }
+
+  const newStartedAt =
+    typeof body.started_at === 'number' ? body.started_at : session.started_at
 
   let newEndedAt: number
   if (typeof body.ended_at === 'number') {
     newEndedAt = body.ended_at
   } else if (typeof body.duration_seconds === 'number') {
-    newEndedAt = session.started_at + body.duration_seconds
+    newEndedAt = newStartedAt + body.duration_seconds
   } else {
     throw new ValidationError(
       'ended_at or duration_seconds (number) is required',
     )
   }
-  if (newEndedAt <= session.started_at) {
+  if (newEndedAt <= newStartedAt) {
     throw new ValidationError('ended_at must be after started_at')
   }
 
@@ -126,7 +147,12 @@ router.patch('/:id', async (c) => {
   }
   const category = categoryStore.findRaw(item.category_id)!
 
-  const updated = sessionStore.updateEnd(session, category, newEndedAt)
+  const updated = sessionStore.updateEnd(
+    session,
+    category,
+    newStartedAt,
+    newEndedAt,
+  )
   return c.json(updated)
 })
 

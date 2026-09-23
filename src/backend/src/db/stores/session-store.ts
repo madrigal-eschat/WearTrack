@@ -322,9 +322,14 @@ class SessionStore {
    * End a session: derive elapsed, compute rest, persist; target/max
    * stay as set at start.
    */
-  end(session: Session, category: Category, endedAt: number): Session {
+  end(
+    session: Session,
+    category: Category,
+    endedAt: number,
+    startedAt: number = session.started_at,
+  ): Session {
     return db.transaction(() => {
-      const elapsed = endedAt - session.started_at
+      const elapsed = endedAt - startedAt
       let rest: number | null
       let riskLevel: RiskLevel | null = null
       if (category.type === 'rotation') {
@@ -342,11 +347,12 @@ class SessionStore {
       }
 
       db.prepare(
-        'UPDATE sessions SET ended_at = ?, rest_seconds = ? WHERE id = ?',
-      ).run(endedAt, rest, session.id)
+        'UPDATE sessions SET started_at = ?, ended_at = ?, rest_seconds = ? ' +
+          'WHERE id = ?',
+      ).run(startedAt, endedAt, rest, session.id)
 
       const updated = this.find(session.id)!
-      const snapshot = { ...updated, ended_at: endedAt }
+      const snapshot = { ...updated, started_at: startedAt, ended_at: endedAt }
       statsStore.recordItemSession(snapshot)
       statsStore.recordCategorySession(
         category.id,
@@ -392,18 +398,18 @@ class SessionStore {
   updateEnd(
     session: Session,
     category: Category,
-    newEndedAt: number,
+    newStartedAt: number = session.started_at,
+    newEndedAt: number = session.ended_at ?? session.started_at,
   ): Session {
     return db.transaction(() => {
       if (session.ended_in_injury) {
-        db.prepare('UPDATE sessions SET ended_at = ? WHERE id = ?').run(
-          newEndedAt,
-          session.id,
-        )
+        db.prepare(
+          'UPDATE sessions SET started_at = ?, ended_at = ? WHERE id = ?',
+        ).run(newStartedAt, newEndedAt, session.id)
         return this.find(session.id)!
       }
 
-      const elapsed = newEndedAt - session.started_at
+      const elapsed = newEndedAt - newStartedAt
       let rest: number | null
       if (category.type === 'rotation') {
         rest = null
@@ -420,8 +426,9 @@ class SessionStore {
       }
 
       db.prepare(
-        'UPDATE sessions SET ended_at = ?, rest_seconds = ? WHERE id = ?',
-      ).run(newEndedAt, rest, session.id)
+        'UPDATE sessions SET started_at = ?, ended_at = ?, rest_seconds = ? ' +
+          'WHERE id = ?',
+      ).run(newStartedAt, newEndedAt, rest, session.id)
 
       statsStore.recomputeItem(session.item_id)
       statsStore.recomputeCategory(category.id, category.break_grace_time)
