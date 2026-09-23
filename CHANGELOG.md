@@ -1,3 +1,13 @@
+# [1.7.0](https://github.com/madrigal-eschat/WearTrack/compare/v1.6.3...v1.7.0) (2026-09-23)
+
+
+### Features
+
+* display frontend and backend versions in settings ([fb59a39](https://github.com/madrigal-eschat/WearTrack/commit/fb59a39d8122a9eabd630882b1d13389a671a10e))
+* embed frontend build metadata ([0687925](https://github.com/madrigal-eschat/WearTrack/commit/0687925f940aabb301e0b72563e36ba137c5f351))
+* expose backend build metadata ([23afbf3](https://github.com/madrigal-eschat/WearTrack/commit/23afbf319bc13708139601d4b358d3244fd94bd9))
+* fetch backend version metadata ([bfb015f](https://github.com/madrigal-eschat/WearTrack/commit/bfb015f3fb0cf21b7e7cf0058ae292fffa618a16))
+
 ## [1.6.3](https://github.com/madrigal-eschat/WearTrack/compare/v1.6.2...v1.6.3) (2026-09-22)
 
 
