@@ -207,7 +207,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, onMounted } from 'vue'
+import { reactive, onMounted, watchEffect } from 'vue'
 import { Icon } from '@iconify/vue'
 import {
   kBlockTitle, kList, kListItem, kDialog, kDialogButton,
@@ -443,8 +443,15 @@ onMounted(async () => {
       await loadRecentSessions(entry.category.id)
     }
   }
+})
+
+// Fills in a default pick for any category that lacks one. Runs reactively
+// because current sessions and items can each arrive after mount.
+watchEffect(() => {
   for (const entry of currentSessions.value) {
-    selectedItem[entry.category.id] = firstAvailableItemId(entry)
+    if (!selectedItem[entry.category.id]) {
+      selectedItem[entry.category.id] = firstAvailableItemId(entry)
+    }
   }
 })
 
