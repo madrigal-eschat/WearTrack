@@ -86,8 +86,12 @@ watch(
       return
     }
     startedAt.value = toDateTimeLocalValue(entry.session.started_at)
+    // `now` ticks once a second and can lag the server-stamped start.
     endedAt.value = toDateTimeLocalValue(
-      entry.session.ended_at ?? Math.floor(now.value / 1000),
+      Math.max(
+        entry.session.ended_at ?? Math.floor(now.value / 1000),
+        entry.session.started_at,
+      ),
     )
     canForget.value =
       Math.floor(now.value / 1000) - entry.session.started_at < 300
