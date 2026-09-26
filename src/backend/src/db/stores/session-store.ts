@@ -52,6 +52,10 @@ export interface ItemWithLastSession {
   rest_seconds: number | null;
 }
 
+function utcDay(ts: number): string {
+  return new Date(ts * 1000).toISOString().slice(0, 10)
+}
+
 class SessionStore {
   findAllLastSessions(): ItemWithLastSession[] {
     return db
@@ -210,6 +214,31 @@ class SessionStore {
         'SELECT id FROM sessions WHERE item_id = ? AND ended_at IS NULL',
       )
       .get(itemId) as { id: number } | undefined
+  }
+
+  /**
+   * First session (any item, open or closed) in the category other than
+   * `excludeId` whose span intersects [from, to). Touching boundaries do
+   * not intersect; an open session extends indefinitely.
+   */
+  findOverlappingInCategory(
+    categoryId: number,
+    excludeId: number,
+    from: number,
+    to: number,
+  ):
+    | { session_id: number; item_id: number; item_name: string }
+    | undefined {
+    return db
+      .prepare(
+        `SELECT s.id AS session_id, i.id AS item_id, i.name AS item_name
+         FROM sessions s JOIN items i ON i.id = s.item_id
+         WHERE i.category_id = ? AND s.id != ?
+         AND s.started_at < ? AND (s.ended_at IS NULL OR s.ended_at > ?)
+         ORDER BY s.started_at LIMIT 1`,
+      )
+      .get(categoryId, excludeId, to, from) as
+      { session_id: number; item_id: number; item_name: string } | undefined
   }
 
   findOpenWithItemData(): OpenSessionWithItem[] {
@@ -384,50 +413,82 @@ class SessionStore {
   }
 
   /**
-   * Correct a completed session's end time (duration is derived by the
-   * caller). `started_at` never changes. Injury-ended sessions never had
-   * rest_seconds/stats contributions, so they're skipped for both here,
-   * matching endWithInjury().
+   * Correct a completed session's start and/or end time. Injury-ended
+   * sessions never had rest_seconds/stats contributions, so they're
+   * skipped for both here, matching endWithInjury(). target/max stay as
+   * set at start. If the start day changes, the session_day_index row
+   * moves with it.
    */
-  updateEnd(
+  updateTimes(
     session: Session,
     category: Category,
+    newStartedAt: number,
     newEndedAt: number,
   ): Session {
     return db.transaction(() => {
       if (session.ended_in_injury) {
-        db.prepare('UPDATE sessions SET ended_at = ? WHERE id = ?').run(
-          newEndedAt,
-          session.id,
-        )
-        return this.find(session.id)!
-      }
-
-      const elapsed = newEndedAt - session.started_at
-      let rest: number | null
-      if (category.type === 'rotation') {
-        rest = null
+        db.prepare(
+          'UPDATE sessions SET started_at = ?, ended_at = ? WHERE id = ?',
+        ).run(newStartedAt, newEndedAt, session.id)
       } else {
-        const injuryActive = injuryStore.hasActiveInCategory(category.id)
-        const riskLevel = riskLevelFor(elapsed, category)
-        rest = computeRest(
-          elapsed,
-          session.max_wear_seconds,
-          category,
-          riskLevel,
-          injuryActive,
-        )
+        const elapsed = newEndedAt - newStartedAt
+        let rest: number | null
+        if (category.type === 'rotation') {
+          rest = null
+        } else {
+          const injuryActive = injuryStore.hasActiveInCategory(category.id)
+          const riskLevel = riskLevelFor(elapsed, category)
+          rest = computeRest(
+            elapsed,
+            session.max_wear_seconds,
+            category,
+            riskLevel,
+            injuryActive,
+          )
+        }
+
+        db.prepare(
+          'UPDATE sessions SET started_at = ?, ended_at = ?, ' +
+            'rest_seconds = ? WHERE id = ?',
+        ).run(newStartedAt, newEndedAt, rest, session.id)
+
+        statsStore.recomputeItem(session.item_id)
+        statsStore.recomputeCategory(category.id, category.break_grace_time)
       }
 
-      db.prepare(
-        'UPDATE sessions SET ended_at = ?, rest_seconds = ? WHERE id = ?',
-      ).run(newEndedAt, rest, session.id)
-
-      statsStore.recomputeItem(session.item_id)
-      statsStore.recomputeCategory(category.id, category.break_grace_time)
-
+      this.reindexDay(session, category.id)
       return this.find(session.id)!
     })()
+  }
+
+  /**
+   * After a session's start moved, re-point its session_day_index row:
+   * drop the old (day, category, item) row if no session remains on it,
+   * and ensure the new one exists.
+   */
+  private reindexDay(before: Session, categoryId: number): void {
+    const oldDay = utcDay(before.started_at)
+    this.dropDayIndexIfOrphaned(oldDay, categoryId, before.item_id)
+    this.recordDayIndex(before.id)
+  }
+
+  private dropDayIndexIfOrphaned(
+    day: string,
+    categoryId: number,
+    itemId: number,
+  ): void {
+    const remaining = db
+      .prepare(
+        `SELECT COUNT(*) AS n FROM sessions
+         WHERE item_id = ? AND date(started_at, 'unixepoch') = ?`,
+      )
+      .get(itemId, day) as { n: number }
+    if (remaining.n === 0) {
+      db.prepare(
+        'DELETE FROM session_day_index WHERE day = ? ' +
+          'AND category_id = ? AND item_id = ?',
+      ).run(day, categoryId, itemId)
+    }
   }
 
   /**
@@ -436,25 +497,11 @@ class SessionStore {
    * that (day, category, item).
    */
   remove(session: Session, category: Category): void {
-    const day = new Date(session.started_at * 1000)
-      .toISOString()
-      .slice(0, 10)
+    const day = utcDay(session.started_at)
 
     db.transaction(() => {
       db.prepare('DELETE FROM sessions WHERE id = ?').run(session.id)
-
-      const remaining = db
-        .prepare(
-          `SELECT COUNT(*) AS n FROM sessions
-           WHERE item_id = ? AND date(started_at, 'unixepoch') = ?`,
-        )
-        .get(session.item_id, day) as { n: number }
-      if (remaining.n === 0) {
-        db.prepare(
-          'DELETE FROM session_day_index WHERE day = ? ' +
-            'AND category_id = ? AND item_id = ?',
-        ).run(day, category.id, session.item_id)
-      }
+      this.dropDayIndexIfOrphaned(day, category.id, session.item_id)
 
       if (!session.ended_in_injury && session.ended_at !== null) {
         statsStore.recomputeItem(session.item_id)

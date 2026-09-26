@@ -1268,6 +1268,260 @@ describe('PATCH /api/sessions/:id', () => {
     })
 })
 
+describe('PATCH /api/sessions/:id start/end editing', () => {
+  async function patchSession(id: number, body: Record<string, unknown>) {
+    return app.request(`${SESSIONS}/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+  }
+
+  async function newCategory(name: string, overrides = {}) {
+    return (await createCategory({ name, ...overrides })).json()
+  }
+
+  async function newItem(categoryId: number, name: string) {
+    return (await createItem(categoryId, { name })).json()
+  }
+
+  async function completedSession(
+    itemId: number,
+    startedAt: number,
+    endedAt: number,
+  ) {
+    const s = await (
+      await app.request(`${SESSIONS}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: itemId, started_at: startedAt }),
+      })
+    ).json()
+    await endSession(s.id, { ended_at: endedAt })
+    return s as { id: number }
+  }
+
+  const T = Math.floor(Date.now() / 1000) - 100000
+
+  it('edits started_at alone and keeps ended_at', async () => {
+    const cat = await newCategory('Edit Start Cat')
+    const item = await newItem(cat.id, 'Edit Start Shoe')
+    const s = await completedSession(item.id, T + 100, T + 1000)
+
+    const res = await patchSession(s.id, { started_at: T + 400 })
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.started_at).toBe(T + 400)
+    expect(body.ended_at).toBe(T + 1000)
+  })
+
+  it('edits started_at and ended_at together', async () => {
+    const cat = await newCategory('Edit Both Cat')
+    const item = await newItem(cat.id, 'Edit Both Shoe')
+    const s = await completedSession(item.id, T + 100, T + 1000)
+
+    const res = await patchSession(s.id, {
+      started_at: T + 50,
+      ended_at: T + 2000,
+    })
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.started_at).toBe(T + 50)
+    expect(body.ended_at).toBe(T + 2000)
+  })
+
+  it('rejects started_at at or after the existing ended_at', async () => {
+    const cat = await newCategory('Edit Start Late Cat')
+    const item = await newItem(cat.id, 'Edit Start Late Shoe')
+    const s = await completedSession(item.id, T + 100, T + 1000)
+
+    const res = await patchSession(s.id, { started_at: T + 1000 })
+    expect(res.status).toBe(400)
+  })
+
+  it('rejects an edit that overlaps another item in the category', async () => {
+    const cat = await newCategory('Edit Overlap Cat')
+    const a = await newItem(cat.id, 'Edit Overlap A')
+    const b = await newItem(cat.id, 'Edit Overlap B')
+    await completedSession(a.id, T + 100, T + 500)
+    const s = await completedSession(b.id, T + 600, T + 1000)
+
+    const res = await patchSession(s.id, { started_at: T + 400 })
+    expect(res.status).toBe(409)
+  })
+
+  it('rejects an end edit that reaches into a later session', async () => {
+    const cat = await newCategory('Edit Overlap End Cat')
+    const item = await newItem(cat.id, 'Edit Overlap End Shoe')
+    const s = await completedSession(item.id, T + 100, T + 500)
+    await completedSession(item.id, T + 600, T + 1000)
+
+    const res = await patchSession(s.id, { ended_at: T + 700 })
+    expect(res.status).toBe(409)
+  })
+
+  it('rejects an end edit that reaches into an open session', async () => {
+    const cat = await newCategory('Edit Overlap Open Cat')
+    const item = await newItem(cat.id, 'Edit Overlap Open Shoe')
+    const s = await completedSession(item.id, T + 100, T + 500)
+    await app.request(`${SESSIONS}/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: item.id, started_at: T + 600 }),
+    })
+
+    const res = await patchSession(s.id, { ended_at: T + 700 })
+    expect(res.status).toBe(409)
+  })
+
+  it('allows back-to-back sessions (touching boundaries)', async () => {
+    const cat = await newCategory('Edit Touch Cat')
+    const item = await newItem(cat.id, 'Edit Touch Shoe')
+    await completedSession(item.id, T + 100, T + 500)
+    const s = await completedSession(item.id, T + 600, T + 1000)
+
+    const res = await patchSession(s.id, { started_at: T + 500 })
+    expect(res.status).toBe(200)
+  })
+
+  it('allows an overlap with a session in a different category', async () => {
+    const cat = await newCategory('Edit Cross Cat A')
+    const other = await newCategory('Edit Cross Cat B')
+    const item = await newItem(cat.id, 'Edit Cross Shoe A')
+    const otherItem = await newItem(other.id, 'Edit Cross Shoe B')
+    await completedSession(otherItem.id, T + 100, T + 500)
+    const s = await completedSession(item.id, T + 600, T + 1000)
+
+    const res = await patchSession(s.id, { started_at: T + 200 })
+    expect(res.status).toBe(200)
+  })
+
+  it('always allows shrinking, even amid legacy overlaps', async () => {
+    const cat = await newCategory('Edit Shrink Cat')
+    const item = await newItem(cat.id, 'Edit Shrink Shoe')
+    const s = await completedSession(item.id, T + 100, T + 1000)
+    // Pre-existing overlap (data from before collision checks).
+    await completedSession(item.id, T + 200, T + 400)
+
+    const res = await patchSession(s.id, {
+      started_at: T + 150,
+      ended_at: T + 900,
+    })
+    expect(res.status).toBe(200)
+  })
+
+  it('updates item and category totals for a start edit', async () => {
+    const cat = await newCategory('Edit Totals Cat')
+    const item = await newItem(cat.id, 'Edit Totals Shoe')
+    const s = await completedSession(item.id, T + 100, T + 1000)
+
+    await patchSession(s.id, { started_at: T + 500 })
+
+    const itemStats = prepare(
+      'SELECT total_wear_seconds, max_single_session_wear_seconds ' +
+        'FROM stats WHERE item_id = ?',
+    ).get(item.id)
+    expect(itemStats).toEqual({
+      total_wear_seconds: 500,
+      max_single_session_wear_seconds: 500,
+    })
+    const catStats = prepare(
+      'SELECT total_wear_seconds, session_count FROM category_stats ' +
+        'WHERE category_id = ?',
+    ).get(cat.id)
+    expect(catStats).toEqual({ total_wear_seconds: 500, session_count: 1 })
+  })
+
+  it('recomputes the category streak from the edited order', async () => {
+    const cat = await newCategory('Edit Streak Cat', {
+      rest_multiplier: 0,
+      minimum_rest: 0,
+      break_grace_time: 1000,
+    })
+    const item = await newItem(cat.id, 'Edit Streak Shoe')
+    await completedSession(item.id, T, T + 100)
+    const b = await completedSession(item.id, T + 200, T + 300)
+    await completedSession(item.id, T + 2200, T + 2300)
+
+    // Move B far enough from A that the streak breaks at B, not at C.
+    const res = await patchSession(b.id, {
+      started_at: T + 2000,
+      ended_at: T + 2100,
+    })
+    expect(res.status).toBe(200)
+
+    const stats = prepare(
+      'SELECT streak_count, streak_wear_seconds, best_streak_count, ' +
+        'best_streak_wear_seconds, session_count FROM category_stats ' +
+        'WHERE category_id = ?',
+    ).get(cat.id)
+    expect(stats).toEqual({
+      streak_count: 2,
+      streak_wear_seconds: 200,
+      best_streak_count: 2,
+      best_streak_wear_seconds: 200,
+      session_count: 3,
+    })
+  })
+
+  it('leaves stats identical to a from-scratch recompute', async () => {
+    const cat = await newCategory('Edit Equiv Cat', {
+      rest_multiplier: 0,
+      minimum_rest: 0,
+      break_grace_time: 1000,
+    })
+    const item = await newItem(cat.id, 'Edit Equiv Shoe')
+    await completedSession(item.id, T, T + 100)
+    const b = await completedSession(item.id, T + 200, T + 300)
+    await completedSession(item.id, T + 2200, T + 2300)
+    await patchSession(b.id, { started_at: T + 2000, ended_at: T + 2100 })
+
+    const itemSql = 'SELECT * FROM stats WHERE item_id = ?'
+    const catSql = 'SELECT * FROM category_stats WHERE category_id = ?'
+    const itemBefore = prepare(itemSql).get(item.id)
+    const catBefore = prepare(catSql).get(cat.id)
+
+    const { statsStore } = await import('../../src/db/stores/stats-store.js')
+    statsStore.recomputeItem(item.id)
+    statsStore.recomputeCategory(cat.id, cat.break_grace_time)
+
+    expect(prepare(itemSql).get(item.id)).toEqual(itemBefore)
+    expect(prepare(catSql).get(cat.id)).toEqual(catBefore)
+  })
+
+  it('moves the session_day_index row when the start day changes', async () => {
+    const cat = await newCategory('Edit Day Cat')
+    const item = await newItem(cat.id, 'Edit Day Shoe')
+    const day = Date.UTC(2025, 2, 10) / 1000
+    const s = await completedSession(item.id, day + 43200, day + 46800)
+
+    const res = await patchSession(s.id, { started_at: day - 3600 })
+    expect(res.status).toBe(200)
+
+    const days = prepare(
+      'SELECT day FROM session_day_index WHERE category_id = ? ' +
+        'AND item_id = ? ORDER BY day',
+    ).all(cat.id, item.id)
+    expect(days).toEqual([{ day: '2025-03-09' }])
+  })
+
+  it('keeps the old day indexed when a sibling session remains', async () => {
+    const cat = await newCategory('Edit Day Sibling Cat')
+    const item = await newItem(cat.id, 'Edit Day Sibling Shoe')
+    const day = Date.UTC(2025, 2, 10) / 1000
+    const s = await completedSession(item.id, day + 43200, day + 46800)
+    await completedSession(item.id, day + 50000, day + 53600)
+
+    await patchSession(s.id, { started_at: day - 3600 })
+
+    const days = prepare(
+      'SELECT day FROM session_day_index WHERE category_id = ? ' +
+        'AND item_id = ? ORDER BY day',
+    ).all(cat.id, item.id)
+    expect(days).toEqual([{ day: '2025-03-09' }, { day: '2025-03-10' }])
+  })
+})
+
 describe('GET /api/sessions/current streak_count', () => {
   it('is 0 for a fresh category with no sessions', async () => {
     const cat = await (
