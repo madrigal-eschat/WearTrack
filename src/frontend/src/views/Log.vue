@@ -88,9 +88,11 @@
       v-if="editTarget"
       :open="editOpen"
       @update:open="editOpen = $event"
-      :duration-minutes="editDurationMinutes"
-      @update:duration-minutes="editDurationMinutes = $event"
-      :max-minutes="Math.ceil((editRange.max - editRange.min) / 60)"
+      :started-at="editStartedAt"
+      @update:started-at="editStartedAt = $event"
+      :ended-at="editEndedAt"
+      @update:ended-at="editEndedAt = $event"
+      :error="editError"
       @save="saveEdit"
     />
   </k-page>
@@ -116,11 +118,12 @@ import {
   buildDateIndex, type DateIndexEntry,
 } from '../utils/sessionDateIndex.js'
 import { apiFetch } from '../utils/apiFetch.js'
+import { buildEditChanges } from '../utils/sessionEditChanges.js'
 
 const {
   sessions, loading, loadInitial, loadMore,
   categoryFilter, itemFilter, setCategoryFilter, setItemFilter, jumpTo,
-  editableRangeFor, editSession, deleteSession,
+  editSession, deleteSession,
 } = useSessionLog()
 
 const { categories, loadCategories } = useCategories()
@@ -186,22 +189,19 @@ function openActions(entry: SessionLogEntry): void {
 }
 
 const editOpen = ref(false)
-const editDurationMinutes = ref(0)
+const editStartedAt = ref(0)
+const editEndedAt = ref(0)
+const editError = ref<string | null>(null)
 const editTarget = computed(() => activeEntry.value)
-const editRange = computed(() => (
-  editTarget.value
-    ? editableRangeFor(editTarget.value)
-    : { min: 0, max: 0 }
-))
 
 function startEdit(): void {
   actionsOpen.value = false
   if (!editTarget.value || editTarget.value.ended_at === null) {
     return
   }
-  editDurationMinutes.value = Math.round(
-    (editTarget.value.ended_at - editTarget.value.started_at) / 60,
-  )
+  editStartedAt.value = editTarget.value.started_at
+  editEndedAt.value = editTarget.value.ended_at
+  editError.value = null
   editOpen.value = true
 }
 
@@ -212,17 +212,25 @@ async function openDeleteConfirmation(): Promise<void> {
 }
 
 async function saveEdit(): Promise<void> {
-  if (!editTarget.value) {
+  const target = editTarget.value
+  if (!target || target.ended_at === null) {
     return
   }
-  const newEndedAt = editTarget.value.started_at
-    + editDurationMinutes.value * 60
-  const clamped = Math.min(
-    Math.max(newEndedAt, editRange.value.min + 1),
-    editRange.value.max,
+  const changes = buildEditChanges(
+    { started_at: target.started_at, ended_at: target.ended_at },
+    editStartedAt.value,
+    editEndedAt.value,
   )
-  await editSession(editTarget.value, clamped)
-  editOpen.value = false
+  if (Object.keys(changes).length === 0) {
+    editOpen.value = false
+    return
+  }
+  try {
+    await editSession(target, changes)
+    editOpen.value = false
+  } catch (e) {
+    editError.value = e instanceof Error ? e.message : 'Could not save edit'
+  }
 }
 
 async function performDelete(): Promise<void> {

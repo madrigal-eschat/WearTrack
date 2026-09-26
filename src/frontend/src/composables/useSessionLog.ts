@@ -1,10 +1,6 @@
 import { ref } from 'vue'
 import { apiFetch } from '../utils/apiFetch.js'
 import type { Session } from './useWear.js'
-import {
-  computeEditableRange,
-  type LastEdited,
-} from '../utils/sessionEditPolicy.js'
 
 export interface SessionLogEntry extends Session {
   category_id: number;
@@ -22,7 +18,6 @@ const categoryFilter = ref<number | null>(null)
 const itemFilter = ref<number | null>(null)
 const hasMore = ref(true)
 const loading = ref(false)
-const lastEdited = ref<LastEdited | null>(null)
 
 function buildQuery(before?: number): string {
   const params = new URLSearchParams()
@@ -87,46 +82,20 @@ async function jumpTo(cursor: number): Promise<void> {
   await loadInitial(cursor)
 }
 
-function editableRangeFor(
-  session: SessionLogEntry,
-): { min: number; max: number } {
-  if (session.ended_at === null) {
-    return { min: session.started_at, max: session.started_at }
-  }
-  return computeEditableRange(
-    {
-      id: session.id,
-      started_at: session.started_at,
-      ended_at: session.ended_at,
-    },
-    lastEdited.value,
-  )
-}
-
 async function editSession(
   session: SessionLogEntry,
-  newEndedAt: number,
+  changes: { started_at?: number; ended_at?: number },
 ): Promise<void> {
   const res = await apiFetch(`/api/sessions/${session.id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ended_at: newEndedAt }),
+    body: JSON.stringify(changes),
   })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
     throw new Error(body.error ?? `HTTP ${res.status}`)
   }
   const updated: SessionLogEntry = await res.json()
-
-  if (
-    lastEdited.value?.sessionId !== session.id &&
-    session.ended_at !== null
-  ) {
-    lastEdited.value = {
-      sessionId: session.id,
-      originalEndedAt: session.ended_at,
-    }
-  }
 
   const idx = sessions.value.findIndex((s) => s.id === session.id)
   if (idx !== -1) {
@@ -142,9 +111,6 @@ async function deleteSession(session: SessionLogEntry): Promise<void> {
     throw new Error(`HTTP ${res.status}`)
   }
   sessions.value = sessions.value.filter((s) => s.id !== session.id)
-  if (lastEdited.value?.sessionId === session.id) {
-    lastEdited.value = null
-  }
 }
 
 export function useSessionLog() {
@@ -159,7 +125,6 @@ export function useSessionLog() {
     setCategoryFilter,
     setItemFilter,
     jumpTo,
-    editableRangeFor,
     editSession,
     deleteSession,
   }
