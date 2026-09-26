@@ -160,11 +160,11 @@
             @update:selected-item-id="selectedItem[entry.category.id] = $event"
             :locked="isLocked(entry)"
             :forced-item-name="forcedItemName(entry)"
+            :stop-action="onStop"
             :rest-remaining="effectiveRestRemainingSeconds(entry)"
             :item-rest-remaining="restRemainingSeconds(entry)"
             :item-rotation-available="(id: number) =>
               itemRotationAvailable(entry, id)"
-            @stop="onStop(entry)"
             @choose-something-else="chooseSomethingElse(entry)"
             @wear="onWearClick(entry)"
           />
@@ -172,6 +172,15 @@
       </k-list-item>
     </k-list>
   </div>
+
+  <!-- End-session dialog -->
+  <EndSessionDialog
+    :opened="endSessionDialog.visible"
+    :entry="endSessionDialog.entry"
+    @close="endSessionDialog.visible = false"
+    @confirm="confirmEndSession"
+    @forget="forgetSession"
+  />
 
   <!-- Rest-period confirmation dialog -->
   <k-dialog
@@ -181,13 +190,11 @@
     <template #title>Start during rest?</template>
     <template #content>
       <template v-if="restWarning.entry">
-        {{ shortDuration(restRemainingSeconds(
-          restWarning.entry, dialogItemIdOverride(restWarning.entry),
-        )) }} of rest remaining.
+        {{ shortDuration(restRemainingSeconds(restWarning.entry,
+          dialogItemIdOverride(restWarning.entry))) }} of rest remaining.
         Starting early reduces your target to
-        <strong>{{
-          idleTarget(restWarning.entry, dialogItemIdOverride(restWarning.entry))
-        }}</strong>.
+        <strong>{{ idleTarget(restWarning.entry,
+          dialogItemIdOverride(restWarning.entry)) }}</strong>.
       </template>
     </template>
     <template #buttons>
@@ -200,13 +207,14 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, onMounted } from 'vue'
+import { reactive, onMounted, watchEffect } from 'vue'
 import { Icon } from '@iconify/vue'
 import {
   kBlockTitle, kList, kListItem, kDialog, kDialogButton,
 } from 'konsta/vue'
 import WearProgressBar from './WearProgressBar.vue'
 import CurrentSessionActions from './CurrentSessionActions.vue'
+import EndSessionDialog from './EndSessionDialog.vue'
 import {
   useWear,
   type CurrentEntry,
@@ -230,7 +238,13 @@ import {
   decayTimeLeft,
 } from '../utils/wearCalculations.js'
 
-const { currentSessions, loaded, startSession, endSession } = useWear()
+const {
+  currentSessions,
+  loaded,
+  startSession,
+  endSession,
+  deleteSession,
+} = useWear()
 const { loadItems, itemsForCategory } = useItems()
 const { showError } = useToast()
 const now = useNow()
@@ -323,6 +337,11 @@ function chooseSomethingElse(entry: CurrentEntry) {
   selectedItem[entry.category.id] = firstAvailableItemId(entry)
 }
 
+const endSessionDialog = reactive<{
+  visible: boolean;
+  entry: CurrentEntry | null;
+}>({ visible: false, entry: null })
+
 const restWarning = reactive<{
   visible: boolean;
   entry: CurrentEntry | null;
@@ -331,6 +350,55 @@ const restWarning = reactive<{
 function showRestWarning(entry: CurrentEntry) {
   restWarning.entry = entry
   restWarning.visible = true
+}
+
+function openEndSessionDialog(entry: CurrentEntry): void {
+  if (!entry.session) {
+    return
+  }
+  endSessionDialog.entry = entry
+  endSessionDialog.visible = true
+}
+
+async function confirmEndSession(
+  startedAt: number,
+  endedAt: number,
+): Promise<void> {
+  const entry = endSessionDialog.entry
+  if (!entry?.session) {
+    return
+  }
+
+  try {
+    await endSession(entry.session.id, { startedAt, endedAt })
+    endSessionDialog.visible = false
+    endSessionDialog.entry = null
+    if (entry.category.type === 'rotation') {
+      overrideLock[entry.category.id] = false
+      await loadRecentSessions(entry.category.id)
+    }
+  } catch (e) {
+    showError(String(e))
+  }
+}
+
+async function forgetSession(): Promise<void> {
+  const entry = endSessionDialog.entry
+  if (!entry?.session) {
+    return
+  }
+
+  try {
+    await deleteSession(entry.session.id)
+    endSessionDialog.visible = false
+    endSessionDialog.entry = null
+    if (entry.category.type === 'rotation') {
+      overrideLock[entry.category.id] = false
+      await loadRecentSessions(entry.category.id)
+    }
+  } catch (e) {
+    showError(String(e))
+  }
 }
 
 /**
@@ -375,8 +443,15 @@ onMounted(async () => {
       await loadRecentSessions(entry.category.id)
     }
   }
+})
+
+// Fills in a default pick for any category that lacks one. Runs reactively
+// because current sessions and items can each arrive after mount.
+watchEffect(() => {
   for (const entry of currentSessions.value) {
-    selectedItem[entry.category.id] = firstAvailableItemId(entry)
+    if (!selectedItem[entry.category.id]) {
+      selectedItem[entry.category.id] = firstAvailableItemId(entry)
+    }
   }
 })
 
@@ -658,14 +733,6 @@ async function onStop(entry: CurrentEntry) {
   if (!entry.session) {
     return
   }
-  try {
-    await endSession(entry.session.id)
-    if (entry.category.type === 'rotation') {
-      overrideLock[entry.category.id] = false
-      await loadRecentSessions(entry.category.id)
-    }
-  } catch (e) {
-    showError(String(e))
-  }
+  openEndSessionDialog(entry)
 }
 </script>
