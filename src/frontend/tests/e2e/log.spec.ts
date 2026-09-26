@@ -1,4 +1,6 @@
-import { test, expect, type APIRequestContext } from '@playwright/test'
+import {
+  test, expect, type APIRequestContext, type Page,
+} from '@playwright/test'
 import { uid } from './helpers.js'
 
 test.describe('Log session actions', () => {
@@ -43,8 +45,10 @@ test.describe('Log session actions', () => {
   async function createSession(
     request: APIRequestContext,
     durationSeconds: number,
+    // Whole minute, so it survives a round-trip through the minute-resolution
+    // datetime-local inputs.
+    startedAt = Math.floor(Date.now() / 60000) * 60 - 3600,
   ) {
-    const startedAt = Math.floor(Date.now() / 1000) - 3600
     const startResponse = await request.post('/api/sessions/start', {
       data: { item_id: itemId, started_at: startedAt },
     })
@@ -65,9 +69,22 @@ test.describe('Log session actions', () => {
     }
   })
 
-  test('can edit a completed log entry', async ({ page, request }) => {
-    const sessionId = await createSession(request, 600)
+  // Local "YYYY-MM-DDTHH:mm" in the browser's timezone (datetime-local).
+  async function localInput(page: Page, ts: number) {
+    return page.evaluate((seconds) => {
+      const d = new Date(seconds * 1000)
+      const p = (n: number) => String(n).padStart(2, '0')
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+        + `T${p(d.getHours())}:${p(d.getMinutes())}`
+    }, ts)
+  }
 
+  async function getSession(request: APIRequestContext, id: number) {
+    const response = await request.get(`/api/sessions/${id}`)
+    return await response.json() as { started_at: number; ended_at: number }
+  }
+
+  async function openEditDialog(page: Page, itemName: string) {
     await page.goto('/log')
     const row = page.locator('li').filter({ hasText: itemName }).first()
     const actions = row.getByRole('button', { name: 'Session actions' })
@@ -78,21 +95,66 @@ test.describe('Log session actions', () => {
     await expect(editButton).toBeVisible()
     await editButton.click()
 
-    const title = page.getByText('Edit session', { exact: true })
-    await expect(title).toBeVisible()
-    const duration = page.locator('input[type="number"]')
-    await expect(duration).toBeVisible()
-    await duration.fill('5')
-    const saveButton = page.getByRole('button', { name: 'Save' })
-    await expect(saveButton).toBeVisible()
-    await saveButton.click()
+    await expect(page.getByText('Edit session', { exact: true })).toBeVisible()
+    const inputs = page.locator('input[type="datetime-local"]')
+    return {
+      row,
+      start: inputs.nth(0),
+      end: inputs.nth(1),
+      save: page.getByRole('button', { name: 'Save' }),
+    }
+  }
+
+  test('can edit the end of a completed log entry', async ({
+    page, request,
+  }) => {
+    const sessionId = await createSession(request, 600)
+    const before = await getSession(request, sessionId)
+
+    const { row, start, end, save } = await openEditDialog(page, itemName)
+    await expect(start).toBeVisible()
+    await expect(end).toBeVisible()
+    await expect(page.getByText('Duration: 10m 0s')).toBeVisible()
+
+    await end.fill(await localInput(page, before.started_at + 300))
+    await expect(page.getByText('Duration: 5m 0s')).toBeVisible()
+    await save.click()
 
     await expect.poll(async () => {
-      const response = await request.get(`/api/sessions/${sessionId}`)
-      const session = await response.json()
+      const session = await getSession(request, sessionId)
       return session.ended_at - session.started_at
     }).toBe(300)
     await expect(row).toContainText('5m')
+  })
+
+  test('can edit the start of a completed log entry', async ({
+    page, request,
+  }) => {
+    const sessionId = await createSession(request, 600)
+    const before = await getSession(request, sessionId)
+
+    const { start, save } = await openEditDialog(page, itemName)
+    await start.fill(await localInput(page, before.started_at - 300))
+    await expect(page.getByText('Duration: 15m 0s')).toBeVisible()
+    await save.click()
+
+    await expect.poll(async () => {
+      const session = await getSession(request, sessionId)
+      return [session.started_at, session.ended_at]
+    }).toEqual([before.started_at - 300, before.ended_at])
+  })
+
+  test('blocks saving when the end is not after the start', async ({
+    page, request,
+  }) => {
+    const sessionId = await createSession(request, 600)
+    const before = await getSession(request, sessionId)
+
+    const { end, save } = await openEditDialog(page, itemName)
+    await end.fill(await localInput(page, before.started_at - 60))
+
+    await expect(page.getByText('End must be after start')).toBeVisible()
+    await expect(save).toBeDisabled()
   })
 
   test('can delete a completed log entry', async ({ page, request }) => {
