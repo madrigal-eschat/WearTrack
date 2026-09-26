@@ -245,3 +245,60 @@ describe('leaderboards', () => {
     }
   })
 })
+
+describe('recomputeCategory — streak order', () => {
+  // Own category so streak state is independent of the tests above.
+  function setup(name: string) {
+    const cat = categoryStore.create({
+      name,
+      icon: 'x',
+      initial_target_wear_duration_seconds: 900,
+      initial_max_wear_duration_seconds: 1800,
+      rest_multiplier: 0,
+      minimum_rest: 0,
+      risk_levels: [{ lower: null, upper: null, text: 'Only', severity: 1 }],
+      break_decay_multiplier: 0.91,
+      break_grace_time: 1000,
+    })
+    statsStore.initCategory(cat.id)
+    const itemId = db
+      .prepare(
+        `INSERT INTO items (category_id, name, color, difficulty_multiplier)
+         VALUES (?, 'x', '#fff', 1)`,
+      )
+      .run(cat.id).lastInsertRowid as number
+    return { catId: cat.id, itemId }
+  }
+
+  it('resets the streak where the gap is, not at the end', () => {
+    const { catId, itemId } = setup('Streak Mid Reset')
+    // A, then a gap > grace (1000), then B and C close together.
+    insertSession(300, itemId, 0, 100, 0)
+    insertSession(301, itemId, 2000, 2100, 0)
+    insertSession(302, itemId, 2200, 2300, 0)
+
+    statsStore.recomputeCategory(catId, 1000)
+
+    const stats = statsStore.findForCategory(catId)!
+    expect(stats.streak_count).toBe(2)
+    expect(stats.streak_wear_seconds).toBe(200)
+    expect(stats.best_streak_count).toBe(2)
+    expect(stats.best_streak_wear_seconds).toBe(200)
+    expect(stats.session_count).toBe(3)
+  })
+
+  it('orders sessions ending at the same time by id', () => {
+    const { catId, itemId } = setup('Streak Tie')
+    insertSession(330, itemId, 0, 100, 0)
+    // P and Q end together; P (lower id) precedes Q, so Q continues the
+    // streak P started after the gap.
+    insertSession(331, itemId, 5000, 6000, 0)
+    insertSession(332, itemId, 5500, 6000, 0)
+
+    statsStore.recomputeCategory(catId, 1000)
+
+    const stats = statsStore.findForCategory(catId)!
+    expect(stats.streak_count).toBe(2)
+    expect(stats.streak_wear_seconds).toBe(1500)
+  })
+})
