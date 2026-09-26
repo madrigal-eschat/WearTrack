@@ -169,10 +169,12 @@ class StatsStore {
     const prev = db
       .prepare(
         `SELECT s.* FROM sessions s JOIN items i ON i.id = s.item_id
-         WHERE i.category_id = ? AND s.ended_at IS NOT NULL AND s.id != ?
-         ORDER BY s.ended_at DESC LIMIT 1`,
+         WHERE i.category_id = ? AND s.ended_at IS NOT NULL
+         AND (s.ended_at < ? OR (s.ended_at = ? AND s.id < ?))
+         ORDER BY s.ended_at DESC, s.id DESC LIMIT 1`,
       )
-      .get(categoryId, session.id) as PrevSession | undefined
+      .get(categoryId, session.ended_at, session.ended_at, session.id) as
+      PrevSession | undefined
 
     const { streak_count: streakCount, streak_wear: streakWear } =
       computeNewStreak(stats, prev ?? null, session, breakGraceTime)

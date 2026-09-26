@@ -1,49 +1,74 @@
 <template>
   <k-dialog :opened="open" @backdropclick="$emit('update:open', false)">
     <template #title>Edit session</template>
-    <div class="flex flex-col gap-2">
+    <div class="flex flex-col gap-3">
       <label class="text-sm text-gray-500">
-        Duration (minutes)
+        Start
         <input
-          :value="durationMinutes"
-          @input="
-            $emit(
-              'update:durationMinutes',
-              Number(($event.target as HTMLInputElement).value),
-            )
-          "
-          type="number"
+          :value="toLocalInput(startedAt)"
+          @input="onInput($event, (ts) => emit('update:startedAt', ts))"
+          type="datetime-local"
           class="w-full border rounded px-2 py-1 mt-1"
-          :min="1"
-          :max="maxMinutes"
         />
       </label>
-      <p class="text-xs text-gray-400">
-        Allowed: {{ formatDuration(1) }} to
-        {{ formatDuration(maxMinutes * 60) }}
+      <label class="text-sm text-gray-500">
+        End
+        <input
+          :value="toLocalInput(endedAt)"
+          @input="onInput($event, (ts) => emit('update:endedAt', ts))"
+          type="datetime-local"
+          class="w-full border rounded px-2 py-1 mt-1"
+        />
+      </label>
+      <p
+        class="text-sm"
+        :class="valid ? 'text-gray-500' : 'text-red-600'"
+      >
+        {{ durationLabel }}
       </p>
+      <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
     </div>
     <template #buttons>
       <k-dialog-button @click="$emit('update:open', false)">
         Cancel
       </k-dialog-button>
-      <k-dialog-button strong @click="$emit('save')">Save</k-dialog-button>
+      <k-dialog-button strong :disabled="!valid" @click="$emit('save')">
+        Save
+      </k-dialog-button>
     </template>
   </k-dialog>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { kDialog, kDialogButton } from 'konsta/vue'
-import { formatDuration } from '../utils/formatDuration.js'
+import { formatDurationDHM } from '../utils/formatDuration.js'
+import { fromLocalInput, toLocalInput } from '../utils/datetimeLocal.js'
 
-defineProps<{
+const props = defineProps<{
   open: boolean;
-  durationMinutes: number;
-  maxMinutes: number;
+  startedAt: number;
+  endedAt: number;
+  error?: string | null;
 }>()
-defineEmits<{
+const emit = defineEmits<{
   'update:open': [value: boolean];
-  'update:durationMinutes': [value: number];
+  'update:startedAt': [value: number];
+  'update:endedAt': [value: number];
   save: [];
 }>()
+
+const valid = computed(() => props.endedAt > props.startedAt)
+const durationLabel = computed(() => (
+  valid.value
+    ? `Duration: ${formatDurationDHM(props.endedAt - props.startedAt)}`
+    : 'End must be after start'
+))
+
+function onInput(event: Event, apply: (ts: number) => void): void {
+  const ts = fromLocalInput((event.target as HTMLInputElement).value)
+  if (ts !== null) {
+    apply(ts)
+  }
+}
 </script>
