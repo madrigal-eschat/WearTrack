@@ -1,7 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  formatDuration, formatDurationDHM, shortDuration,
-} from './formatDuration'
+import { formatDuration, shortDuration } from './formatDuration'
 
 describe('formatDuration', () => {
   it('returns "0s" for zero or negative', () => {
@@ -58,28 +56,5 @@ describe('shortDuration', () => {
   it('returns days and hours when not a whole day', () => {
     expect(shortDuration(90000)).toBe('1d 1h')
     expect(shortDuration(108000)).toBe('1d 6h')
-  })
-})
-
-describe('formatDurationDHM', () => {
-  it('returns "0m" for zero or negative', () => {
-    expect(formatDurationDHM(0)).toBe('0m')
-    expect(formatDurationDHM(-60)).toBe('0m')
-  })
-
-  it('returns minutes only when under an hour', () => {
-    expect(formatDurationDHM(59)).toBe('0m')
-    expect(formatDurationDHM(180)).toBe('3m')
-  })
-
-  it('returns hours and minutes when under a day', () => {
-    expect(formatDurationDHM(3600)).toBe('1h 0m')
-    expect(formatDurationDHM(7380)).toBe('2h 3m')
-  })
-
-  it('returns days, hours and minutes from a day up', () => {
-    expect(formatDurationDHM(93780)).toBe('1d 2h 3m')
-    expect(formatDurationDHM(86400)).toBe('1d 0h 0m')
-    expect(formatDurationDHM(2 * 86400 + 3 * 60)).toBe('2d 0h 3m')
   })
 })
