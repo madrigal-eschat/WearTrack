@@ -40,96 +40,48 @@
             v-for="entry in sessions"
             :key="entry.id"
             :entry="entry"
-            @open-actions="openActions(entry)"
+            @open-actions="sessionActions?.open(entry)"
           />
         </k-list>
         <div ref="sentinel" class="h-4"></div>
       </div>
 
-      <div
-        class="
-          w-6 flex flex-col items-center justify-center gap-0.5
-          overflow-y-auto shrink-0
-        "
-      >
-        <button
-          v-for="entry in dateIndex"
-          :key="entry.label"
-          type="button"
-          class="text-[9px] leading-tight text-blue-600"
-          @click="jumpTo(entry.cursor)"
-        >{{ jumpLabel(entry) }}</button>
-      </div>
+      <LogDateIndex :entries="dateIndex" @jump="jumpTo" />
     </div>
 
-    <!-- Kebab action sheet -->
-    <Actions :opened="actionsOpen" @backdropclick="actionsOpen = false">
-      <ActionsGroup>
-        <ActionsButton @click="startEdit()">Edit</ActionsButton>
-        <ActionsButton
-          class="text-red-600"
-          @click="openDeleteConfirmation"
-        >Delete</ActionsButton>
-      </ActionsGroup>
-      <ActionsGroup>
-        <ActionsButton bold @click="actionsOpen = false">Cancel</ActionsButton>
-      </ActionsGroup>
-    </Actions>
-
-    <DeleteButton
-      v-if="activeEntry"
-      ref="deleteButton"
-      title="Delete session?"
-      message="This cannot be undone."
-      @confirm="performDelete"
-    />
-
-    <EditSessionDialog
-      v-if="editTarget"
-      :open="editOpen"
-      @update:open="editOpen = $event"
-      :started-at="editStartedAt"
-      @update:started-at="editStartedAt = $event"
-      :ended-at="editEndedAt"
-      @update:ended-at="editEndedAt = $event"
-      :error="editError"
-      @save="saveEdit"
-    />
+    <LogSessionActions ref="sessionActions" />
   </k-page>
 </template>
 
 <script setup lang="ts">
 import {
-  ref, computed, onMounted, onUnmounted, watch, nextTick,
+  ref, computed, onMounted, onUnmounted, watch,
 } from 'vue'
-import {
-  kPage, kBlock, kList, Actions, ActionsGroup, ActionsButton,
-} from 'konsta/vue'
+import { kPage, kBlock, kList } from 'konsta/vue'
 import PageHeader from '../components/PageHeader.vue'
-import DeleteButton from '../components/DeleteButton.vue'
 import LogItem from '../components/LogItem.vue'
-import EditSessionDialog from '../components/EditSessionDialog.vue'
-import {
-  useSessionLog, type SessionLogEntry,
-} from '../composables/useSessionLog.js'
+import LogDateIndex from '../components/LogDateIndex.vue'
+import LogSessionActions from '../components/LogSessionActions.vue'
+import { useSessionLog } from '../composables/useSessionLog.js'
+import { useLogDateIndex } from '../composables/useLogDateIndex.js'
 import { useCategories } from '../composables/useCategories.js'
 import { useItems } from '../composables/useItems.js'
-import {
-  buildDateIndex, type DateIndexEntry,
-} from '../utils/sessionDateIndex.js'
-import { apiFetch } from '../utils/apiFetch.js'
-import { buildEditChanges } from '../utils/sessionEditChanges.js'
 
 const {
   sessions, loading, loadInitial, loadMore,
   categoryFilter, itemFilter, setCategoryFilter, setItemFilter, jumpTo,
-  editSession, deleteSession,
 } = useSessionLog()
+const { dateIndex, refreshDateIndex } = useLogDateIndex(
+  categoryFilter,
+  itemFilter,
+)
 
 const { categories, loadCategories } = useCategories()
 const { items, loadItems, itemsForCategory } = useItems()
 
-const dateIndex = ref<DateIndexEntry[]>([])
+const sessionActions = ref<InstanceType<typeof LogSessionActions> | null>(
+  null,
+)
 
 const filterableItems = computed(() => (
   categoryFilter.value !== null
@@ -152,92 +104,6 @@ watch(itemFilter, async (id) => {
   await setItemFilter(id)
   await refreshDateIndex()
 })
-
-async function refreshDateIndex(): Promise<void> {
-  const params = new URLSearchParams()
-  if (categoryFilter.value !== null) {
-    params.set('category_id', String(categoryFilter.value))
-  }
-  if (itemFilter.value !== null) {
-    params.set('item_id', String(itemFilter.value))
-  }
-  const res = await apiFetch(`/api/sessions/dates?${params.toString()}`)
-  const days: string[] = res.ok ? await res.json() : []
-  dateIndex.value = buildDateIndex(days)
-}
-
-function jumpLabel(entry: DateIndexEntry): string {
-  if (entry.granularity === 'day') {
-    return entry.label.slice(8, 10)
-  }
-  if (entry.granularity === 'week') {
-    return entry.label.slice(8, 10)
-  }
-  if (entry.granularity === 'month') {
-    return entry.label.slice(5, 7)
-  }
-  return entry.label.slice(2, 4)
-}
-
-const actionsOpen = ref(false)
-const activeEntry = ref<SessionLogEntry | null>(null)
-const deleteButton = ref<{ open: () => void } | null>(null)
-
-function openActions(entry: SessionLogEntry): void {
-  activeEntry.value = entry
-  actionsOpen.value = true
-}
-
-const editOpen = ref(false)
-const editStartedAt = ref(0)
-const editEndedAt = ref(0)
-const editError = ref<string | null>(null)
-const editTarget = computed(() => activeEntry.value)
-
-function startEdit(): void {
-  actionsOpen.value = false
-  if (!editTarget.value || editTarget.value.ended_at === null) {
-    return
-  }
-  editStartedAt.value = editTarget.value.started_at
-  editEndedAt.value = editTarget.value.ended_at
-  editError.value = null
-  editOpen.value = true
-}
-
-async function openDeleteConfirmation(): Promise<void> {
-  actionsOpen.value = false
-  await nextTick()
-  deleteButton.value?.open()
-}
-
-async function saveEdit(): Promise<void> {
-  const target = editTarget.value
-  if (!target || target.ended_at === null) {
-    return
-  }
-  const changes = buildEditChanges(
-    { started_at: target.started_at, ended_at: target.ended_at },
-    editStartedAt.value,
-    editEndedAt.value,
-  )
-  if (Object.keys(changes).length === 0) {
-    editOpen.value = false
-    return
-  }
-  try {
-    await editSession(target, changes)
-    editOpen.value = false
-  } catch (e) {
-    editError.value = e instanceof Error ? e.message : 'Could not save edit'
-  }
-}
-
-async function performDelete(): Promise<void> {
-  if (activeEntry.value) {
-    await deleteSession(activeEntry.value)
-  }
-}
 
 const sentinel = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
