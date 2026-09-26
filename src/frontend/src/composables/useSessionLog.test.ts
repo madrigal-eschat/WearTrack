@@ -93,37 +93,42 @@ describe('useSessionLog', () => {
     expect(url).toContain('category_id=5')
   })
 
-  it(
-    'editableRangeFor delegates to the edit policy' +
-      ' (shrink-only before any edit)',
-    () => {
-      const { editableRangeFor } = useSessionLog()
-      const entry = makeEntry({ id: 42, started_at: 1000, ended_at: 2000 })
-      expect(editableRangeFor(entry)).toEqual({ min: 1000, max: 2000 })
-    },
-  )
+  it('editSession updates the row in place', async () => {
+    mockFetchOnce([makeEntry({ id: 1, started_at: 1000, ended_at: 2000 })])
+    const { sessions, loadInitial, editSession } = useSessionLog()
+    await loadInitial()
 
-  it(
-    'editSession updates the row in place and records lastEdited',
-    async () => {
-      mockFetchOnce([
-        makeEntry({ id: 1, started_at: 1000, ended_at: 2000 }),
-      ])
-      const { sessions, loadInitial, editSession, editableRangeFor } =
-        useSessionLog()
-      await loadInitial()
+    mockFetchOnce(makeEntry({ id: 1, started_at: 500, ended_at: 2500 }))
+    await editSession(sessions.value[0], { started_at: 500, ended_at: 2500 })
+    expect(sessions.value[0].started_at).toBe(500)
+    expect(sessions.value[0].ended_at).toBe(2500)
+  })
 
-      mockFetchOnce(makeEntry({ id: 1, started_at: 1000, ended_at: 1500 }))
-      await editSession(sessions.value[0], 1500)
-      expect(sessions.value[0].ended_at).toBe(1500)
+  it('editSession PATCHes only the fields it is given', async () => {
+    mockFetchOnce([makeEntry({ id: 7 })])
+    const { sessions, loadInitial, editSession } = useSessionLog()
+    await loadInitial()
 
-      // Now the "last chance" range should widen back to the original 2000
-      expect(editableRangeFor(sessions.value[0])).toEqual({
-        min: 1000,
-        max: 2000,
-      })
-    },
-  )
+    mockFetchOnce(makeEntry({ id: 7, started_at: 400 }))
+    await editSession(sessions.value[0], { started_at: 400 })
+    const [url, init] = (global.fetch as ReturnType<typeof vi.fn>).mock
+      .calls[0] as [string, RequestInit]
+    expect(url).toBe('/api/sessions/7')
+    expect(init.method).toBe('PATCH')
+    expect(JSON.parse(init.body as string)).toEqual({ started_at: 400 })
+  })
+
+  it('editSession throws the server error message', async () => {
+    mockFetchOnce([makeEntry({ id: 1 })])
+    const { sessions, loadInitial, editSession } = useSessionLog()
+    await loadInitial()
+
+    mockFetchOnce({ error: 'Overlaps a session on item "X"' }, false)
+    await expect(
+      editSession(sessions.value[0], { ended_at: 3000 }),
+    ).rejects.toThrow('Overlaps a session on item "X"')
+    expect(sessions.value[0].ended_at).toBe(2000)
+  })
 
   it('deleteSession removes the row from the list', async () => {
     mockFetchOnce([makeEntry({ id: 1 })])

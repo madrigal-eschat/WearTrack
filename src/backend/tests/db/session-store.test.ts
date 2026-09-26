@@ -53,7 +53,7 @@ describe('sessionStore.end', () => {
     const started = sessionStore.start(1, rawCat(), item, 20_000)
     const ended = sessionStore.end(started, rawCat(), 20_000 + 600)
 
-    const updated = sessionStore.updateEnd(
+    const updated = sessionStore.updateTimes(
       ended,
       rawCat(),
       20_000 + 30,
