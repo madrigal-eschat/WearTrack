@@ -2,24 +2,20 @@
   <k-dialog :opened="open" @backdropclick="$emit('update:open', false)">
     <template #title>Edit session</template>
     <div class="flex flex-col gap-3">
-      <label class="text-sm text-gray-500">
-        Start
-        <input
+      <k-list class="!m-0">
+        <k-list-input
+          label="Start"
+          type="datetime-local"
           :value="toLocalInput(startedAt)"
           @input="onInput($event, (ts) => emit('update:startedAt', ts))"
-          type="datetime-local"
-          class="w-full border rounded px-2 py-1 mt-1"
         />
-      </label>
-      <label class="text-sm text-gray-500">
-        End
-        <input
+        <k-list-input
+          label="End"
+          type="datetime-local"
           :value="toLocalInput(endedAt)"
           @input="onInput($event, (ts) => emit('update:endedAt', ts))"
-          type="datetime-local"
-          class="w-full border rounded px-2 py-1 mt-1"
         />
-      </label>
+      </k-list>
       <p
         class="text-sm"
         :class="valid ? 'text-gray-500' : 'text-red-600'"
@@ -41,7 +37,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { kDialog, kDialogButton } from 'konsta/vue'
+import {
+  kDialog, kDialogButton, kList, kListInput,
+} from 'konsta/vue'
 import { formatDuration } from '../utils/formatDuration.js'
 import { fromLocalInput, toLocalInput } from '../utils/datetimeLocal.js'
 
