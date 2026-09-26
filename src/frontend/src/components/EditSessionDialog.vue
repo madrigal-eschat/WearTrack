@@ -42,7 +42,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { kDialog, kDialogButton } from 'konsta/vue'
-import { formatDurationDHM } from '../utils/formatDuration.js'
+import { formatDuration } from '../utils/formatDuration.js'
 import { fromLocalInput, toLocalInput } from '../utils/datetimeLocal.js'
 
 const props = defineProps<{
@@ -61,7 +61,7 @@ const emit = defineEmits<{
 const valid = computed(() => props.endedAt > props.startedAt)
 const durationLabel = computed(() => (
   valid.value
-    ? `Duration: ${formatDurationDHM(props.endedAt - props.startedAt)}`
+    ? `Duration: ${formatDuration(props.endedAt - props.startedAt)}`
     : 'End must be after start'
 ))
 
