@@ -24,7 +24,7 @@
     "@types/node": "^26.6.2",
     "@types/web-push": "^3.6.4",
     "@vitest/coverage-v8": "^5.0.1",
-    "eslint": "^10.0.0",
+    "eslint": "^10.11.0",
     "tsx": "^4.23.13",
     "typescript": "^6.0.0",
     "typescript-eslint": "^8.0.0",
