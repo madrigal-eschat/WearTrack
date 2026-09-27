@@ -1,3 +1,16 @@
+# [1.8.0](https://github.com/madrigal-eschat/WearTrack/compare/v1.7.0...v1.8.0) (2026-09-27)
+
+
+### Bug Fixes
+
+* **wear:** remove e2e races in item selection and end-session default ([d40c58e](https://github.com/madrigal-eschat/WearTrack/commit/d40c58e7f936bbb264c6886cce040d5282010c76))
+
+
+### Features
+
+* **log:** edit session start and end times ([7b0ee81](https://github.com/madrigal-eschat/WearTrack/commit/7b0ee81553d05be74a279178ad445ea0e13a77c3))
+* **sessions:** add end-session dialog with editable timestamps and forget action ([3e2cd59](https://github.com/madrigal-eschat/WearTrack/commit/3e2cd59c639ec7aa632886a7c451428331b000c1))
+
 # [1.7.0](https://github.com/madrigal-eschat/WearTrack/compare/v1.6.3...v1.7.0) (2026-09-23)
 
 
