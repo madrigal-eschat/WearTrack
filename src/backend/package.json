@@ -21,7 +21,7 @@
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0",
     "@types/cors": "^2.8.17",
-    "@types/node": "^26.6.4",
+    "@types/node": "^26.6.5",
     "@types/web-push": "^3.6.4",
     "@vitest/coverage-v8": "^5.0.4",
     "eslint": "^10.11.0",
