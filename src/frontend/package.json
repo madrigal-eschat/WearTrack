@@ -16,7 +16,7 @@
     "@heroicons/vue": "^2.2.0",
     "@iconify-json/ph": "^1.2.2",
     "@iconify/vue": "^5.0.5",
-    "@tailwindcss/vite": "^4.2.4",
+    "@tailwindcss/vite": "^4.3.5",
     "konsta": "^5.5.0",
     "tailwindcss": "^4.3.5",
     "vue": "^3.5.44",
