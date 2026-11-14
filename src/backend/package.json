@@ -16,7 +16,7 @@
     "cors": "^2.8.5",
     "hono": "^4.13.17",
     "mqtt": "^5.16.1",
-    "web-push": "^3.6.7"
+    "web-push": "^4.0.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0",
