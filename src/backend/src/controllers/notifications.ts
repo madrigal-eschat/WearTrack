@@ -12,7 +12,7 @@ router.get('/vapid-public-key', (c) => {
 router.post('/subscribe', async (c) => {
   const body = await c.req.json()
   if (
-    typeof body.endpoint !== 'string' ||
+    typeof body?.endpoint !== 'string' ||
     typeof body.keys?.p256dh !== 'string' ||
     typeof body.keys?.auth !== 'string'
   ) {
@@ -22,7 +22,11 @@ router.post('/subscribe', async (c) => {
   return c.json({ ok: true })
 })
 
-router.delete('/subscribe', (c) => {
-  notificationStore.deleteSubscription()
+router.delete('/subscribe', async (c) => {
+  const body = await c.req.json().catch(() => null)
+  if (typeof body?.endpoint !== 'string') {
+    throw new ValidationError('Missing push subscription endpoint')
+  }
+  notificationStore.deleteSubscription(body.endpoint)
   return c.json({ ok: true })
 })
