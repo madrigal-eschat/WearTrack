@@ -1,3 +1,10 @@
+## [1.8.1](https://github.com/madrigal-eschat/WearTrack/compare/v1.8.0...v1.8.1) (2026-11-28)
+
+
+### Bug Fixes
+
+* deliver push notifications to multiple devices ([4f61bfa](https://github.com/madrigal-eschat/WearTrack/commit/4f61bfac60144573e6c24fd65f4d6222ab63acaa))
+
 # [1.8.0](https://github.com/madrigal-eschat/WearTrack/compare/v1.7.0...v1.8.0) (2026-09-27)
 
 
