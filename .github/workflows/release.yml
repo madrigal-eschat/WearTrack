@@ -27,13 +27,14 @@ jobs:
           ref: main
           fetch-depth: 0
           fetch-tags: true
+          token: ${{ secrets.RELEASE_TOKEN }}
       - uses: actions/setup-node@v7
         with:
           node-version: 24
       - run: npm ci
       - id: semrel
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           npx semantic-release
           if git describe --tags --exact-match HEAD > /dev/null 2>&1; then
