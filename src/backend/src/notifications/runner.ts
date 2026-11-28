@@ -1,6 +1,6 @@
 import { eventBus, type EventName, type EventPayloads } from '../events/bus.js'
 import { send, isConfigured } from './sender.js'
-import { notificationStore } from './store.js'
+import { notificationStore, type StoredSubscription } from './store.js'
 import { formatDuration } from '../utils/time.js'
 
 interface Copy {
@@ -80,36 +80,39 @@ const NOTIFICATION_EVENTS: Array<Exclude<EventName, 'poller_tick'>> = [
   'reminder_due',
 ]
 
+async function sendToSubscription(
+  subscription: StoredSubscription,
+  message: Copy & { tag: string },
+  event: EventName,
+  categoryId: number,
+): Promise<void> {
+  const context = { event, categoryId, subscriptionId: subscription.id }
+  console.info('[notifications] Sending push', context)
+  try {
+    const statusCode = await send(subscription.subscription_json, message)
+    console.info('[notifications] Push accepted', { ...context, statusCode })
+  } catch (e: unknown) {
+    const status = (e as { statusCode?: unknown } | null)?.statusCode
+    const statusCode = typeof status === 'number' ? status : undefined
+    console.error('[notifications] Push failed', { ...context, statusCode })
+    if (statusCode === 410 || statusCode === 404) {
+      notificationStore.deleteExpiredSubscription(subscription)
+    }
+  }
+}
+
 async function notify<E extends Exclude<EventName, 'poller_tick'>>(
   event: E,
   payload: EventPayloads[E],
 ): Promise<void> {
-  const subscription = notificationStore.getSubscription()
-  if (!subscription) {
-    return
-  }
   const copy = copyFor(event, payload)
   if (!copy) {
     return
   }
-  try {
-    await send(subscription, {
-      title: copy.title,
-      body: copy.body,
-      tag: tagFor(event, payload),
-    })
-  } catch (e: unknown) {
-    const status = (e as { statusCode?: number }).statusCode
-    if (status === 410 || status === 404) {
-      notificationStore.deleteSubscription()
-      return
-    }
-    console.error(
-      `[notifications] Failed to send ${event} for category ` +
-        `${payload.category_id}:`,
-      e,
-    )
-  }
+  const message = { ...copy, tag: tagFor(event, payload) }
+  await Promise.all(notificationStore.getSubscriptions().map((subscription) =>
+    sendToSubscription(subscription, message, event, payload.category_id),
+  ))
 }
 
 let started = false

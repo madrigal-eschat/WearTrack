@@ -18,7 +18,10 @@ export function getPublicKey(): string | null {
 export async function send(
   subscriptionJson: string,
   payload: { title: string; body: string; tag: string },
-): Promise<void> {
+): Promise<number> {
   const subscription = JSON.parse(subscriptionJson) as webpush.PushSubscription
-  await webpush.sendNotification(subscription, JSON.stringify(payload))
+  const response = await webpush.sendNotification(
+    subscription, JSON.stringify(payload),
+  )
+  return response.statusCode
 }

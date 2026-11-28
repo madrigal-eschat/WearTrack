@@ -21,6 +21,15 @@ export function useNotifications() {
   const isSubscribed = ref(false)
   let cachedPublicKey: string | null = null
 
+  async function registerSubscription(sub: PushSubscription): Promise<void> {
+    const res = await apiFetch('/api/notifications/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(sub.toJSON()),
+    })
+    isSubscribed.value = res.ok
+  }
+
   async function init() {
     if (!isSupported) {
       return
@@ -38,7 +47,9 @@ export function useNotifications() {
     isConfigured.value = true
     const reg = await navigator.serviceWorker.ready
     const sub = await reg.pushManager.getSubscription()
-    isSubscribed.value = sub !== null
+    if (sub) {
+      await registerSubscription(sub)
+    }
   }
 
   async function enable(): Promise<void> {
@@ -55,31 +66,24 @@ export function useNotifications() {
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(cachedPublicKey),
     })
-    const res = await apiFetch('/api/notifications/subscribe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(sub.toJSON()),
-    })
-    if (res.ok) {
-      isSubscribed.value = true
-    }
+    await registerSubscription(sub)
   }
 
   async function disable(): Promise<void> {
     if (!isSupported) {
       return
     }
-    try {
-      const reg = await navigator.serviceWorker.ready
-      const sub = await reg.pushManager.getSubscription()
-      if (sub) {
-        await sub.unsubscribe()
-      }
-    } catch {
-      // Proceed to delete server-side subscription regardless
-    }
-    await apiFetch('/api/notifications/subscribe', { method: 'DELETE' })
+    const reg = await navigator.serviceWorker.ready
+    const sub = await reg.pushManager.getSubscription()
+    await sub?.unsubscribe()
     isSubscribed.value = false
+    if (sub) {
+      await apiFetch('/api/notifications/subscribe', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endpoint: sub.endpoint }),
+      })
+    }
   }
 
   onMounted(() => {

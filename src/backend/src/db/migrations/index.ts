@@ -12,6 +12,7 @@ import runMigration010 from './010_mqtt_config.js'
 import runMigration011 from './011_rotation_categories.js'
 import runMigration012 from './012_drop_mqtt_config.js'
 import runMigration013 from './013_reminder_schedules.js'
+import runMigration014 from './014_push_subscription_endpoints.js'
 
 const migrations: Array<{ version: number; name: string; run: () => void }> = [
   { version: 1, name: '001_initial', run: runMigration001 },
@@ -27,6 +28,11 @@ const migrations: Array<{ version: number; name: string; run: () => void }> = [
   { version: 11, name: '011_rotation_categories', run: runMigration011 },
   { version: 12, name: '012_drop_mqtt_config', run: runMigration012 },
   { version: 13, name: '013_reminder_schedules', run: runMigration013 },
+  {
+    version: 14,
+    name: '014_push_subscription_endpoints',
+    run: runMigration014,
+  },
 ]
 
 export function runMigrations() {
